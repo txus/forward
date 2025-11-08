@@ -11,8 +11,8 @@ target_include_directories(forward PUBLIC ../include)
 # this depends on (header only) boost
 #target_link_libraries(forward PRIVATE Boost::boost)
 
-# all users of this library will need at least C++11
-target_compile_features(forward PUBLIC cxx_std_11)
+# all users of this library will need at least C++26
+target_compile_features(forward PUBLIC cxx_std_26)
 
 # IDEs should put the headers in a nice place
 source_group(

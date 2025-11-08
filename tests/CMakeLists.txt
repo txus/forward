@@ -10,8 +10,8 @@ FetchContent_MakeAvailable(googletest)
 # Tests need to be added as executables firts
 add_executable(testlib testlib.cpp)
 
-# Im using C++17 in the test
-target_compile_features(testlib PRIVATE cxx_std_17)
+# Im using C++26 in the test
+target_compile_features(testlib PRIVATE cxx_std_26)
 
 # should be linked to the main library, as well as the Catch2 testing library
 target_link_libraries(testlib PRIVATE forward GTest::gtest_main)
