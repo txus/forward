@@ -9,6 +9,13 @@ Requirements:
 * Git
 * Doxygen
 
+To use clang: just export these before you run cmake:
+
+```
+export CC=clang
+export CXX=clang++
+```
+
 To configure:
 
 ```
