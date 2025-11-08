@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15..4.0)
+cmake_minimum_required(VERSION 3.19..4.0)
 
 project(
   Forward
@@ -6,6 +6,9 @@ project(
   DESCRIPTION "A simple transformer inference engine"
   LANGUAGES CXX
 )
+
+# msgpack in tokenizers_cpp is doing weird stuff
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
