@@ -9,7 +9,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(tokenizers_cpp)
 
 # make an automatic library - will be static or dynamic based on user setting
-add_library(forward lib.cpp tokenizer.cpp ${HEADER_LIST})
+add_library(forward tokenizer.cpp model.cpp ${HEADER_LIST})
 
 # we need this directory, and users of our library will need it too
 target_include_directories(forward PUBLIC ../include)

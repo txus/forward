@@ -1,13 +1,16 @@
-#include <forward/lib.hpp>
+#include <forward/model.hpp>
 
 #include <fmt/format.h>
 
 int main() {
-  int a = 5, b = 7;
+  model::Model mod("./tests/model");
 
-  auto result = add_two(a, b);
+  auto prompt = "Hello, world";
 
-  fmt::print("Result: {}", result);
+  auto completion = mod.generate(prompt, 5);
+
+  fmt::print("Prompt: {}", prompt);
+  fmt::print("Completion: {}", completion);
 
   return 0;
 }

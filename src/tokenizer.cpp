@@ -2,12 +2,12 @@
 #include <iostream>
 #include <string>
 
-#include "forward/tokenizer.hpp"
-
+#include <forward/tokenizer.hpp>
 #include <tokenizers_cpp.h>
 
-std::string LoadBytesFromFile(const std::string &path) {
-  std::ifstream fs(path, std::ios::in | std::ios::binary);
+std::string LoadBytesFromFile(std::string_view path) {
+  std::ifstream fs(std::filesystem::path(path),
+                   std::ios::in | std::ios::binary);
   if (fs.fail()) {
     std::cerr << "Cannot open " << path << std::endl;
     exit(1);
@@ -21,27 +21,20 @@ std::string LoadBytesFromFile(const std::string &path) {
   return data;
 }
 
-std::vector<int> encode(std::string prompt) {
-  // Read blob from file.
-  auto blob = LoadBytesFromFile("model/tokenizer.json");
-  // Note: all the current factory APIs takes in-memory blob as input.
-  // This gives some flexibility on how these blobs can be read.
-  auto tok = tokenizers::Tokenizer::FromBlobJSON(blob);
-  // call Encode to turn prompt into token ids
-  std::vector<int> ids = tok->Encode(prompt);
-  // call Decode to turn ids into string
-  std::string decoded_prompt = tok->Decode(ids);
-  return ids;
+namespace tokenizer {
+
+Tokenizer::Tokenizer(std::string_view tokenizer_path) {
+  auto blob = LoadBytesFromFile(tokenizer_path);
+  impl_ = tokenizers::Tokenizer::FromBlobJSON(blob);
 }
 
-std::string decode(std::vector<int> token_ids) {
-  // Read blob from file.
-  auto blob = LoadBytesFromFile("model/tokenizer.json");
-  // Note: all the current factory APIs takes in-memory blob as input.
-  // This gives some flexibility on how these blobs can be read.
-  auto tok = tokenizers::Tokenizer::FromBlobJSON(blob);
-  // call Decode to turn ids into string
-  std::string decoded_prompt = tok->Decode(token_ids);
+Tokenizer::~Tokenizer() = default;
 
-  return decoded_prompt;
+std::vector<int> Tokenizer::encode(std::string_view prompt) {
+  return impl_->Encode(std::string(prompt));
 }
+std::string Tokenizer::decode(std::vector<int> token_ids) {
+  return impl_->Decode(token_ids);
+}
+
+} // namespace tokenizer
