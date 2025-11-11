@@ -1,11 +1,9 @@
 #pragma once
 
 #include <algorithm>
-#include <exception>
 #include <iostream>
 #include <print>
 #include <stdexcept>
-#include <system_error>
 #include <vector>
 
 namespace tensor {

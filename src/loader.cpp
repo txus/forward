@@ -1,6 +1,4 @@
-#include <chrono>
 #include <cstdlib>
-#include <execution>
 #include <forward/loader.hpp>
 #include <forward/tensor.hpp>
 #include <iostream>
@@ -168,9 +166,6 @@ void inspect_safetensors(std::string_view file_path) {
 
 tensor::Tensor<float> load_from_safetensors(std::string_view file_path,
                                             std::string_view tensor_name) {
-  using clock = std::chrono::high_resolution_clock;
-  auto total_start = clock::now();
-
   safetensors::safetensors_t st = load(file_path);
 
   safetensors::tensor_t tensor;
