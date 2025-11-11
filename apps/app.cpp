@@ -1,9 +1,12 @@
+#include <forward/loader.hpp>
 #include <forward/model.hpp>
 
 #include <fmt/format.h>
 
 int main() {
   model::Model mod("./tests/model");
+
+  loader::inspect_safetensors("./tests/model/model.safetensors");
 
   auto prompt = "Hello, world";
 

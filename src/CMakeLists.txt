@@ -9,13 +9,21 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(tokenizers_cpp)
 
 # make an automatic library - will be static or dynamic based on user setting
-add_library(forward tokenizer.cpp model.cpp ${HEADER_LIST})
+add_library(forward tokenizer.cpp model.cpp loader.cpp nn/embedding.cpp ${HEADER_LIST})
+
+FetchContent_Declare(
+  safetensors_cpp
+  GIT_REPOSITORY https://github.com/syoyo/safetensors-cpp.git
+  GIT_TAG 10f7d8f)
+set(SAFETENSORS_CPP_CXX_EXCEPTIONS ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(safetensors_cpp)
 
 # we need this directory, and users of our library will need it too
 target_include_directories(forward PUBLIC ../include)
 
 # this depends on tokenizers_cpp
 target_link_libraries(forward PRIVATE tokenizers_cpp)
+target_link_libraries(forward PRIVATE safetensors_cpp)
 
 # all users of this library will need at least C++26
 target_compile_features(forward PUBLIC cxx_std_26)
