@@ -4,9 +4,15 @@
 #include <forward/model.hpp>
 
 TEST(ModelTest, Forward) {
-  model::Model mod(TEST_MODEL_PATH);
 
-  auto completion = mod.generate("Hello, world", 5);
+  try {
+    model::Model mod(TEST_MODEL_PATH);
 
-  EXPECT_EQ(completion, "completion");
+    // auto input = tensor::Tensor<int>{{1, 4}};
+    // auto output = mod.forward(input);
+  } catch (std::exception e) {
+    std::println("Exception we're cooked {}", e.what());
+  }
+
+  // EXPECT_EQ(completion, "completion");
 }

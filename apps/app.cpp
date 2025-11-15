@@ -3,10 +3,15 @@
 
 #include <fmt/format.h>
 
-int main() {
-  model::Model mod("./tests/model");
+int main(int argc, char *argv[]) {
+  auto path = "./tests/model";
+  if (argc > 1) {
+    path = argv[1];
+  }
 
-  loader::inspect_safetensors("./tests/model/model.safetensors");
+  model::Model mod(path);
+
+  // loader::inspect_safetensors("./tests/model/model.safetensors");
 
   auto prompt = "Hello, world";
 
