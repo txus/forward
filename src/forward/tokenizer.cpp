@@ -33,7 +33,7 @@ Tokenizer::~Tokenizer() = default;
 std::vector<int> Tokenizer::encode(std::string_view prompt) {
   return impl_->Encode(std::string(prompt));
 }
-std::string Tokenizer::decode(std::vector<int> token_ids) {
+std::string Tokenizer::decode(std::vector<int> &token_ids) {
   return impl_->Decode(token_ids);
 }
 

@@ -1,8 +1,8 @@
 #include <cstdlib>
 #include <forward/loader.hpp>
-#include <forward/tensor.hpp>
 #include <iostream>
 #include <print>
+#include <tensor/tensor.hpp>
 
 #define SAFETENSORS_CPP_IMPLEMENTATION
 #include <safetensors.hh>
@@ -122,6 +122,18 @@ safetensors::safetensors_t load(std::string_view(file_path)) {
 }
 
 namespace loader {
+
+std::vector<std::string> all_tensor_names(std::string_view file_path) {
+  std::vector<std::string> out;
+
+  safetensors::safetensors_t st = load(file_path);
+
+  for (size_t i = 0; i < st.tensors.size(); i++) {
+    out.push_back(st.tensors.keys()[i]);
+  }
+
+  return out;
+}
 
 void inspect_safetensors(std::string_view file_path) {
   safetensors::safetensors_t st = load(file_path);

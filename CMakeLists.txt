@@ -7,6 +7,9 @@ project(
   LANGUAGES CXX
 )
 
+set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/.cmake/fetchcontent")
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+
 # msgpack in tokenizers_cpp is doing weird stuff
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
@@ -26,15 +29,10 @@ endif()
 
 include(FetchContent)
 
-FetchContent_Declare(
-  fmtlib
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 12.1.0)
-FetchContent_MakeAvailable(fmtlib)
-# adds fmt::fmt
-
 # compiled library code
-add_subdirectory(src)
+add_subdirectory(src/tensor)
+add_subdirectory(src/llama)
+add_subdirectory(src/forward)
 
 # executable code
 add_subdirectory(apps)

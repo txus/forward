@@ -15,9 +15,9 @@ private:
 
 public:
   explicit Tokenizer(std::string_view tokenizer_path);
-  ~Tokenizer(); // required for unique_ptr with forward-declared type
+  ~Tokenizer();
 
   std::vector<int> encode(std::string_view prompt);
-  std::string decode(std::vector<int> token_ids);
+  std::string decode(std::vector<int> &token_ids);
 };
 } // namespace tokenizer
