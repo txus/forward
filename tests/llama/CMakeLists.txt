@@ -4,6 +4,7 @@ target_link_libraries(test_llama PRIVATE llama GTest::gtest_main)
 target_include_directories(test_llama
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}/..
         ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 

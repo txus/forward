@@ -2,8 +2,22 @@
 
 #include <cmath>
 #include <gtest/gtest.h>
+#include <llama/model.hpp>
 #include <span>
 #include <tensor/tensor.hpp>
+
+inline std::unordered_map<std::string, tensor::Tensor<float>>
+empty_weights(const llama::ModelConfig &config) {
+  std::unordered_map<std::string, tensor::Tensor<float>> out;
+
+  std::vector<size_t> shape{{static_cast<unsigned long>(config.vocab_size),
+                             static_cast<unsigned long>(config.hidden_dim)}};
+
+  out.insert_or_assign("model.embed_tokens.weight",
+                       std::move(tensor::Tensor<float>{shape}));
+
+  return out;
+}
 
 template <typename T>
 void tensor_is_close(std::span<const T> a, std::span<const T> b,

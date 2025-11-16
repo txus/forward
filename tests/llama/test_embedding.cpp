@@ -1,5 +1,5 @@
-#include "tensor/tensor.hpp"
 #include <gtest/gtest.h>
+#include <tensor/tensor.hpp>
 
 #include <common/test_utils.hpp>
 

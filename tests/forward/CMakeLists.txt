@@ -5,6 +5,7 @@ target_include_directories(test_forward
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_CURRENT_BINARY_DIR}/..
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
 include(GoogleTest)

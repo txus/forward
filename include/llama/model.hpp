@@ -15,19 +15,19 @@ struct ModelConfig {
 
 class Model {
 private:
-  ModelConfig config;
-  bool loaded_;
+  bool loaded_ = false;
 
 public:
   explicit Model(ModelConfig config);
   explicit Model(std::string_view model_path);
   ~Model() = default;
 
+  ModelConfig config;
   llama::Embedding embed;
   std::vector<llama::Embedding> layers;
 
   void load_weights(
-      std::unordered_map<std::string_view, tensor::Tensor<float>> &weight_map);
+      std::unordered_map<std::string, tensor::Tensor<float>> &weight_map);
 
   tensor::Tensor<float> forward(tensor::TensorView<int> &token_ids) const;
 };

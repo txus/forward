@@ -4,8 +4,6 @@
 #include <cassert>
 #include <fmt/color.h>
 #include <fmt/format.h>
-#include <iostream>
-#include <print>
 #include <span>
 #include <stdexcept>
 #include <vector>
@@ -84,7 +82,7 @@ template <typename T> struct TensorView {
 template <typename T> class Tensor {
 private:
   std::vector<T> data_;
-  const Shape shape_;
+  Shape shape_;
 
 public:
   explicit Tensor(Shape shape) : shape_(shape) {

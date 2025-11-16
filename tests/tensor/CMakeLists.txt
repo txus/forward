@@ -4,6 +4,7 @@ target_link_libraries(test_tensor PRIVATE tensor_core tensor_cpu GTest::gtest_ma
 target_include_directories(test_tensor
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}/..
         ${CMAKE_CURRENT_SOURCE_DIR}/..
 )
 
