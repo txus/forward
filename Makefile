@@ -9,6 +9,10 @@ all:
 release:
 	@cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
 
+.PHONY: app
+app:
+	@cd build && make forward && cd .. && ./build/apps/forward
+
 .PHONY: test
 tensor:
 	@cd build && make test_tensor && ./tests/tensor/test_tensor

@@ -10,11 +10,26 @@ inline std::unordered_map<std::string, tensor::Tensor<float>>
 empty_weights(const llama::ModelConfig &config) {
   std::unordered_map<std::string, tensor::Tensor<float>> out;
 
-  std::vector<size_t> shape{{static_cast<unsigned long>(config.vocab_size),
-                             static_cast<unsigned long>(config.hidden_dim)}};
+  {
+    std::vector<size_t> shape{{config.vocab_size, config.hidden_dim}};
 
-  out.insert_or_assign("model.embed_tokens.weight",
-                       std::move(tensor::Tensor<float>{shape}));
+    tensor::Tensor<float> weights{shape};
+    weights.fill_(0.5);
+
+    out.insert_or_assign("model.embed_tokens.weight", std::move(weights));
+  }
+
+  for (int l = 0; l < config.num_hidden_layers; ++l) {
+    std::vector<size_t> shape{config.hidden_dim};
+
+    const std::string key =
+        fmt::format("model.layers.{}.input_layernorm.weight", l);
+
+    tensor::Tensor<float> weights{shape};
+    weights.fill_(0.1);
+
+    out.insert_or_assign(key, std::move(weights));
+  }
 
   return out;
 }

@@ -13,7 +13,7 @@ FetchContent_Declare(json
 )
 FetchContent_MakeAvailable(json)
 
-add_library(llama STATIC embedding.cpp model.cpp)
+add_library(llama STATIC embedding.cpp model.cpp rms_norm.cpp layer.cpp)
 
 target_link_libraries(llama
   PUBLIC tensor_core

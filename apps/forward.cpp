@@ -18,7 +18,23 @@ int main(int argc, char *argv[]) {
   // loader::inspect_safetensors("./tests/model/model.safetensors");
 
   auto weights = loader::load_weights("./tests/model/model.safetensors",
-                                      "model.embed_tokens.weight");
+                                      "model.embed_tokens.weight",
+                                      "model.layers.0.input_layernorm.weight",
+                                      "model.layers.1.input_layernorm.weight",
+                                      "model.layers.2.input_layernorm.weight",
+                                      "model.layers.3.input_layernorm.weight",
+                                      "model.layers.4.input_layernorm.weight",
+                                      "model.layers.5.input_layernorm.weight",
+                                      "model.layers.6.input_layernorm.weight",
+                                      "model.layers.7.input_layernorm.weight",
+                                      "model.layers.8.input_layernorm.weight",
+                                      "model.layers.9.input_layernorm.weight",
+                                      "model.layers.10.input_layernorm.weight",
+                                      "model.layers.11.input_layernorm.weight",
+                                      "model.layers.12.input_layernorm.weight",
+                                      "model.layers.13.input_layernorm.weight",
+                                      "model.layers.14.input_layernorm.weight",
+                                      "model.layers.15.input_layernorm.weight");
   mod.load_weights(weights);
 
   auto prompt = "Hello, world";

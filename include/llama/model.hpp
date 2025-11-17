@@ -1,16 +1,16 @@
 #pragma once
 
 #include <llama/embedding.hpp>
-#include <llama/transformer_layer.hpp>
+#include <llama/layer.hpp>
 #include <tensor/tensor.hpp>
 #include <unordered_map>
 
 namespace llama {
 
 struct ModelConfig {
-  int vocab_size;
-  int hidden_dim;
-  int num_hidden_layers;
+  size_t vocab_size;
+  size_t hidden_dim;
+  size_t num_hidden_layers;
 };
 
 class Model {
@@ -24,7 +24,7 @@ public:
 
   ModelConfig config;
   llama::Embedding embed;
-  std::vector<llama::Embedding> layers;
+  std::vector<llama::Layer> layers;
 
   void load_weights(
       std::unordered_map<std::string, tensor::Tensor<float>> &weight_map);

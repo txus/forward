@@ -1,6 +1,5 @@
 #include <fmt/format.h>
 #include <forward/loader.hpp>
-#include <llama/embedding.hpp>
 #include <llama/model.hpp>
 #include <tensor/tensor.hpp>
 
@@ -25,9 +24,16 @@ Model::Model(std::string_view model_path) {
 
 void Model::load_weights(
     std::unordered_map<std::string, tensor::Tensor<float>> &weight_map) {
-  auto embed_weights = weight_map.at("model.embed_tokens.weight").view();
-  fmt::println("loading embedding weights {}", embed_weights);
-  embed.set_weights(embed_weights);
+  embed.set_weights(weight_map.at("model.embed_tokens.weight").view());
+
+  for (int l = 0; l < config.num_hidden_layers; ++l) {
+    auto layer = llama::Layer{};
+
+    layer.load_weights(weight_map, l);
+
+    layers.push_back(std::move(layer));
+  }
+
   loaded_ = true;
 }
 
@@ -36,8 +42,13 @@ tensor::Tensor<float> Model::forward(tensor::TensorView<int> &token_ids) const {
 
   fmt::println("Embedding tokens {}", token_ids);
 
-  auto embedded = embed.forward(token_ids);
+  auto residual_stream = embed.forward(token_ids);
 
-  return embedded;
+  for (int l = 0; l < config.num_hidden_layers; ++l) {
+    auto input = residual_stream.view();
+    residual_stream = layers[l].forward(input);
+  }
+
+  return residual_stream;
 }
 } // namespace llama

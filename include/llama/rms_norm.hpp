@@ -5,14 +5,14 @@
 namespace llama {
 class RMSNorm {
 private:
-  tensor::TensorView<float> weights;
+  tensor::TensorView<float> weights_;
 
 public:
-  explicit RMSNorm();
-  ~RMSNorm();
+  explicit RMSNorm() = default;
+  ~RMSNorm() = default;
 
-  void load_weights(std::string_view model_path, std::string_view tensor_name);
+  void set_weights(tensor::TensorView<float> weights);
 
-  tensor::Tensor<float> forward(tensor::TensorView<float> inputs);
+  tensor::Tensor<float> forward(tensor::TensorView<float> &inputs) const;
 };
 } // namespace llama
