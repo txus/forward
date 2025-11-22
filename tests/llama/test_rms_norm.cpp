@@ -7,7 +7,7 @@
 using namespace llama;
 using namespace tensor;
 
-TEST(RMSNormTest, Forward) {
+TEST(LlamaRMSNormTest, Forward) {
   size_t hidden_dim = 2;
   size_t batch_size = 1;
   size_t seq_len = 4;

@@ -7,7 +7,7 @@
 using namespace llama;
 using namespace tensor;
 
-TEST(LayerTest, Forward) {
+TEST(LlamaLayerTest, Forward) {
   Layer<bfloat16, CPU> layer{};
 
   const size_t batch_size = 1;

@@ -6,7 +6,7 @@
 
 using namespace tensor;
 
-TEST(LoaderTest, LoadFromSafetensors) {
+TEST(ForwardLoaderTest, LoadFromSafetensors) {
   auto path = std::string(TEST_MODEL_PATH "/model.safetensors");
   auto weights = loader::load_weights<bfloat16, CPU>(path, "model.embed_tokens.weight");
 

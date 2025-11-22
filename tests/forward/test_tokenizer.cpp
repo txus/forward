@@ -4,7 +4,7 @@
 
 #include "common/test_config.h"
 
-TEST(TokenizerTest, Roundtrip) {
+TEST(ForwardTokenizerTest, Roundtrip) {
   tokenizer::Tokenizer tok(TEST_MODEL_PATH "/tokenizer.json");
   const std::string_view prompt = "hello world";
 

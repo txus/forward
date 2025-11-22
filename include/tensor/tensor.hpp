@@ -100,7 +100,7 @@ private:
 public:
   explicit Tensor(Shape shape) : shape_(std::move(shape)) {
     size_t total = 1;
-    for (auto dim : shape) {
+    for (auto& dim : shape_) {
       total *= dim;
     }
     data_.resize(total);
@@ -126,7 +126,7 @@ public:
       throw std::out_of_range("cannot set beyond size");
     }
 
-    data_[idx] = value;
+    span()[idx] = value;
   }
 
   T item() const {

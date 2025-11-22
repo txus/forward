@@ -1,5 +1,7 @@
 # forward
 
+[![CI](https://github.com/txus/forward/actions/workflows/ci.yml/badge.svg)](https://github.com/txus/forward/actions/workflows/ci.yml)
+
 A simple inference engine. An excuse to learn C++ really.
 
 Requirements:

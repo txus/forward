@@ -11,32 +11,33 @@ release:
 
 .PHONY: app
 app:
-	@cd build && make forward && cd .. && ./build/apps/forward
+	@cmake --build build --target forward
+	@./build/apps/forward
 
-.PHONY: test
+.PHONY: tensor
 tensor:
-	@cd build && make test_tensor && ./tests/tensor/test_tensor
+	@cmake --build build --target test_tensor
+	@ctest --test-dir build -R "^Tensor" --output-on-failure
 
 .PHONY: llama
 llama:
-	@cd build && make test_llama && ./tests/llama/test_llama
+	@cmake --build build --target test_llama
+	@ctest --test-dir build -R "^Llama" --output-on-failure
 
 .PHONY: forward
 forward:
-	@cd build && make test_forward && ./tests/forward/test_forward
+	@cmake --build build --target test_forward
+	@ctest --test-dir build -R "^Forward" --output-on-failure
 
 .PHONY: test
-test: tensor llama forward
-	@cd build && ./tests/tensor/test_tensor && ./tests/llama/test_llama && ./tests/forward/test_forward
+test:
+	@cmake --build build
+	@ctest --test-dir build --output-on-failure
 
 
 .PHONY: lint
 lint:
 	@./scripts/lint.sh
-
-.PHONY: lint-fix
-lint-fix:
-	@./scripts/lint.sh --fix
 
 .PHONY: format
 format:

@@ -7,7 +7,7 @@
 using namespace llama;
 using namespace tensor;
 
-TEST(ModelTest, Forward) {
+TEST(LlamaModelTest, Forward) {
   Model<bfloat16, CPU> mod{ModelConfig{
       .vocab_size = 128,
       .hidden_dim = 32,
