@@ -31,4 +31,11 @@ jobs:
       run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
 
     - name: Test
-      run: ctest --test-dir build --output-on-failure --verbose
+      run: ctest --test-dir build --output-on-failure --output-junit test-results.xml
+
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: build/test-results.xml
+        check_name: Test Results
