@@ -7,104 +7,107 @@
 #define SAFETENSORS_CPP_IMPLEMENTATION
 #include <safetensors.hh>
 
-std::string to_string(safetensors::dtype dtype, const uint8_t *data) {
+// NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+std::string to_string(safetensors::dtype dtype, const uint8_t* data) {
   switch (dtype) {
   case safetensors::dtype::kBOOL: {
-    return std::to_string(data[0] ? 1 : 0);
+    return std::to_string((data[0] != 0U) ? 1 : 0);
   }
   case safetensors::dtype::kUINT8: {
     return std::to_string(data[0]);
   }
   case safetensors::dtype::kINT8: {
-    return std::to_string(*reinterpret_cast<const int8_t *>(data));
+    return std::to_string(*reinterpret_cast<const int8_t*>(data));
   }
   case safetensors::dtype::kUINT16: {
-    return std::to_string(*reinterpret_cast<const uint16_t *>(data));
+    return std::to_string(*reinterpret_cast<const uint16_t*>(data));
   }
   case safetensors::dtype::kINT16: {
-    return std::to_string(*reinterpret_cast<const int16_t *>(data));
+    return std::to_string(*reinterpret_cast<const int16_t*>(data));
   }
   case safetensors::dtype::kUINT32: {
-    return std::to_string(*reinterpret_cast<const uint32_t *>(data));
+    return std::to_string(*reinterpret_cast<const uint32_t*>(data));
   }
   case safetensors::dtype::kINT32: {
-    return std::to_string(*reinterpret_cast<const int32_t *>(data));
+    return std::to_string(*reinterpret_cast<const int32_t*>(data));
   }
   case safetensors::dtype::kUINT64: {
-    return std::to_string(*reinterpret_cast<const uint64_t *>(data));
+    return std::to_string(*reinterpret_cast<const uint64_t*>(data));
   }
   case safetensors::dtype::kINT64: {
-    return std::to_string(*reinterpret_cast<const int64_t *>(data));
+    return std::to_string(*reinterpret_cast<const int64_t*>(data));
   }
   case safetensors::dtype::kFLOAT16: {
-    return std::to_string(
-        safetensors::fp16_to_float(*reinterpret_cast<const uint16_t *>(data)));
+    return std::to_string(safetensors::fp16_to_float(*reinterpret_cast<const uint16_t*>(data)));
   }
   case safetensors::dtype::kBFLOAT16: {
-    return std::to_string(safetensors::bfloat16_to_float(
-        *reinterpret_cast<const int64_t *>(data)));
+    return std::to_string(safetensors::bfloat16_to_float(*reinterpret_cast<const int64_t*>(data)));
   }
   case safetensors::dtype::kFLOAT32: {
-    return std::to_string(*reinterpret_cast<const float *>(data));
+    return std::to_string(*reinterpret_cast<const float*>(data));
   }
   case safetensors::dtype::kFLOAT64: {
-    return std::to_string(*reinterpret_cast<const double *>(data));
+    return std::to_string(*reinterpret_cast<const double*>(data));
   }
   }
 
-  return std::string("???");
+  return {"???"};
 }
+// NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 
-std::string to_string_snipped(const safetensors::tensor_t &t,
-                              const uint8_t *databuffer, size_t N = 8) {
-  std::stringstream ss;
-  size_t nitems = safetensors::get_shape_size(t);
-  size_t itembytes = safetensors::get_dtype_bytes(t.dtype);
+std::string to_string_snipped(const safetensors::tensor_t& tensor, const uint8_t* databuffer,
+                              size_t count = 8) {
+  std::stringstream string_stream;
+  size_t nitems = safetensors::get_shape_size(tensor);
+  size_t itembytes = safetensors::get_dtype_bytes(tensor.dtype);
 
-  if ((N == 0) || ((N * 2) >= nitems)) {
-    ss << "[";
+  if ((count == 0) || ((count * 2) >= nitems)) {
+    string_stream << "[";
     for (size_t i = 0; i < nitems; i++) {
       if (i > 0) {
-        ss << ", ";
+        string_stream << ", ";
       }
-      ss << to_string(t.dtype, databuffer + t.data_offsets[0] + i * itembytes);
+      string_stream << to_string(tensor.dtype,
+                                 databuffer + tensor.data_offsets[0] + (i * itembytes));
     }
-    ss << "]";
+    string_stream << "]";
   } else {
-    ss << "[";
-    size_t head_end = (std::min)(N, nitems);
-    size_t tail_start = (std::max)(nitems - N, head_end);
+    string_stream << "[";
+    size_t head_end = (std::min)(count, nitems);
+    size_t tail_start = (std::max)(nitems - count, head_end);
 
     for (size_t i = 0; i < head_end; i++) {
       if (i > 0) {
-        ss << ", ";
+        string_stream << ", ";
       }
-      ss << to_string(t.dtype, databuffer + t.data_offsets[0] + i * itembytes);
+      string_stream << to_string(tensor.dtype,
+                                 databuffer + tensor.data_offsets[0] + (i * itembytes));
     }
 
-    ss << ", ..., ";
+    string_stream << ", ..., ";
 
     for (size_t i = tail_start; i < nitems; i++) {
       if (i > tail_start) {
-        ss << ", ";
+        string_stream << ", ";
       }
-      ss << to_string(t.dtype, databuffer + t.data_offsets[0] + i * itembytes);
+      string_stream << to_string(tensor.dtype,
+                                 databuffer + tensor.data_offsets[0] + (i * itembytes));
     }
 
-    ss << "]";
+    string_stream << "]";
   }
 
-  return ss.str();
+  return string_stream.str();
 }
 
 safetensors::safetensors_t load(std::string_view(file_path)) {
-  safetensors::safetensors_t st;
+  safetensors::safetensors_t safetensors;
 
-  std::string warn, err;
-  bool ret =
-      safetensors::mmap_from_file(std::string(file_path), &st, &warn, &err);
+  std::string warn;
+  std::string err;
+  bool ret = safetensors::mmap_from_file(std::string(file_path), &safetensors, &warn, &err);
 
-  if (warn.size()) {
+  if (warn.size() != 0U) {
     std::println(std::cerr, "WARN: {}", warn);
   }
 
@@ -113,12 +116,12 @@ safetensors::safetensors_t load(std::string_view(file_path)) {
     throw "fatal error";
   }
 
-  if (!safetensors::validate_data_offsets(st, err)) {
+  if (!safetensors::validate_data_offsets(safetensors, err)) {
     std::println(std::cerr, "Invalid data offsets\nErr: {}", err);
     throw "fatal error";
   }
 
-  return st;
+  return safetensors;
 }
 
 namespace loader {
@@ -126,26 +129,27 @@ namespace loader {
 std::vector<std::string> all_tensor_names(std::string_view file_path) {
   std::vector<std::string> out;
 
-  safetensors::safetensors_t st = load(file_path);
+  safetensors::safetensors_t safetensors = load(file_path);
 
-  for (size_t i = 0; i < st.tensors.size(); i++) {
-    out.push_back(st.tensors.keys()[i]);
+  out.reserve(safetensors.tensors.size());
+  for (size_t i = 0; i < safetensors.tensors.size(); i++) {
+    out.push_back(safetensors.tensors.keys()[i]);
   }
 
   return out;
 }
 
 void inspect_safetensors(std::string_view file_path) {
-  safetensors::safetensors_t st = load(file_path);
+  safetensors::safetensors_t safetensors = load(file_path);
 
-  const uint8_t *databuffer{st.databuffer_addr};
+  const uint8_t* databuffer{safetensors.databuffer_addr};
 
   safetensors::tensor_t tensor;
 
-  for (size_t i = 0; i < st.tensors.size(); i++) {
-    std::string key = st.tensors.keys()[i];
+  for (size_t i = 0; i < safetensors.tensors.size(); i++) {
+    std::string key = safetensors.tensors.keys()[i];
     safetensors::tensor_t tensor;
-    st.tensors.at(i, &tensor);
+    safetensors.tensors.at(i, &tensor);
 
     std::cout << key << ": " << safetensors::get_dtype_str(tensor.dtype) << " ";
     std::cout << "[";
@@ -157,18 +161,18 @@ void inspect_safetensors(std::string_view file_path) {
     }
     std::cout << "]\n";
 
-    std::cout << "  data_offsets[" << std::to_string(tensor.data_offsets[0])
-              << ", " << std::to_string(tensor.data_offsets[1]) << "]\n";
+    std::cout << "  data_offsets[" << std::to_string(tensor.data_offsets[0]) << ", "
+              << std::to_string(tensor.data_offsets[1]) << "]\n";
     std::cout << "  " << to_string_snipped(tensor, databuffer) << "\n";
 
     // Print metadata
-    if (st.metadata.size()) {
+    if (safetensors.metadata.size() != 0U) {
       std::cout << "\n";
       std::cout << "__metadata__\n";
-      for (size_t i = 0; i < st.metadata.size(); i++) {
-        std::string key = st.metadata.keys()[i];
+      for (size_t i = 0; i < safetensors.metadata.size(); i++) {
+        std::string key = safetensors.metadata.keys()[i];
         std::string value;
-        st.metadata.at(i, &value);
+        safetensors.metadata.at(i, &value);
 
         std::cout << "  " << key << ":" << value << "\n";
       }
@@ -176,13 +180,12 @@ void inspect_safetensors(std::string_view file_path) {
   }
 }
 
-tensor::Tensor<tensor::bfloat16, tensor::CPU>
-load_from_safetensors(std::string_view file_path,
-                      std::string_view tensor_name) {
-  safetensors::safetensors_t st = load(file_path);
+tensor::Tensor<tensor::bfloat16, tensor::CPU> load_from_safetensors(std::string_view file_path,
+                                                                    std::string_view tensor_name) {
+  safetensors::safetensors_t safetensors = load(file_path);
 
   safetensors::tensor_t tensor;
-  bool res = st.tensors.at(std::string(tensor_name), &tensor);
+  bool res = safetensors.tensors.at(std::string(tensor_name), &tensor);
   if (!res) {
     throw std::runtime_error("Tensor not found");
   }
@@ -195,15 +198,15 @@ load_from_safetensors(std::string_view file_path,
 
   std::vector<tensor::bfloat16> data(nitems);
 
-  const tensor::bfloat16 *bf16_data =
-      reinterpret_cast<const tensor::bfloat16 *>(st.databuffer_addr +
-                                                 tensor.data_offsets[0]);
+  // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+  const auto* const bf16_data = reinterpret_cast<const tensor::bfloat16*>(
+      safetensors.databuffer_addr + tensor.data_offsets[0]);
+  // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 
-  std::memcpy(data.data(), st.databuffer_addr + tensor.data_offsets[0],
+  std::memcpy(data.data(), safetensors.databuffer_addr + tensor.data_offsets[0],
               nitems * sizeof(tensor::bfloat16));
 
-  tensor::Tensor<tensor::bfloat16, tensor::CPU> out(tensor.shape,
-                                                    std::move(data));
+  tensor::Tensor<tensor::bfloat16, tensor::CPU> out(tensor.shape, std::move(data));
 
   return out;
 }

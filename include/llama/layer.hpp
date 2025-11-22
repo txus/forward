@@ -13,10 +13,9 @@ public:
   explicit Layer() = default;
   ~Layer() = default;
 
-  void load_weights(
-      std::unordered_map<std::string, tensor::Tensor<T, D>> &weight_map,
-      size_t layer_idx);
+  void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map,
+                    size_t layer_idx);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<T, D> &inputs) const;
+  tensor::Tensor<T, D> forward(tensor::TensorView<T, D>& inputs) const;
 };
 } // namespace llama

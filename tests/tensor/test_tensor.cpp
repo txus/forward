@@ -1,8 +1,7 @@
+#include <fmt/format.h>
 #include <gtest/gtest.h>
 
 #include <common/test_utils.hpp>
-#include <fmt/format.h>
-
 #include <tensor/tensor.hpp>
 
 TEST(TensorTest, Stride) {
@@ -13,15 +12,15 @@ TEST(TensorTest, Stride) {
 }
 
 TEST(TensorTest, FillAndGet) {
-  tensor::Tensor<int, tensor::CPU> t({2, 4});
+  tensor::Tensor<int, tensor::CPU> tensor({2, 4});
 
-  t.fill_(4);
+  tensor.fill_(4);
 
   std::vector<int> fill_expected = {4, 4, 4, 4, 4, 4, 4, 4};
 
-  tensor_is_close<int>(t.span(), std::span(fill_expected));
+  tensor_is_close<int>(tensor.span(), std::span(fill_expected));
 
-  const auto sliced = t.view().get(0);
+  const auto sliced = tensor.view().get(0);
 
   std::vector<int> expected = {4, 4, 4, 4};
 
@@ -32,57 +31,57 @@ TEST(TensorTest, FillAndGet) {
 }
 
 TEST(TensorTest, Slice3d) {
-  tensor::Tensor<int, tensor::CPU> t({2, 4, 3});
-  const auto first = t.view().get(0);
+  tensor::Tensor<int, tensor::CPU> tensor({2, 4, 3});
+  const auto first = tensor.view().get(0);
   tensor::Shape shape = {4, 3};
 
   EXPECT_EQ(first.shape, shape);
 }
 
 TEST(TensorTest, Set) {
-  tensor::Tensor<int, tensor::CPU> t({2, 4});
+  tensor::Tensor<int, tensor::CPU> tensor({2, 4});
 
-  t.fill_(0);
+  tensor.fill_(0);
 
-  t.set_(2, 6);
+  tensor.set_(2, 6);
 
   std::vector<int> expected = {0, 0, 6, 0, 0, 0, 0, 0};
 
-  tensor_is_close<int>(t.span(), std::span(expected));
+  tensor_is_close<int>(tensor.span(), std::span(expected));
 }
 
 TEST(TensorTest, ConstructWithData) {
   std::vector<int> data = {0, 0, 6, 0, 0, 0, 0, 0};
 
-  tensor::Tensor<int, tensor::CPU> t({2, 4}, std::move(data));
+  tensor::Tensor<int, tensor::CPU> tensor({2, 4}, std::move(data));
 
   std::vector<int> expected = {0, 0, 6, 0, 0, 0, 0, 0};
 
-  tensor_is_close<int>(t.span(), std::span(expected));
+  tensor_is_close<int>(tensor.span(), std::span(expected));
 }
 
 TEST(TensorTest, Copy) {
-  tensor::Tensor<int, tensor::CPU> t({2, 4});
+  tensor::Tensor<int, tensor::CPU> tensor({2, 4});
 
-  auto view = t.view();
+  auto view = tensor.view();
 
   auto new_t = view.copy();
   new_t.set_(0, 6);
-  t.set_(0, 7);
+  tensor.set_(0, 7);
 
-  EXPECT_EQ(t.at(0), 7);
+  EXPECT_EQ(tensor.at(0), 7);
   EXPECT_EQ(new_t.at(0), 6);
 }
 
 TEST(TensorTest, CopySlice) {
-  tensor::Tensor<int, tensor::CPU> t({2, 4});
+  tensor::Tensor<int, tensor::CPU> tensor({2, 4});
 
-  auto view = t.view().get(0);
+  auto view = tensor.view().get(0);
 
   auto new_t = view.copy();
   new_t.set_(0, 6);
-  t.set_(0, 7);
+  tensor.set_(0, 7);
 
-  EXPECT_EQ(t.at(0), 7);
+  EXPECT_EQ(tensor.at(0), 7);
   EXPECT_EQ(new_t.at(0), 6);
 }

@@ -1,14 +1,14 @@
-#include "common/test_config.h"
 #include <gtest/gtest.h>
 
 #include <forward/loader.hpp>
+
+#include "common/test_config.h"
 
 using namespace tensor;
 
 TEST(LoaderTest, LoadFromSafetensors) {
   auto path = std::string(TEST_MODEL_PATH "/model.safetensors");
-  auto weights =
-      loader::load_weights<bfloat16, CPU>(path, "model.embed_tokens.weight");
+  auto weights = loader::load_weights<bfloat16, CPU>(path, "model.embed_tokens.weight");
 
   auto embed_weights = weights.at("model.embed_tokens.weight");
 
@@ -16,7 +16,7 @@ TEST(LoaderTest, LoadFromSafetensors) {
 
   EXPECT_EQ(embed_weights.shape(), shape);
 
-  auto w = embed_weights.view().span();
+  auto weights_ = embed_weights.view().span();
 
   fmt::println("Weights {}", embed_weights.view());
 
@@ -25,6 +25,6 @@ TEST(LoaderTest, LoadFromSafetensors) {
 
   bfloat16 epsilon = 0.0001;
 
-  EXPECT_LT(std::abs(w[0] - expected_first), epsilon);
-  EXPECT_LT(std::abs(w[w.size() - 1] - expected_last), epsilon);
+  EXPECT_LT(std::abs(weights_[0] - expected_first), epsilon);
+  EXPECT_LT(std::abs(weights_[weights_.size() - 1] - expected_last), epsilon);
 }

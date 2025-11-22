@@ -13,6 +13,6 @@ public:
 
   void set_weights(tensor::TensorView<T, D> weights);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<int, D> &token_ids) const;
+  tensor::Tensor<T, D> forward(tensor::TensorView<int, D>& token_ids) const;
 };
 } // namespace llama

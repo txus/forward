@@ -1,23 +1,22 @@
+#include <tokenizers_cpp.h>
+
+#include <forward/tokenizer.hpp>
 #include <fstream>
 #include <iostream>
 #include <string>
 
-#include <forward/tokenizer.hpp>
-#include <tokenizers_cpp.h>
-
 std::string LoadBytesFromFile(std::string_view path) {
-  std::ifstream fs(std::filesystem::path(path),
-                   std::ios::in | std::ios::binary);
-  if (fs.fail()) {
-    std::cerr << "Cannot open " << path << std::endl;
+  std::ifstream file_stream(std::filesystem::path(path), std::ios::in | std::ios::binary);
+  if (file_stream.fail()) {
+    std::cerr << "Cannot open " << path << '\n';
     exit(1);
   }
   std::string data;
-  fs.seekg(0, std::ios::end);
-  size_t size = static_cast<size_t>(fs.tellg());
-  fs.seekg(0, std::ios::beg);
+  file_stream.seekg(0, std::ios::end);
+  long size = static_cast<long>(file_stream.tellg());
+  file_stream.seekg(0, std::ios::beg);
   data.resize(size);
-  fs.read(data.data(), size);
+  file_stream.read(data.data(), size);
   return data;
 }
 
@@ -33,7 +32,7 @@ Tokenizer::~Tokenizer() = default;
 std::vector<int> Tokenizer::encode(std::string_view prompt) {
   return impl_->Encode(std::string(prompt));
 }
-std::string Tokenizer::decode(std::vector<int> &token_ids) {
+std::string Tokenizer::decode(std::vector<int>& token_ids) {
   return impl_->Decode(token_ids);
 }
 

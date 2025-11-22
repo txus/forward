@@ -1,7 +1,7 @@
 #include <common/test_config.h>
-#include <common/test_utils.hpp>
 #include <gtest/gtest.h>
 
+#include <common/test_utils.hpp>
 #include <llama/model.hpp>
 
 using namespace llama;
@@ -20,7 +20,7 @@ TEST(ModelTest, Forward) {
 
   auto input_ = Tensor<int, CPU>{{1, 4}};
 
-  auto v = input_.view();
+  auto view = input_.view();
 
-  auto output = mod.forward(v);
+  auto output = mod.forward(view);
 }

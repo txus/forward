@@ -24,11 +24,10 @@ public:
 
   ModelConfig config;
   llama::Embedding<T, D> embed;
-  std::vector<llama::Layer<T, D>> layers;
+  std::vector<llama::Layer<T, D>> layers{};
 
-  void load_weights(
-      std::unordered_map<std::string, tensor::Tensor<T, D>> &weight_map);
+  void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<int, D> &token_ids) const;
+  tensor::Tensor<T, D> forward(tensor::TensorView<int, D>& token_ids) const;
 };
 } // namespace llama

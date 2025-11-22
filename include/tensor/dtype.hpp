@@ -1,43 +1,41 @@
 #pragma once
 
-#include <bit>
 #include <fmt/format.h>
+
+#include <bit>
 #include <type_traits>
 
-namespace tensor {
-namespace dtype {
+namespace tensor::dtype {
 struct bfloat16 {
   uint16_t bits;
 
   bfloat16() = default;
-  bfloat16(float f) { // extract top 16 bits
-    uint32_t f32_bits = std::bit_cast<uint32_t>(f);
-
-    // keep only the top 16 bits
+  bfloat16(float value) { // extract top 16 bits
+    auto f32_bits = std::bit_cast<uint32_t>(value);
     bits = static_cast<uint16_t>(f32_bits >> 16);
   }
 
   // pad with zeros at the bottom
   operator float() const {
-    uint32_t f32_bits = static_cast<uint32_t>(bits << 16);
+    auto f32_bits = static_cast<uint32_t>(bits << 16);
 
     return std::bit_cast<float>(f32_bits);
   };
 
   bfloat16 operator+(bfloat16 other) const {
-    return bfloat16(float(*this) + float(other));
+    return {float(*this) + float(other)};
   }
 
   bfloat16 operator-(bfloat16 other) const {
-    return bfloat16(float(*this) - float(other));
+    return {float(*this) - float(other)};
   }
 
   bfloat16 operator*(bfloat16 other) const {
-    return bfloat16(float(*this) * float(other));
+    return {float(*this) * float(other)};
   }
 
   bfloat16 operator/(bfloat16 other) const {
-    return bfloat16(float(*this) / float(other));
+    return {float(*this) / float(other)};
   }
 };
 
@@ -51,19 +49,20 @@ concept DType = is_dtype<D>::value;
 
 template <typename T> struct dtype_name;
 template <> struct dtype_name<bfloat16> {
-  static constexpr const char *value = "bfloat16";
+  static constexpr const char* value = "bfloat16";
 };
 template <> struct dtype_name<int> {
-  static constexpr const char *value = "int";
+  static constexpr const char* value = "int";
 };
-} // namespace dtype
-} // namespace tensor
+} // namespace tensor::dtype
 
 template <> struct fmt::formatter<tensor::dtype::bfloat16> {
-  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+  static constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
 
   template <typename FormatContext>
-  auto format(const tensor::dtype::bfloat16 &bf16, FormatContext &ctx) const {
+  auto format(const tensor::dtype::bfloat16& bf16, FormatContext& ctx) const {
     return fmt::format_to(ctx.out(), "{}", float(bf16));
   }
 };

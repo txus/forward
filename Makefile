@@ -30,6 +30,20 @@ test: tensor llama forward
 	@cd build && ./tests/tensor/test_tensor && ./tests/llama/test_llama && ./tests/forward/test_forward
 
 
+.PHONY: lint
+lint:
+	@./scripts/lint.sh
+
+.PHONY: lint-fix
+lint-fix:
+	@./scripts/lint.sh --fix
+
+.PHONY: format
+format:
+	@echo "Formatting C++ files..."
+	@find src include tests apps -type f \( -name "*.cpp" -o -name "*.hpp" \) -exec clang-format -i {} +
+	@echo "✓ Formatting complete!"
+
 .PHONY: clean
 clean:
 	@rm -rf build*/ || true

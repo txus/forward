@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
-#include <tensor/tensor.hpp>
 
 #include <common/test_utils.hpp>
-
 #include <llama/embedding.hpp>
+#include <tensor/tensor.hpp>
 
 using namespace llama;
 using namespace tensor;
@@ -16,8 +15,9 @@ TEST(EmbeddingTest, Forward) {
 
   Tensor<bfloat16, CPU> weights_{{vocab_size, hidden_dim}};
   weights_.fill_(0.0);
-  for (int i = 0; i < weights_.size(); ++i)
-    weights_.set_(i, i);
+  for (int i = 0; i < weights_.size(); ++i) {
+    weights_.set_(i, float(i));
+  }
 
   auto weights = weights_.view();
 
@@ -26,8 +26,9 @@ TEST(EmbeddingTest, Forward) {
 
   Tensor<int, CPU> inputs_{{batch_size, seq_len}};
   inputs_.fill_(1);
-  for (int i = 0; i < inputs_.size(); ++i)
+  for (int i = 0; i < inputs_.size(); ++i) {
     inputs_.set_(i, i % 4);
+  }
 
   auto inputs = inputs_.view();
 

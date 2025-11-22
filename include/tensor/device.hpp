@@ -2,8 +2,7 @@
 
 #include <type_traits>
 
-namespace tensor {
-namespace device {
+namespace tensor::device {
 struct CPU {};
 struct CUDA {};
 
@@ -17,10 +16,9 @@ concept Device = is_device<D>::value;
 
 template <typename D> struct device_name;
 template <> struct device_name<CPU> {
-  static constexpr const char *value = "CPU";
+  static constexpr const char* value = "CPU";
 };
 template <> struct device_name<CUDA> {
-  static constexpr const char *value = "CUDA";
+  static constexpr const char* value = "CUDA";
 };
-} // namespace device
-} // namespace tensor
+} // namespace tensor::device

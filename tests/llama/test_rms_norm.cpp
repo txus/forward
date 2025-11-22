@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
-#include <tensor/tensor.hpp>
 
 #include <common/test_utils.hpp>
-
 #include <llama/rms_norm.hpp>
+#include <tensor/tensor.hpp>
 
 using namespace llama;
 using namespace tensor;
@@ -20,7 +19,7 @@ TEST(RMSNormTest, Forward) {
   Tensor<bfloat16, CPU> inputs_{{batch_size, seq_len, hidden_dim}};
   // arange
   for (int i = 0; i < inputs_.size(); ++i) {
-    inputs_.span()[i] = i;
+    inputs_.span()[i] = float(i);
   }
   auto inputs = inputs_.view();
 

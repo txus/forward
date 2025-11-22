@@ -1,7 +1,7 @@
 #include <common/test_config.h>
-#include <common/test_utils.hpp>
 #include <gtest/gtest.h>
 
+#include <common/test_utils.hpp>
 #include <llama/layer.hpp>
 
 using namespace llama;

@@ -1,17 +1,16 @@
 #include <forward/loader.hpp>
 #include <llama/embedding.hpp>
+#include <utility>
 
 using namespace llama;
 using namespace tensor;
 
-template <DType T, Device D>
-void Embedding<T, D>::set_weights(TensorView<T, D> weights) {
-  weights_ = weights;
+template <DType T, Device D> void Embedding<T, D>::set_weights(TensorView<T, D> weights) {
+  weights_ = std::move(weights);
 }
 
 template <>
-Tensor<bfloat16, CPU>
-Embedding<bfloat16, CPU>::forward(TensorView<int, CPU> &token_ids) const {
+Tensor<bfloat16, CPU> Embedding<bfloat16, CPU>::forward(TensorView<int, CPU>& token_ids) const {
   const auto w_shape = weights_.shape;
 
   const size_t vocab_size = w_shape[0];
@@ -26,18 +25,17 @@ Embedding<bfloat16, CPU>::forward(TensorView<int, CPU> &token_ids) const {
   const auto ids_span = token_ids.span();
   auto out_span = out.span();
 
-  for (size_t b = 0; b < batch_size; ++b) {
-    for (size_t s = 0; s < seq_len; ++s) {
+  for (size_t row_idx = 0; row_idx < batch_size; ++row_idx) {
+    for (size_t seq_pos = 0; seq_pos < seq_len; ++seq_pos) {
       // take the sth token
-      size_t i = b * seq_len + s;
-      int tok_id = ids_span[i];
+      size_t idx = (row_idx * seq_len) + seq_pos;
+      int tok_id = ids_span[idx];
       assert(tok_id >= 0 && static_cast<size_t>(tok_id) < vocab_size);
 
       size_t src_off = static_cast<size_t>(tok_id) * hidden_dim;
-      size_t dest_off = i * hidden_dim;
+      size_t dest_off = idx * hidden_dim;
 
-      std::copy_n(w_span.data() + src_off, hidden_dim,
-                  out_span.data() + dest_off);
+      std::copy_n(w_span.data() + src_off, hidden_dim, out_span.data() + dest_off);
     }
   }
 

@@ -1,7 +1,8 @@
-#include "common/test_config.h"
 #include <gtest/gtest.h>
 
 #include <forward/tokenizer.hpp>
+
+#include "common/test_config.h"
 
 TEST(TokenizerTest, Roundtrip) {
   tokenizer::Tokenizer tok(TEST_MODEL_PATH "/tokenizer.json");

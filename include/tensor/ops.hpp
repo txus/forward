@@ -5,6 +5,6 @@
 namespace tensor {
 
 template <DType T, Device D>
-Tensor<T, D> add(TensorView<T, D> &a, TensorView<T, D> &b);
+Tensor<T, D> add(TensorView<T, D>& tensor_a, TensorView<T, D>& tensor_b);
 
 } // namespace tensor
