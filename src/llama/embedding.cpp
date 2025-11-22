@@ -1,14 +1,17 @@
 #include <forward/loader.hpp>
 #include <llama/embedding.hpp>
 
-namespace llama {
+using namespace llama;
+using namespace tensor;
 
-void Embedding::set_weights(tensor::TensorView<float> weights) {
+template <DType T, Device D>
+void Embedding<T, D>::set_weights(TensorView<T, D> weights) {
   weights_ = weights;
 }
 
-tensor::Tensor<float>
-Embedding::forward(tensor::TensorView<int> &token_ids) const {
+template <>
+Tensor<bfloat16, CPU>
+Embedding<bfloat16, CPU>::forward(TensorView<int, CPU> &token_ids) const {
   const auto w_shape = weights_.shape;
 
   const size_t vocab_size = w_shape[0];
@@ -17,7 +20,7 @@ Embedding::forward(tensor::TensorView<int> &token_ids) const {
   const size_t batch_size = token_ids.shape[0];
   const size_t seq_len = token_ids.shape[1];
 
-  tensor::Tensor<float> out{{batch_size, seq_len, hidden_dim}};
+  Tensor<bfloat16, CPU> out{{batch_size, seq_len, hidden_dim}};
 
   const auto w_span = weights_.span();
   const auto ids_span = token_ids.span();
@@ -40,4 +43,5 @@ Embedding::forward(tensor::TensorView<int> &token_ids) const {
 
   return out;
 }
-} // namespace llama
+
+template class llama::Embedding<bfloat16, CPU>;

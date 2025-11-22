@@ -13,7 +13,7 @@ struct ModelConfig {
   size_t num_hidden_layers;
 };
 
-class Model {
+template <tensor::DType T, tensor::Device D> class Model {
 private:
   bool loaded_ = false;
 
@@ -23,12 +23,12 @@ public:
   ~Model() = default;
 
   ModelConfig config;
-  llama::Embedding embed;
-  std::vector<llama::Layer> layers;
+  llama::Embedding<T, D> embed;
+  std::vector<llama::Layer<T, D>> layers;
 
   void load_weights(
-      std::unordered_map<std::string, tensor::Tensor<float>> &weight_map);
+      std::unordered_map<std::string, tensor::Tensor<T, D>> &weight_map);
 
-  tensor::Tensor<float> forward(tensor::TensorView<int> &token_ids) const;
+  tensor::Tensor<T, D> forward(tensor::TensorView<int, D> &token_ids) const;
 };
 } // namespace llama

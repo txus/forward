@@ -13,7 +13,7 @@ TEST(TensorTest, Stride) {
 }
 
 TEST(TensorTest, FillAndGet) {
-  tensor::Tensor<int> t({2, 4});
+  tensor::Tensor<int, tensor::CPU> t({2, 4});
 
   t.fill_(4);
 
@@ -32,7 +32,7 @@ TEST(TensorTest, FillAndGet) {
 }
 
 TEST(TensorTest, Slice3d) {
-  tensor::Tensor<int> t({2, 4, 3});
+  tensor::Tensor<int, tensor::CPU> t({2, 4, 3});
   const auto first = t.view().get(0);
   tensor::Shape shape = {4, 3};
 
@@ -40,7 +40,7 @@ TEST(TensorTest, Slice3d) {
 }
 
 TEST(TensorTest, Set) {
-  tensor::Tensor<int> t({2, 4});
+  tensor::Tensor<int, tensor::CPU> t({2, 4});
 
   t.fill_(0);
 
@@ -54,7 +54,7 @@ TEST(TensorTest, Set) {
 TEST(TensorTest, ConstructWithData) {
   std::vector<int> data = {0, 0, 6, 0, 0, 0, 0, 0};
 
-  tensor::Tensor<int> t({2, 4}, std::move(data));
+  tensor::Tensor<int, tensor::CPU> t({2, 4}, std::move(data));
 
   std::vector<int> expected = {0, 0, 6, 0, 0, 0, 0, 0};
 
@@ -62,7 +62,7 @@ TEST(TensorTest, ConstructWithData) {
 }
 
 TEST(TensorTest, Copy) {
-  tensor::Tensor<int> t({2, 4});
+  tensor::Tensor<int, tensor::CPU> t({2, 4});
 
   auto view = t.view();
 
@@ -75,7 +75,7 @@ TEST(TensorTest, Copy) {
 }
 
 TEST(TensorTest, CopySlice) {
-  tensor::Tensor<int> t({2, 4});
+  tensor::Tensor<int, tensor::CPU> t({2, 4});
 
   auto view = t.view().get(0);
 

@@ -7,10 +7,12 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-namespace llama {
+using namespace llama;
+using namespace tensor;
 
-Model::Model(ModelConfig config) : config(config) {}
-Model::Model(std::string_view model_path) {
+template <DType T, Device D>
+Model<T, D>::Model(ModelConfig config) : config(config) {}
+template <DType T, Device D> Model<T, D>::Model(std::string_view model_path) {
   std::ifstream f((std::string(model_path)));
 
   assert(f.is_open());
@@ -22,12 +24,13 @@ Model::Model(std::string_view model_path) {
                        .num_hidden_layers = data["num_hidden_layers"]};
 }
 
-void Model::load_weights(
-    std::unordered_map<std::string, tensor::Tensor<float>> &weight_map) {
+template <DType T, Device D>
+void Model<T, D>::load_weights(
+    std::unordered_map<std::string, Tensor<T, D>> &weight_map) {
   embed.set_weights(weight_map.at("model.embed_tokens.weight").view());
 
   for (int l = 0; l < config.num_hidden_layers; ++l) {
-    auto layer = llama::Layer{};
+    auto layer = Layer<T, D>{};
 
     layer.load_weights(weight_map, l);
 
@@ -37,7 +40,8 @@ void Model::load_weights(
   loaded_ = true;
 }
 
-tensor::Tensor<float> Model::forward(tensor::TensorView<int> &token_ids) const {
+template <DType T, Device D>
+Tensor<T, D> Model<T, D>::forward(TensorView<int, D> &token_ids) const {
   assert(loaded_ == true);
 
   fmt::println("Embedding tokens {}", token_ids);
@@ -51,4 +55,5 @@ tensor::Tensor<float> Model::forward(tensor::TensorView<int> &token_ids) const {
 
   return residual_stream;
 }
-} // namespace llama
+
+template class llama::Model<bfloat16, CPU>;

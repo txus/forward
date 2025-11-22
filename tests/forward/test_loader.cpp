@@ -3,9 +3,12 @@
 
 #include <forward/loader.hpp>
 
+using namespace tensor;
+
 TEST(LoaderTest, LoadFromSafetensors) {
   auto path = std::string(TEST_MODEL_PATH "/model.safetensors");
-  auto weights = loader::load_weights(path, "model.embed_tokens.weight");
+  auto weights =
+      loader::load_weights<bfloat16, CPU>(path, "model.embed_tokens.weight");
 
   auto embed_weights = weights.at("model.embed_tokens.weight");
 
@@ -15,10 +18,12 @@ TEST(LoaderTest, LoadFromSafetensors) {
 
   auto w = embed_weights.view().span();
 
-  float expected_first = 0.004517;
-  float expected_last = 0.006622;
+  fmt::println("Weights {}", embed_weights.view());
 
-  float epsilon = 0.0001;
+  bfloat16 expected_first = 0.004517;
+  bfloat16 expected_last = 0.006622;
+
+  bfloat16 epsilon = 0.0001;
 
   EXPECT_LT(std::abs(w[0] - expected_first), epsilon);
   EXPECT_LT(std::abs(w[w.size() - 1] - expected_last), epsilon);

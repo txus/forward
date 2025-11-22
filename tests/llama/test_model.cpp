@@ -4,8 +4,11 @@
 
 #include <llama/model.hpp>
 
+using namespace llama;
+using namespace tensor;
+
 TEST(ModelTest, Forward) {
-  llama::Model mod{llama::ModelConfig{
+  Model<bfloat16, CPU> mod{ModelConfig{
       .vocab_size = 128,
       .hidden_dim = 32,
       .num_hidden_layers = 1,
@@ -15,7 +18,7 @@ TEST(ModelTest, Forward) {
 
   mod.load_weights(weights);
 
-  auto input_ = tensor::Tensor<int>{{1, 4}};
+  auto input_ = Tensor<int, CPU>{{1, 4}};
 
   auto v = input_.view();
 

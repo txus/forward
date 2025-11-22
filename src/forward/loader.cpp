@@ -176,8 +176,9 @@ void inspect_safetensors(std::string_view file_path) {
   }
 }
 
-tensor::Tensor<float> load_from_safetensors(std::string_view file_path,
-                                            std::string_view tensor_name) {
+tensor::Tensor<tensor::bfloat16, tensor::CPU>
+load_from_safetensors(std::string_view file_path,
+                      std::string_view tensor_name) {
   safetensors::safetensors_t st = load(file_path);
 
   safetensors::tensor_t tensor;
@@ -192,15 +193,17 @@ tensor::Tensor<float> load_from_safetensors(std::string_view file_path,
 
   size_t nitems = safetensors::get_shape_size(tensor);
 
-  std::vector<float> data(nitems);
+  std::vector<tensor::bfloat16> data(nitems);
 
-  const uint16_t *bf16_data = reinterpret_cast<const uint16_t *>(
-      st.databuffer_addr + tensor.data_offsets[0]);
+  const tensor::bfloat16 *bf16_data =
+      reinterpret_cast<const tensor::bfloat16 *>(st.databuffer_addr +
+                                                 tensor.data_offsets[0]);
 
-  std::transform(bf16_data, bf16_data + nitems, data.begin(),
-                 safetensors::bfloat16_to_float);
+  std::memcpy(data.data(), st.databuffer_addr + tensor.data_offsets[0],
+              nitems * sizeof(tensor::bfloat16));
 
-  tensor::Tensor<float> out(tensor.shape, std::move(data));
+  tensor::Tensor<tensor::bfloat16, tensor::CPU> out(tensor.shape,
+                                                    std::move(data));
 
   return out;
 }

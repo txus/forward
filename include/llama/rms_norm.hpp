@@ -3,16 +3,17 @@
 #include <tensor/tensor.hpp>
 
 namespace llama {
-class RMSNorm {
+
+template <tensor::DType T, tensor::Device D> class RMSNorm {
 private:
-  tensor::TensorView<float> weights_;
+  tensor::TensorView<T, D> weights_;
 
 public:
   explicit RMSNorm() = default;
   ~RMSNorm() = default;
 
-  void set_weights(tensor::TensorView<float> weights);
+  void set_weights(tensor::TensorView<T, D> weights);
 
-  tensor::Tensor<float> forward(tensor::TensorView<float> &inputs) const;
+  tensor::Tensor<T, D> forward(tensor::TensorView<T, D> &inputs) const;
 };
 } // namespace llama

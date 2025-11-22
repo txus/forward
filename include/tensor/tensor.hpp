@@ -8,7 +8,13 @@
 #include <stdexcept>
 #include <vector>
 
+#include <tensor/device.hpp>
+#include <tensor/dtype.hpp>
+
 namespace tensor {
+
+using namespace device;
+using namespace dtype;
 
 typedef std::vector<size_t> Shape;
 
@@ -27,9 +33,9 @@ inline const size_t stride(Shape shape, size_t dim) {
   return stride_;
 }
 
-template <typename T> class Tensor;
+template <DType T, Device D> class Tensor;
 
-template <typename T> struct TensorView {
+template <DType T, Device D> struct TensorView {
   std::span<T> data;
   Shape shape;
 
@@ -62,8 +68,8 @@ template <typename T> struct TensorView {
     return TensorView{std::span<T>(data.data() + offset, sub_size), new_shape};
   }
 
-  Tensor<T> copy() const {
-    Tensor<T> t{shape};
+  Tensor<T, D> copy() const {
+    Tensor<T, D> t{shape};
 
     assert(t.size() == data.size());
     std::copy_n(data.data(), data.size(), t.data());
@@ -79,7 +85,7 @@ template <typename T> struct TensorView {
   std::span<const T> span() const { return data; }
 };
 
-template <typename T> class Tensor {
+template <DType T, Device D> class Tensor {
 private:
   std::vector<T> data_;
   Shape shape_;
@@ -95,8 +101,8 @@ public:
       : shape_(shape), data_(std::move(data)) {};
   ~Tensor() = default;
 
-  TensorView<T> view() { return TensorView<T>{span(), shape()}; }
-  TensorView<T> view() const { return TensorView<T>{span(), shape()}; }
+  TensorView<T, D> view() { return TensorView<T, D>{span(), shape()}; }
+  TensorView<T, D> view() const { return TensorView<T, D>{span(), shape()}; }
 
   void fill_(T value) { std::fill(data_.begin(), data_.end(), value); }
 
@@ -156,17 +162,19 @@ void assert_all_close(T &&a, T &&b, float eps,
 
 } // namespace tensor
 
-template <typename T> struct fmt::formatter<tensor::TensorView<T>> {
+template <tensor::DType T, tensor::Device D>
+struct fmt::formatter<tensor::TensorView<T, D>> {
   // no custom format spec for now -> just {}
   constexpr auto parse(format_parse_context &ctx) {
     return ctx.begin(); // no format options
   }
 
   template <typename FormatContext>
-  auto format(const tensor::TensorView<T> &tv, FormatContext &ctx) const {
+  auto format(const tensor::TensorView<T, D> &tv, FormatContext &ctx) const {
     auto out = ctx.out();
 
-    fmt::format_to(out, fmt::emphasis::bold, "<TensorView ");
+    fmt::format_to(out, "<Tensor<{}, {}> ", tensor::dtype::dtype_name<T>::value,
+                   tensor::device::device_name<D>::value);
     fmt::format_to(out, fmt::emphasis::italic, "shape=[");
 
     for (std::size_t i = 0; i < tv.shape.size(); ++i) {
@@ -187,14 +195,14 @@ template <typename T> struct fmt::formatter<tensor::TensorView<T>> {
 private:
   template <typename OutputIt>
   OutputIt format_tensor_view(OutputIt out,
-                              const tensor::TensorView<T> &tv) const {
+                              const tensor::TensorView<T, D> &tv) const {
     constexpr std::size_t max_elems_per_dim = 4; // tweak as you like
     return format_tensor_rec(out, tv, /*dim=*/0, /*offset=*/0,
                              max_elems_per_dim);
   }
 
   template <typename OutputIt>
-  OutputIt format_tensor_rec(OutputIt out, const tensor::TensorView<T> &tv,
+  OutputIt format_tensor_rec(OutputIt out, const tensor::TensorView<T, D> &tv,
                              std::size_t dim, std::size_t offset,
                              std::size_t max_elems) const {
     const auto &shape = tv.shape;

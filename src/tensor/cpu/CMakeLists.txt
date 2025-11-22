@@ -1,6 +1,6 @@
-file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/tensor/cpu/*.hpp")
+file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/tensor/*.hpp")
 
-add_library(tensor_cpu STATIC cpu.cpp)
+add_library(tensor_cpu STATIC ops.cpp)
 
 target_link_libraries(tensor_cpu
   PUBLIC tensor_core

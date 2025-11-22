@@ -2,13 +2,16 @@
 #include <llama/rms_norm.hpp>
 
 using namespace llama;
+using namespace tensor;
 
-void RMSNorm::set_weights(tensor::TensorView<float> weights) {
+template <DType T, Device D>
+void RMSNorm<T, D>::set_weights(TensorView<T, D> weights) {
   weights_ = weights;
 }
 
-tensor::Tensor<float>
-RMSNorm::forward(tensor::TensorView<float> &inputs) const {
+template <>
+Tensor<bfloat16, CPU>
+RMSNorm<bfloat16, CPU>::forward(TensorView<bfloat16, CPU> &inputs) const {
   const size_t batch_size = inputs.shape[0];
   const size_t seq_len = inputs.shape[1];
   const size_t hidden_dim = inputs.shape[2];
@@ -17,7 +20,7 @@ RMSNorm::forward(tensor::TensorView<float> &inputs) const {
 
   const auto w = weights_.span();
 
-  tensor::Tensor<float> out_{{batch_size, seq_len, hidden_dim}};
+  Tensor<bfloat16, CPU> out_{{batch_size, seq_len, hidden_dim}};
 
   auto out = out_.view();
 
@@ -26,20 +29,20 @@ RMSNorm::forward(tensor::TensorView<float> &inputs) const {
       const auto hid_span = inputs.get(b, s).span();
       auto out_span = out.get(b, s).span();
 
-      std::vector<float> buf{};
+      std::vector<bfloat16> buf{};
       buf.reserve(hidden_dim);
 
-      // calculate RMS
-      auto sum = 0.0;
+      // calculate RMS, accumulate in fp32
+      float sum = 0.0;
       for (int h = 0; h < hidden_dim; ++h) {
         sum += std::pow(hid_span[h], 2);
       }
 
-      auto rms = std::sqrt(sum / hid_span.size());
+      float rms = std::sqrt(sum / hid_span.size());
 
       // normalize values
       for (int h = 0; h < hidden_dim; ++h) {
-        buf[h] = (hid_span[h] / rms) * w[h];
+        buf[h] = bfloat16((float(hid_span[h]) / rms) * w[h]);
       }
 
       std::copy_n(std::span(buf).data(), hidden_dim, out_span.data());
@@ -48,3 +51,5 @@ RMSNorm::forward(tensor::TensorView<float> &inputs) const {
 
   return out_;
 }
+
+template class llama::RMSNorm<bfloat16, CPU>;

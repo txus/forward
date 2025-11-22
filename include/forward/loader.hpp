@@ -7,17 +7,17 @@ namespace loader {
 
 void inspect_safetensors(std::string_view file_path);
 std::vector<std::string> all_tensor_names(std::string_view file_path);
-tensor::Tensor<float> load_from_safetensors(std::string_view file_path,
-                                            std::string_view tensor_name);
+tensor::Tensor<tensor::bfloat16, tensor::CPU>
+load_from_safetensors(std::string_view file_path, std::string_view tensor_name);
 
-template <typename... Names>
+template <tensor::DType T, tensor::Device D, typename... Names>
   requires(std::conjunction_v<std::is_convertible<Names, std::string_view>...>)
-std::unordered_map<std::string, tensor::Tensor<float>>
+std::unordered_map<std::string, tensor::Tensor<T, D>>
 load_weights(std::string_view file_path, Names &&...names) {
 
   std::vector<std::string> name_list{std::string(std::string_view{names})...};
 
-  std::unordered_map<std::string, tensor::Tensor<float>> out;
+  std::unordered_map<std::string, tensor::Tensor<T, D>> out;
 
   for (auto &name : name_list) {
     auto tensor = load_from_safetensors(file_path, name);

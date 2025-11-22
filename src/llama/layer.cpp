@@ -1,9 +1,11 @@
 #include <llama/layer.hpp>
 
 using namespace llama;
+using namespace tensor;
 
-void Layer::load_weights(
-    std::unordered_map<std::string, tensor::Tensor<float>> &weight_map,
+template <DType T, Device D>
+void Layer<T, D>::load_weights(
+    std::unordered_map<std::string, Tensor<T, D>> &weight_map,
     size_t layer_idx) {
 
   const std::string key =
@@ -12,8 +14,11 @@ void Layer::load_weights(
   rms_norm_1.set_weights(weight_map.at(key).view());
 }
 
-tensor::Tensor<float> Layer::forward(tensor::TensorView<float> &inputs) const {
+template <DType T, Device D>
+Tensor<T, D> Layer<T, D>::forward(TensorView<T, D> &inputs) const {
   auto norm = rms_norm_1.forward(inputs);
 
   return norm;
 }
+
+template class llama::Layer<bfloat16, CPU>;
