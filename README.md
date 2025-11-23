@@ -7,7 +7,7 @@ A simple inference engine. An excuse to learn C++ really.
 Requirements:
 
 * CMake 3.11 or better; 3.14+ highly recommended.
-* A C++17 compatible compiler.
+* A C++26 compatible compiler (tested with Clang 20 and GCC 14).
 * Git
 * Doxygen
 

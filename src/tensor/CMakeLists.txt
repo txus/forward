@@ -21,7 +21,7 @@ target_include_directories(tensor_core
 
 target_compile_features(tensor_core
     INTERFACE
-        cxx_std_20
+        cxx_std_26
 )
 
 target_sources(tensor_core
