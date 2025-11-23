@@ -29,6 +29,35 @@ endif()
 
 include(FetchContent)
 
+# Declare all external dependencies in one place
+FetchContent_Declare(
+  fmtlib
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG 12.1.0
+)
+
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY https://github.com/nlohmann/json
+  GIT_TAG v3.12.0
+)
+
+FetchContent_Declare(
+  safetensors_cpp
+  GIT_REPOSITORY https://github.com/syoyo/safetensors-cpp.git
+  GIT_TAG 10f7d8f
+)
+set(SAFETENSORS_CPP_CXX_EXCEPTIONS ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+  tokenizers_cpp
+  GIT_REPOSITORY https://github.com/mlc-ai/tokenizers-cpp
+  GIT_TAG 55d53aa
+)
+
+# Make dependencies available
+FetchContent_MakeAvailable(fmtlib json safetensors_cpp tokenizers_cpp)
+
 # compiled library code
 add_subdirectory(src/tensor)
 add_subdirectory(src/llama)

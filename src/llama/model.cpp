@@ -37,6 +37,8 @@ void Model<T, D>::load_weights(
     layers.push_back(std::move(layer));
   }
 
+  norm.set_weights(weight_map.at("model.norm.weight").view());
+
   loaded_ = true;
 }
 
@@ -52,6 +54,11 @@ Tensor<T, D> Model<T, D>::forward(TensorView<int, D>& token_ids) const {
     auto input = residual_stream.view();
     residual_stream = layers[layer_idx].forward(input);
   }
+
+  auto residual_v = residual_stream.view();
+  residual_stream = norm.forward(residual_v);
+
+  // TODO: project to lm head
 
   return residual_stream;
 }

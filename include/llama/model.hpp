@@ -5,6 +5,8 @@
 #include <tensor/tensor.hpp>
 #include <unordered_map>
 
+#include "llama/rms_norm.hpp"
+
 namespace llama {
 
 struct ModelConfig {
@@ -25,6 +27,7 @@ public:
   ModelConfig config;
   llama::Embedding<T, D> embed;
   std::vector<llama::Layer<T, D>> layers{};
+  llama::RMSNorm<T, D> norm;
 
   void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map);
 

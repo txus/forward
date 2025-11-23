@@ -7,7 +7,8 @@
 namespace llama {
 template <tensor::DType T, tensor::Device D> class Layer {
 private:
-  llama::RMSNorm<T, D> rms_norm_1;
+  llama::RMSNorm<T, D> prenorm;
+  llama::RMSNorm<T, D> postnorm;
 
 public:
   explicit Layer() = default;

@@ -21,7 +21,10 @@ int main(int argc, char* argv[]) {
   // loader::inspect_safetensors("./tests/model/model.safetensors");
 
   auto weights = loader::load_weights<bfloat16, CPU>(
-      "./tests/model/model.safetensors", "model.embed_tokens.weight",
+      "./tests/model/model.safetensors",
+      // prologue
+      "model.embed_tokens.weight",
+      // prenorm
       "model.layers.0.input_layernorm.weight", "model.layers.1.input_layernorm.weight",
       "model.layers.2.input_layernorm.weight", "model.layers.3.input_layernorm.weight",
       "model.layers.4.input_layernorm.weight", "model.layers.5.input_layernorm.weight",
@@ -29,7 +32,26 @@ int main(int argc, char* argv[]) {
       "model.layers.8.input_layernorm.weight", "model.layers.9.input_layernorm.weight",
       "model.layers.10.input_layernorm.weight", "model.layers.11.input_layernorm.weight",
       "model.layers.12.input_layernorm.weight", "model.layers.13.input_layernorm.weight",
-      "model.layers.14.input_layernorm.weight", "model.layers.15.input_layernorm.weight");
+      "model.layers.14.input_layernorm.weight", "model.layers.15.input_layernorm.weight",
+      // postnorm
+      "model.layers.0.post_attention_layernorm.weight",
+      "model.layers.1.post_attention_layernorm.weight",
+      "model.layers.2.post_attention_layernorm.weight",
+      "model.layers.3.post_attention_layernorm.weight",
+      "model.layers.4.post_attention_layernorm.weight",
+      "model.layers.5.post_attention_layernorm.weight",
+      "model.layers.6.post_attention_layernorm.weight",
+      "model.layers.7.post_attention_layernorm.weight",
+      "model.layers.8.post_attention_layernorm.weight",
+      "model.layers.9.post_attention_layernorm.weight",
+      "model.layers.10.post_attention_layernorm.weight",
+      "model.layers.11.post_attention_layernorm.weight",
+      "model.layers.12.post_attention_layernorm.weight",
+      "model.layers.13.post_attention_layernorm.weight",
+      "model.layers.14.post_attention_layernorm.weight",
+      "model.layers.15.post_attention_layernorm.weight",
+      // epilogue
+      "model.norm.weight");
   mod.load_weights(weights);
 
   const auto* prompt = "Hello, world";

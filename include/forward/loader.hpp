@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <tensor/tensor.hpp>
 #include <unordered_map>
 
@@ -20,8 +21,13 @@ std::unordered_map<std::string, tensor::Tensor<T, D>> load_weights(std::string_v
   std::unordered_map<std::string, tensor::Tensor<T, D>> out;
 
   for (auto& name : name_list) {
-    auto tensor = load_from_safetensors(file_path, name);
-    out.emplace(name, std::move(tensor));
+    try {
+      auto tensor = load_from_safetensors(file_path, name);
+      out.emplace(name, std::move(tensor));
+    } catch (std::runtime_error) {
+      fmt::println("Error loading tensor {}", name);
+      throw;
+    }
   }
 
   return out;

@@ -24,13 +24,29 @@ empty_weights(const llama::ModelConfig& config) {
   for (int layer_idx = 0; std::cmp_less(layer_idx, config.num_hidden_layers); ++layer_idx) {
     std::vector<size_t> shape{config.hidden_dim};
 
-    const std::string key = fmt::format("model.layers.{}.input_layernorm.weight", layer_idx);
+    const std::string prenorm_key =
+        fmt::format("model.layers.{}.input_layernorm.weight", layer_idx);
 
-    tensor::Tensor<tensor::bfloat16, tensor::CPU> weights{shape};
-    weights.fill_(tensor::bfloat16(0.1));
+    tensor::Tensor<tensor::bfloat16, tensor::CPU> prenorm_weights{shape};
+    prenorm_weights.fill_(tensor::bfloat16(0.1));
 
-    out.insert_or_assign(key, std::move(weights));
+    out.insert_or_assign(prenorm_key, std::move(prenorm_weights));
+
+    const std::string postnorm_key =
+        fmt::format("model.layers.{}.post_attention_layernorm.weight", layer_idx);
+
+    tensor::Tensor<tensor::bfloat16, tensor::CPU> postnorm_weights{shape};
+    postnorm_weights.fill_(tensor::bfloat16(0.1));
+
+    out.insert_or_assign(postnorm_key, std::move(prenorm_weights));
   }
+
+  std::vector<size_t> shape{config.hidden_dim};
+
+  tensor::Tensor<tensor::bfloat16, tensor::CPU> norm_weights{shape};
+  norm_weights.fill_(tensor::bfloat16(0.1));
+
+  out.insert_or_assign("model.norm.weight", std::move(norm_weights));
 
   return out;
 }
