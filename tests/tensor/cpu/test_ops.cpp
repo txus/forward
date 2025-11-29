@@ -39,3 +39,20 @@ TEST(TensorCPUTest, AddBF16) {
 
   tensor_is_close<bfloat16>(result.span(), exp.span());
 }
+
+TEST(TensorCPUTest, MatmulBF16) {
+  Tensor<bfloat16, CPU> tensor_a({2, 4});
+  Tensor<bfloat16, CPU> tensor_b({4, 2});
+  Tensor<bfloat16, CPU> exp({2, 2});
+
+  tensor_a.fill_(bfloat16(2.0));
+  tensor_b.fill_(bfloat16(3.0));
+  exp.fill_(bfloat16(24.0));
+
+  auto a_v = tensor_a.view();
+  auto b_v = tensor_b.view();
+
+  Tensor<bfloat16, CPU> result = matmul(a_v, b_v);
+
+  tensor_is_close<bfloat16>(result.span(), exp.span());
+}

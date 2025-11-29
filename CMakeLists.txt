@@ -60,6 +60,7 @@ FetchContent_MakeAvailable(fmtlib json safetensors_cpp tokenizers_cpp)
 
 # compiled library code
 add_subdirectory(src/tensor)
+add_subdirectory(src/nn)
 add_subdirectory(src/llama)
 add_subdirectory(src/forward)
 

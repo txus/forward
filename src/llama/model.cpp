@@ -42,8 +42,7 @@ void Model<T, D>::load_weights(
   loaded_ = true;
 }
 
-template <DType T, Device D>
-Tensor<T, D> Model<T, D>::forward(TensorView<int, D>& token_ids) const {
+template <DType T, Device D> Tensor<T, D> Model<T, D>::forward(TensorView<int, D> token_ids) const {
   assert(loaded_);
 
   fmt::println("Embedding tokens {}", token_ids);

@@ -1,11 +1,10 @@
 #pragma once
 
-#include <llama/embedding.hpp>
 #include <llama/layer.hpp>
+#include <nn/embedding.hpp>
+#include <nn/rms_norm.hpp>
 #include <tensor/tensor.hpp>
 #include <unordered_map>
-
-#include "llama/rms_norm.hpp"
 
 namespace llama {
 
@@ -25,12 +24,12 @@ public:
   ~Model() = default;
 
   ModelConfig config;
-  llama::Embedding<T, D> embed;
+  nn::Embedding<T, D> embed;
   std::vector<llama::Layer<T, D>> layers{};
-  llama::RMSNorm<T, D> norm;
+  nn::RMSNorm<T, D> norm;
 
   void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<int, D>& token_ids) const;
+  tensor::Tensor<T, D> forward(tensor::TensorView<int, D> token_ids) const;
 };
 } // namespace llama

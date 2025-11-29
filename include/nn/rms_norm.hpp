@@ -2,7 +2,7 @@
 
 #include <tensor/tensor.hpp>
 
-namespace llama {
+namespace nn {
 
 template <tensor::DType T, tensor::Device D> class RMSNorm {
 private:
@@ -14,6 +14,6 @@ public:
 
   void set_weights(tensor::TensorView<T, D> weights);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<T, D>& inputs) const;
+  tensor::Tensor<T, D> forward(tensor::TensorView<T, D> inputs) const;
 };
-} // namespace llama
+} // namespace nn

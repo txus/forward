@@ -14,5 +14,6 @@ configure_file(
 
 # compiled library code
 add_subdirectory(tensor)
+add_subdirectory(nn)
 add_subdirectory(llama)
 add_subdirectory(forward)

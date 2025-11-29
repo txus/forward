@@ -1,7 +1,7 @@
 #include <tokenizers_cpp.h>
 
-#include <forward/tokenizer.hpp>
 #include <filesystem>
+#include <forward/tokenizer.hpp>
 #include <fstream>
 #include <iostream>
 #include <string>

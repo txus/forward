@@ -1,9 +1,9 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/llama/*.hpp")
 
-add_library(llama STATIC embedding.cpp model.cpp rms_norm.cpp layer.cpp)
+add_library(llama STATIC model.cpp layer.cpp)
 
 target_link_libraries(llama
-  PUBLIC tensor_core tensor_cpu
+  PUBLIC tensor_core tensor_cpu nn_core nn_cpu
   PRIVATE nlohmann_json::nlohmann_json
 )
 

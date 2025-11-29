@@ -174,7 +174,7 @@ template <tensor::DType T, tensor::Device D> struct fmt::formatter<tensor::Tenso
   }
 
   template <typename FormatContext>
-  auto format(const tensor::TensorView<T, D>& tensor_view, FormatContext& ctx) const {
+  auto format(const tensor::TensorView<T, D> tensor_view, FormatContext& ctx) const {
     auto out = ctx.out();
 
     fmt::format_to(out, "<Tensor<{}, {}> ", tensor::dtype::dtype_name<T>::value,
@@ -199,13 +199,13 @@ template <tensor::DType T, tensor::Device D> struct fmt::formatter<tensor::Tenso
 
 private:
   template <typename OutputIt>
-  OutputIt format_tensor_view(OutputIt out, const tensor::TensorView<T, D>& tensor_view) const {
+  OutputIt format_tensor_view(OutputIt out, const tensor::TensorView<T, D> tensor_view) const {
     constexpr std::size_t max_elems_per_dim = 4; // tweak as you like
     return format_tensor_rec(out, tensor_view, /*dim=*/0, /*offset=*/0, max_elems_per_dim);
   }
 
   template <typename OutputIt>
-  OutputIt format_tensor_rec(OutputIt out, const tensor::TensorView<T, D>& tensor_view,
+  OutputIt format_tensor_rec(OutputIt out, const tensor::TensorView<T, D> tensor_view,
                              std::size_t dim, std::size_t offset, std::size_t max_elems) const {
     const auto& shape = tensor_view.shape;
     if (dim == shape.size()) {

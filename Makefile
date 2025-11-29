@@ -19,6 +19,11 @@ tensor:
 	@cmake --build build --target test_tensor
 	@ctest --test-dir build -R "^Tensor" --output-on-failure
 
+.PHONY: nn
+nn:
+	@cmake --build build --target test_nn
+	@ctest --test-dir build -R "^NN" --output-on-failure
+
 .PHONY: llama
 llama:
 	@cmake --build build --target test_llama

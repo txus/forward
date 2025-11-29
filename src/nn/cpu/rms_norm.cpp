@@ -1,16 +1,15 @@
 #include <cmath>
-#include <llama/rms_norm.hpp>
+#include <nn/rms_norm.hpp>
 #include <utility>
 
-using namespace llama;
+using namespace nn;
 using namespace tensor;
 
 template <DType T, Device D> void RMSNorm<T, D>::set_weights(TensorView<T, D> weights) {
   weights_ = std::move(weights);
 }
 
-template <>
-Tensor<bfloat16, CPU> RMSNorm<bfloat16, CPU>::forward(TensorView<bfloat16, CPU>& inputs) const {
+template <DType T, Device D> Tensor<T, D> RMSNorm<T, D>::forward(TensorView<T, D> inputs) const {
   const size_t batch_size = inputs.shape[0];
   const size_t seq_len = inputs.shape[1];
   const size_t hidden_dim = inputs.shape[2];
@@ -19,7 +18,7 @@ Tensor<bfloat16, CPU> RMSNorm<bfloat16, CPU>::forward(TensorView<bfloat16, CPU>&
 
   const auto w_span = weights_.span();
 
-  Tensor<bfloat16, CPU> out_{{batch_size, seq_len, hidden_dim}};
+  Tensor<T, D> out_{{batch_size, seq_len, hidden_dim}};
 
   auto out = out_.view();
 
@@ -28,7 +27,7 @@ Tensor<bfloat16, CPU> RMSNorm<bfloat16, CPU>::forward(TensorView<bfloat16, CPU>&
       const auto hid_span = inputs.get(row_idx, seq_pos).span();
       auto out_span = out.get(row_idx, seq_pos).span();
 
-      std::vector<bfloat16> buf{};
+      std::vector<T> buf{};
       buf.reserve(hidden_dim);
 
       // calculate RMS, accumulate in fp32
@@ -41,7 +40,7 @@ Tensor<bfloat16, CPU> RMSNorm<bfloat16, CPU>::forward(TensorView<bfloat16, CPU>&
 
       // normalize values
       for (int channel_idx = 0; channel_idx < hidden_dim; ++channel_idx) {
-        buf[channel_idx] = bfloat16((float(hid_span[channel_idx]) / rms) * w_span[channel_idx]);
+        buf[channel_idx] = T((float(hid_span[channel_idx]) / rms) * w_span[channel_idx]);
       }
 
       std::copy_n(std::span(buf).data(), hidden_dim, out_span.data());
@@ -51,4 +50,4 @@ Tensor<bfloat16, CPU> RMSNorm<bfloat16, CPU>::forward(TensorView<bfloat16, CPU>&
   return out_;
 }
 
-template class llama::RMSNorm<bfloat16, CPU>;
+template class nn::RMSNorm<bfloat16, CPU>;

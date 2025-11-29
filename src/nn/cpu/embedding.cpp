@@ -1,16 +1,16 @@
 #include <forward/loader.hpp>
-#include <llama/embedding.hpp>
+#include <nn/embedding.hpp>
 #include <utility>
 
-using namespace llama;
+using namespace nn;
 using namespace tensor;
 
 template <DType T, Device D> void Embedding<T, D>::set_weights(TensorView<T, D> weights) {
   weights_ = std::move(weights);
 }
 
-template <>
-Tensor<bfloat16, CPU> Embedding<bfloat16, CPU>::forward(TensorView<int, CPU>& token_ids) const {
+template <DType T, Device D>
+Tensor<T, D> Embedding<T, D>::forward(TensorView<int, D> token_ids) const {
   const auto w_shape = weights_.shape;
 
   const size_t vocab_size = w_shape[0];
@@ -19,7 +19,7 @@ Tensor<bfloat16, CPU> Embedding<bfloat16, CPU>::forward(TensorView<int, CPU>& to
   const size_t batch_size = token_ids.shape[0];
   const size_t seq_len = token_ids.shape[1];
 
-  Tensor<bfloat16, CPU> out{{batch_size, seq_len, hidden_dim}};
+  Tensor<T, D> out{{batch_size, seq_len, hidden_dim}};
 
   const auto w_span = weights_.span();
   const auto ids_span = token_ids.span();
@@ -42,4 +42,4 @@ Tensor<bfloat16, CPU> Embedding<bfloat16, CPU>::forward(TensorView<int, CPU>& to
   return out;
 }
 
-template class llama::Embedding<bfloat16, CPU>;
+template class nn::Embedding<bfloat16, CPU>;

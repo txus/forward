@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 
 #include <common/test_utils.hpp>
-#include <llama/rms_norm.hpp>
+#include <nn/rms_norm.hpp>
 #include <tensor/tensor.hpp>
 
-using namespace llama;
+using namespace nn;
 using namespace tensor;
 
-TEST(LlamaRMSNormTest, Forward) {
+TEST(NNRMSNormTest, Forward) {
   size_t hidden_dim = 2;
   size_t batch_size = 1;
   size_t seq_len = 4;

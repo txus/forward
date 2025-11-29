@@ -1,4 +1,4 @@
-add_executable(test_llama test_embedding.cpp test_model.cpp test_rms_norm.cpp test_layer.cpp)
+add_executable(test_llama test_model.cpp test_layer.cpp)
 target_compile_features(test_llama PRIVATE cxx_std_26)
 target_link_libraries(test_llama PRIVATE llama GTest::gtest_main)
 target_include_directories(test_llama

@@ -14,7 +14,7 @@ void Layer<T, D>::load_weights(std::unordered_map<std::string, Tensor<T, D> /*un
           .view());
 }
 
-template <DType T, Device D> Tensor<T, D> Layer<T, D>::forward(TensorView<T, D>& inputs) const {
+template <DType T, Device D> Tensor<T, D> Layer<T, D>::forward(TensorView<T, D> inputs) const {
   // prenorm
   auto residual_t = prenorm.forward(inputs);
   auto residual_v = residual_t.view();

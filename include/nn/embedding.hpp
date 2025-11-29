@@ -2,7 +2,7 @@
 
 #include <tensor/tensor.hpp>
 
-namespace llama {
+namespace nn {
 template <tensor::DType T, tensor::Device D> class Embedding {
 private:
   tensor::TensorView<T, D> weights_;
@@ -13,6 +13,6 @@ public:
 
   void set_weights(tensor::TensorView<T, D> weights);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<int, D>& token_ids) const;
+  tensor::Tensor<T, D> forward(tensor::TensorView<int, D> token_ids) const;
 };
-} // namespace llama
+} // namespace nn

@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 
 #include <common/test_utils.hpp>
-#include <llama/embedding.hpp>
+#include <nn/embedding.hpp>
 #include <tensor/tensor.hpp>
 
-using namespace llama;
+using namespace nn;
 using namespace tensor;
 
-TEST(LlamaEmbeddingTest, Forward) {
+TEST(NNEmbeddingTest, Forward) {
   size_t vocab_size = 4;
   size_t hidden_dim = 2;
   size_t batch_size = 1;
