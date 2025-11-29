@@ -3,11 +3,11 @@ SHELL = /bin/bash
 
 .PHONY: all
 all:
-	@cmake -S . -B build && cmake --build build --parallel --
+	@cmake -S . -B build -GNinja && cmake --build build --parallel --
 
 .PHONY: release
 release:
-	@cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
+	@cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
 
 .PHONY: app
 app:
