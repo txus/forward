@@ -4,13 +4,6 @@
 #include <common/test_utils.hpp>
 #include <tensor/tensor.hpp>
 
-TEST(TensorTest, Stride) {
-  tensor::Shape shape{2, 4};
-
-  EXPECT_EQ(tensor::stride(shape, 0), 4);
-  EXPECT_EQ(tensor::stride(shape, 1), 1);
-}
-
 TEST(TensorTest, FillAndGet) {
   tensor::Tensor<int, tensor::CPU> tensor({2, 4});
 

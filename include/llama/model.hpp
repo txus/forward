@@ -1,5 +1,6 @@
 #pragma once
 
+#include <llama/config.hpp>
 #include <llama/layer.hpp>
 #include <nn/embedding.hpp>
 #include <nn/rms_norm.hpp>
@@ -7,12 +8,6 @@
 #include <unordered_map>
 
 namespace llama {
-
-struct ModelConfig {
-  size_t vocab_size;
-  size_t hidden_dim;
-  size_t num_hidden_layers;
-};
 
 template <tensor::DType T, tensor::Device D> class Model {
 private:

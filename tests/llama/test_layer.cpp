@@ -8,17 +8,20 @@ using namespace llama;
 using namespace tensor;
 
 TEST(LlamaLayerTest, Forward) {
-  Layer<bfloat16, CPU> layer{};
-
   const size_t batch_size = 1;
   const size_t seq_len = 2;
   const size_t hidden_dim = 4;
+  const size_t intermediate_size = 8;
 
   llama::ModelConfig conf{
       .vocab_size = 128,
       .hidden_dim = hidden_dim,
+      .intermediate_size = intermediate_size,
       .num_hidden_layers = 1,
+      .hidden_act = "silu",
   };
+
+  Layer<bfloat16, CPU> layer{conf};
 
   auto weights = empty_weights(conf);
 

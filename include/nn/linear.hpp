@@ -3,13 +3,13 @@
 #include <tensor/tensor.hpp>
 
 namespace nn {
-template <tensor::DType T, tensor::Device D> class MLP {
+template <tensor::DType T, tensor::Device D> class Linear {
 private:
   tensor::TensorView<T, D> weights_;
 
 public:
-  MLP() = default;
-  ~MLP() = default;
+  Linear() = default;
+  ~Linear() = default;
 
   void set_weights(tensor::TensorView<T, D> weights);
 

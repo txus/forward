@@ -8,11 +8,11 @@ using namespace llama;
 using namespace tensor;
 
 TEST(LlamaModelTest, Forward) {
-  Model<bfloat16, CPU> mod{ModelConfig{
-      .vocab_size = 128,
-      .hidden_dim = 32,
-      .num_hidden_layers = 1,
-  }};
+  Model<bfloat16, CPU> mod{ModelConfig{.vocab_size = 128,
+                                       .hidden_dim = 32,
+                                       .intermediate_size = 64,
+                                       .num_hidden_layers = 1,
+                                       .hidden_act = "silu"}};
 
   auto weights = empty_weights(mod.config);
 

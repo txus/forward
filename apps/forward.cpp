@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 
   Model<bfloat16, CPU> mod("./tests/model/config.json");
 
-  // loader::inspect_safetensors("./tests/model/model.safetensors");
+  loader::inspect_safetensors("./tests/model/model.safetensors");
 
   auto weights = loader::load_weights<bfloat16, CPU>(
       "./tests/model/model.safetensors",
@@ -50,6 +50,33 @@ int main(int argc, char* argv[]) {
       "model.layers.13.post_attention_layernorm.weight",
       "model.layers.14.post_attention_layernorm.weight",
       "model.layers.15.post_attention_layernorm.weight",
+      // MLP up proj
+      "model.layers.0.mlp.up_proj.weight", "model.layers.1.mlp.up_proj.weight",
+      "model.layers.2.mlp.up_proj.weight", "model.layers.3.mlp.up_proj.weight",
+      "model.layers.4.mlp.up_proj.weight", "model.layers.5.mlp.up_proj.weight",
+      "model.layers.6.mlp.up_proj.weight", "model.layers.7.mlp.up_proj.weight",
+      "model.layers.8.mlp.up_proj.weight", "model.layers.9.mlp.up_proj.weight",
+      "model.layers.10.mlp.up_proj.weight", "model.layers.11.mlp.up_proj.weight",
+      "model.layers.12.mlp.up_proj.weight", "model.layers.13.mlp.up_proj.weight",
+      "model.layers.14.mlp.up_proj.weight", "model.layers.15.mlp.up_proj.weight",
+      // MLP gate proj
+      "model.layers.0.mlp.gate_proj.weight", "model.layers.1.mlp.gate_proj.weight",
+      "model.layers.2.mlp.gate_proj.weight", "model.layers.3.mlp.gate_proj.weight",
+      "model.layers.4.mlp.gate_proj.weight", "model.layers.5.mlp.gate_proj.weight",
+      "model.layers.6.mlp.gate_proj.weight", "model.layers.7.mlp.gate_proj.weight",
+      "model.layers.8.mlp.gate_proj.weight", "model.layers.9.mlp.gate_proj.weight",
+      "model.layers.10.mlp.gate_proj.weight", "model.layers.11.mlp.gate_proj.weight",
+      "model.layers.12.mlp.gate_proj.weight", "model.layers.13.mlp.gate_proj.weight",
+      "model.layers.14.mlp.gate_proj.weight", "model.layers.15.mlp.gate_proj.weight",
+      // MLP down proj
+      "model.layers.0.mlp.down_proj.weight", "model.layers.1.mlp.down_proj.weight",
+      "model.layers.2.mlp.down_proj.weight", "model.layers.3.mlp.down_proj.weight",
+      "model.layers.4.mlp.down_proj.weight", "model.layers.5.mlp.down_proj.weight",
+      "model.layers.6.mlp.down_proj.weight", "model.layers.7.mlp.down_proj.weight",
+      "model.layers.8.mlp.down_proj.weight", "model.layers.9.mlp.down_proj.weight",
+      "model.layers.10.mlp.down_proj.weight", "model.layers.11.mlp.down_proj.weight",
+      "model.layers.12.mlp.down_proj.weight", "model.layers.13.mlp.down_proj.weight",
+      "model.layers.14.mlp.down_proj.weight", "model.layers.15.mlp.down_proj.weight",
       // epilogue
       "model.norm.weight");
   mod.load_weights(weights);

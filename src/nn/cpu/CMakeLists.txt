@@ -1,6 +1,6 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/nn/*.hpp")
 
-add_library(nn_cpu STATIC embedding.cpp rms_norm.cpp mlp.cpp)
+add_library(nn_cpu STATIC embedding.cpp act.cpp rms_norm.cpp linear.cpp)
 
 target_link_libraries(nn_cpu
   PUBLIC tensor_core tensor_cpu nn_core

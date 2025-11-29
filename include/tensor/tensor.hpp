@@ -19,7 +19,7 @@ using namespace dtype;
 
 using Shape = std::vector<size_t>;
 
-inline size_t stride(const Shape& shape, size_t dim) {
+inline size_t get_stride(const Shape& shape, size_t dim) {
   auto dims_to_skip = dim + 1;
   size_t stride_ = 1;
 
@@ -34,11 +34,20 @@ inline size_t stride(const Shape& shape, size_t dim) {
   return stride_;
 }
 
+inline Shape get_all_strides(const Shape& shape) {
+  Shape strides{};
+  for (size_t i = 0; i < shape.size(); ++i) {
+    strides.push_back(get_stride(shape, i));
+  }
+  return strides;
+}
+
 template <DType T, Device D> class Tensor;
 
 template <DType T, Device D> struct TensorView {
   std::span<T> data{};
   Shape shape;
+  Shape stride;
 
   template <typename... Ix>
     requires(std::conjunction_v<std::is_integral<Ix>...>)
@@ -51,13 +60,18 @@ template <DType T, Device D> struct TensorView {
     size_t offset = 0;
     for (size_t idx = 0; idx < ndim; ++idx) {
       assert(indices[idx] < shape[idx]);
-      size_t stride_ = stride(shape, idx);
+      size_t stride_ = stride[idx];
       offset += indices[idx] * stride_;
     }
 
     Shape new_shape;
     for (size_t dim = ndim; dim < shape.size(); ++dim) {
       new_shape.push_back(shape[dim]);
+    }
+
+    Shape new_strides;
+    for (size_t dim = ndim; dim < stride.size(); ++dim) {
+      new_strides.push_back(stride[dim]);
     }
 
     size_t sub_size = 1;
@@ -68,7 +82,16 @@ template <DType T, Device D> struct TensorView {
       sub_size = 1; // scalar
     }
 
-    return TensorView{std::span<T>(data.data() + offset, sub_size), new_shape};
+    return TensorView{std::span<T>(data.data() + offset, sub_size), new_shape, new_strides};
+  }
+
+  void transpose() {
+    assert(shape.size() == 2);
+    Shape new_shape = {shape[1], shape[0]};
+    shape = new_shape;
+
+    Shape new_strides = {stride[1], stride[0]};
+    stride = new_strides;
   }
 
   Tensor<T, D> copy() const {
@@ -110,10 +133,10 @@ public:
   ~Tensor() = default;
 
   TensorView<T, D> view() {
-    return TensorView<T, D>{span(), shape()};
+    return TensorView<T, D>{span(), shape(), get_all_strides(shape())};
   }
   TensorView<T, D> view() const {
-    return TensorView<T, D>{span(), shape()};
+    return TensorView<T, D>{span(), shape(), get_all_strides(shape())};
   }
 
   void fill_(T value) {
@@ -208,13 +231,14 @@ private:
   OutputIt format_tensor_rec(OutputIt out, const tensor::TensorView<T, D> tensor_view,
                              std::size_t dim, std::size_t offset, std::size_t max_elems) const {
     const auto& shape = tensor_view.shape;
+    const auto& strides = tensor_view.stride;
     if (dim == shape.size()) {
       // Base case: actually print one scalar
       return fmt::format_to(out, "{}", tensor_view.span()[offset]);
     }
 
     auto dim_size = shape[dim];
-    auto stride = tensor::stride(shape, dim); // assuming you have this
+    auto stride = strides[dim];
 
     *out++ = '[';
     size_t count = std::min<size_t>(dim_size, max_elems);

@@ -8,45 +8,41 @@
 #include <tensor/tensor.hpp>
 #include <utility>
 
+using namespace tensor;
+
+inline Tensor<bfloat16, CPU> make_tensor(const Shape& shape, bfloat16 value) {
+  Tensor<tensor::bfloat16, CPU> weights{shape};
+  weights.fill_(value);
+  return weights;
+}
+
 inline std::unordered_map<std::string, tensor::Tensor<tensor::bfloat16, tensor::CPU>>
 empty_weights(const llama::ModelConfig& config) {
   std::unordered_map<std::string, tensor::Tensor<tensor::bfloat16, tensor::CPU>> out;
 
   {
     std::vector<size_t> shape{{config.vocab_size, config.hidden_dim}};
-
-    tensor::Tensor<tensor::bfloat16, tensor::CPU> weights{shape};
-    weights.fill_(tensor::bfloat16(0.5));
-
-    out.insert_or_assign("model.embed_tokens.weight", std::move(weights));
-  }
-
-  for (int layer_idx = 0; std::cmp_less(layer_idx, config.num_hidden_layers); ++layer_idx) {
-    std::vector<size_t> shape{config.hidden_dim};
-
-    const std::string prenorm_key =
-        fmt::format("model.layers.{}.input_layernorm.weight", layer_idx);
-
-    tensor::Tensor<tensor::bfloat16, tensor::CPU> prenorm_weights{shape};
-    prenorm_weights.fill_(tensor::bfloat16(0.1));
-
-    out.insert_or_assign(prenorm_key, std::move(prenorm_weights));
-
-    const std::string postnorm_key =
-        fmt::format("model.layers.{}.post_attention_layernorm.weight", layer_idx);
-
-    tensor::Tensor<tensor::bfloat16, tensor::CPU> postnorm_weights{shape};
-    postnorm_weights.fill_(tensor::bfloat16(0.1));
-
-    out.insert_or_assign(postnorm_key, std::move(prenorm_weights));
+    out.insert_or_assign("model.embed_tokens.weight", make_tensor(shape, 0.5));
   }
 
   std::vector<size_t> shape{config.hidden_dim};
 
-  tensor::Tensor<tensor::bfloat16, tensor::CPU> norm_weights{shape};
-  norm_weights.fill_(tensor::bfloat16(0.1));
+  for (int layer_idx = 0; std::cmp_less(layer_idx, config.num_hidden_layers); ++layer_idx) {
+    out.insert_or_assign(fmt::format("model.layers.{}.input_layernorm.weight", layer_idx),
+                         make_tensor(shape, 0.1));
 
-  out.insert_or_assign("model.norm.weight", std::move(norm_weights));
+    out.insert_or_assign(fmt::format("model.layers.{}.post_attention_layernorm.weight", layer_idx),
+                         make_tensor(shape, 0.1));
+
+    out.insert_or_assign(fmt::format("model.layers.{}.mlp.up_proj.weight", layer_idx),
+                         make_tensor({config.intermediate_size, config.hidden_dim}, 0.1));
+    out.insert_or_assign(fmt::format("model.layers.{}.mlp.gate_proj.weight", layer_idx),
+                         make_tensor({config.intermediate_size, config.hidden_dim}, 0.1));
+    out.insert_or_assign(fmt::format("model.layers.{}.mlp.down_proj.weight", layer_idx),
+                         make_tensor({config.hidden_dim, config.intermediate_size}, 0.1));
+  }
+
+  out.insert_or_assign("model.norm.weight", make_tensor(shape, 0.1));
 
   return out;
 }

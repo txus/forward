@@ -1,8 +1,13 @@
+#include <llama/config.hpp>
 #include <llama/layer.hpp>
+#include <nn/act.hpp>
 #include <tensor/ops.hpp>
 
 using namespace llama;
 using namespace tensor;
+
+template <DType T, Device D>
+Layer<T, D>::Layer(const ModelConfig& _config) : mlp(MLP<T, D>{_config}) {}
 
 template <DType T, Device D>
 void Layer<T, D>::load_weights(std::unordered_map<std::string, Tensor<T, D> /*unused*/>& weight_map,
@@ -12,6 +17,8 @@ void Layer<T, D>::load_weights(std::unordered_map<std::string, Tensor<T, D> /*un
   postnorm.set_weights(
       weight_map.at(fmt::format("model.layers.{}.post_attention_layernorm.weight", layer_idx))
           .view());
+
+  mlp.load_weights(weight_map, layer_idx);
 }
 
 template <DType T, Device D> Tensor<T, D> Layer<T, D>::forward(TensorView<T, D> inputs) const {
@@ -30,8 +37,8 @@ template <DType T, Device D> Tensor<T, D> Layer<T, D>::forward(TensorView<T, D> 
   residual_v = residual_t.view();
 
   // mlp
-  Tensor<T, D> mlp_output{inputs.shape}; // TODO: implement MLP
-  auto mlp_output_v = mlp_output.view();
+  residual_t = mlp.forward(residual_v);
+  auto mlp_output_v = residual_t.view();
 
   residual_t = add(mlp_output_v, residual_v);
   residual_v = residual_t.view();
