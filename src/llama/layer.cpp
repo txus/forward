@@ -1,13 +1,17 @@
 #include <llama/config.hpp>
 #include <llama/layer.hpp>
 #include <nn/act.hpp>
+#include <nn/rms_norm.hpp>
 #include <tensor/ops.hpp>
 
 using namespace llama;
 using namespace tensor;
+using namespace nn;
 
 template <DType T, Device D>
-Layer<T, D>::Layer(const ModelConfig& _config) : mlp(MLP<T, D>{_config}) {}
+Layer<T, D>::Layer(const ModelConfig& _config)
+    : mlp(MLP<T, D>{_config}), prenorm(RMSNorm<T, D>{_config.rms_norm_eps}),
+      postnorm(RMSNorm<T, D>{_config.rms_norm_eps}) {}
 
 template <DType T, Device D>
 void Layer<T, D>::load_weights(std::unordered_map<std::string, Tensor<T, D> /*unused*/>& weight_map,

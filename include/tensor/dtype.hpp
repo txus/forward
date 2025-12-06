@@ -42,16 +42,29 @@ struct bfloat16 {
 template <typename T> struct is_dtype : std::false_type {};
 
 template <> struct is_dtype<bfloat16> : std::true_type {};
+template <> struct is_dtype<float> : std::true_type {};
 template <> struct is_dtype<int> : std::true_type {};
 
 template <typename D>
-concept DType = is_dtype<D>::value;
+concept DType = is_dtype<std::remove_cv_t<D>>::value;
 
 template <typename T> struct dtype_name;
 template <> struct dtype_name<bfloat16> {
   static constexpr const char* value = "bfloat16";
 };
+template <> struct dtype_name<const bfloat16> {
+  static constexpr const char* value = "bfloat16";
+};
+template <> struct dtype_name<float> {
+  static constexpr const char* value = "float32";
+};
+template <> struct dtype_name<const float> {
+  static constexpr const char* value = "float32";
+};
 template <> struct dtype_name<int> {
+  static constexpr const char* value = "int";
+};
+template <> struct dtype_name<const int> {
   static constexpr const char* value = "int";
 };
 } // namespace tensor::dtype

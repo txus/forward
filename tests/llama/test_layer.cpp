@@ -10,12 +10,12 @@ using namespace tensor;
 TEST(LlamaLayerTest, Forward) {
   const size_t batch_size = 1;
   const size_t seq_len = 2;
-  const size_t hidden_dim = 4;
+  const size_t hidden_size = 4;
   const size_t intermediate_size = 8;
 
   llama::ModelConfig conf{
       .vocab_size = 128,
-      .hidden_dim = hidden_dim,
+      .hidden_size = hidden_size,
       .intermediate_size = intermediate_size,
       .num_hidden_layers = 1,
       .hidden_act = "silu",
@@ -27,7 +27,7 @@ TEST(LlamaLayerTest, Forward) {
 
   layer.load_weights(weights, 0);
 
-  Tensor<bfloat16, CPU> input_{{batch_size, seq_len, hidden_dim}};
+  Tensor<bfloat16, CPU> input_{{batch_size, seq_len, hidden_size}};
   input_.fill_(0.1);
   auto input = input_.view();
 

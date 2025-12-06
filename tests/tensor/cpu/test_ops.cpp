@@ -6,6 +6,14 @@
 
 using namespace tensor;
 
+TEST(TensorCPUTest, Arange) {
+  Tensor<int, CPU> result = arange<CPU>(0, 10, 2);
+
+  std::vector<int> exp = {0, 2, 4, 6, 8};
+
+  tensor_is_close<int>(result.span(), std::span(exp));
+}
+
 TEST(TensorCPUTest, AddInt) {
   Tensor<int, CPU> tensor_a({2, 4});
   Tensor<int, CPU> tensor_b({2, 4});
@@ -38,6 +46,17 @@ TEST(TensorCPUTest, AddBF16) {
   Tensor<bfloat16, CPU> result = add(a_v, b_v);
 
   tensor_is_close<bfloat16>(result.span(), exp.span());
+}
+
+TEST(TensorCPUTest, PowBF16) {
+  Tensor<bfloat16, CPU> tensor({2, 2});
+  tensor.fill_(2.0);
+
+  Tensor<bfloat16, CPU> result = pow<bfloat16>(3.0, tensor.view());
+
+  std::vector<bfloat16> exp = {9, 9, 9, 9};
+
+  tensor_is_close<bfloat16>(result.span(), std::span(exp));
 }
 
 TEST(TensorCPUTest, MatmulBF16) {

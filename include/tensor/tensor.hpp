@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <span>
 #include <stdexcept>
 #include <tensor/device.hpp>
@@ -102,6 +103,35 @@ template <DType T, Device D> struct TensorView {
     return tensor;
   }
 
+  template <DType OutT> Tensor<OutT, D> map(std::function<OutT(T)> func) const {
+    Tensor<OutT, D> result{shape};
+
+    std::transform(data.begin(), data.end(), result.span().begin(), func);
+    return result;
+  }
+
+  Tensor<float, D> to_float() const {
+    return map<float>([](T val) { return static_cast<float>(val); });
+  }
+
+  TensorView<T, D> view_as(Shape new_shape) const {
+    size_t total_elems = 1;
+    for (size_t dim : new_shape) {
+      total_elems *= dim;
+    }
+    assert(total_elems == data.size());
+
+    TensorView<T, D> new_view;
+    new_view.shape = std::move(new_shape);
+    new_view.stride = get_all_strides(new_shape);
+    new_view.data = data;
+    return new_view;
+  }
+
+  Tensor<T, D> operator/(float other) const {
+    return map<T>([other](T val) { return val / other; });
+  }
+
   T item() const {
     assert(data.size() == 1);
     return data[0];
@@ -135,8 +165,8 @@ public:
   TensorView<T, D> view() {
     return TensorView<T, D>{span(), shape(), get_all_strides(shape())};
   }
-  TensorView<T, D> view() const {
-    return TensorView<T, D>{span(), shape(), get_all_strides(shape())};
+  TensorView<const T, D> view() const {
+    return TensorView<const T, D>{span(), shape(), get_all_strides(shape())};
   }
 
   void fill_(T value) {

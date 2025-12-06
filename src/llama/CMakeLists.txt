@@ -1,6 +1,6 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/llama/*.hpp")
 
-add_library(llama STATIC model.cpp layer.cpp mlp.cpp)
+add_library(llama STATIC model.cpp layer.cpp mlp.cpp rope.cpp)
 
 target_link_libraries(llama
   PUBLIC tensor_core tensor_cpu nn_core nn_cpu

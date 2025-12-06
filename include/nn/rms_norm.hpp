@@ -7,8 +7,10 @@ namespace nn {
 template <tensor::DType T, tensor::Device D> class RMSNorm {
 private:
   tensor::TensorView<T, D> weights_;
+  float eps = 1e-05;
 
 public:
+  explicit RMSNorm(float eps);
   explicit RMSNorm() = default;
   ~RMSNorm() = default;
 

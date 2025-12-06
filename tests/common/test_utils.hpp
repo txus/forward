@@ -21,11 +21,11 @@ empty_weights(const llama::ModelConfig& config) {
   std::unordered_map<std::string, tensor::Tensor<tensor::bfloat16, tensor::CPU>> out;
 
   {
-    std::vector<size_t> shape{{config.vocab_size, config.hidden_dim}};
+    std::vector<size_t> shape{{config.vocab_size, config.hidden_size}};
     out.insert_or_assign("model.embed_tokens.weight", make_tensor(shape, 0.5));
   }
 
-  std::vector<size_t> shape{config.hidden_dim};
+  std::vector<size_t> shape{config.hidden_size};
 
   for (int layer_idx = 0; std::cmp_less(layer_idx, config.num_hidden_layers); ++layer_idx) {
     out.insert_or_assign(fmt::format("model.layers.{}.input_layernorm.weight", layer_idx),
@@ -35,11 +35,11 @@ empty_weights(const llama::ModelConfig& config) {
                          make_tensor(shape, 0.1));
 
     out.insert_or_assign(fmt::format("model.layers.{}.mlp.up_proj.weight", layer_idx),
-                         make_tensor({config.intermediate_size, config.hidden_dim}, 0.1));
+                         make_tensor({config.intermediate_size, config.hidden_size}, 0.1));
     out.insert_or_assign(fmt::format("model.layers.{}.mlp.gate_proj.weight", layer_idx),
-                         make_tensor({config.intermediate_size, config.hidden_dim}, 0.1));
+                         make_tensor({config.intermediate_size, config.hidden_size}, 0.1));
     out.insert_or_assign(fmt::format("model.layers.{}.mlp.down_proj.weight", layer_idx),
-                         make_tensor({config.hidden_dim, config.intermediate_size}, 0.1));
+                         make_tensor({config.hidden_size, config.intermediate_size}, 0.1));
   }
 
   out.insert_or_assign("model.norm.weight", make_tensor(shape, 0.1));

@@ -5,6 +5,8 @@
 using namespace nn;
 using namespace tensor;
 
+template <DType T, Device D> RMSNorm<T, D>::RMSNorm(float eps) : eps(eps){};
+
 template <DType T, Device D> void RMSNorm<T, D>::set_weights(TensorView<T, D> weights) {
   weights_ = std::move(weights);
 }
@@ -36,11 +38,11 @@ template <DType T, Device D> Tensor<T, D> RMSNorm<T, D>::forward(TensorView<T, D
         sum += std::pow(hid_span[channel_idx], 2);
       }
 
-      float rms = std::sqrt(sum / hid_span.size()); // NOLINT(*-narrowing-conversions)
+      float rms = 1.0 / std::sqrt(eps + (sum / hid_span.size())); // NOLINT(*-narrowing-conversions)
 
       // normalize values
       for (int channel_idx = 0; channel_idx < hidden_dim; ++channel_idx) {
-        buf[channel_idx] = T((float(hid_span[channel_idx]) / rms) * w_span[channel_idx]);
+        buf[channel_idx] = T(float(hid_span[channel_idx]) * rms) * w_span[channel_idx];
       }
 
       std::copy_n(std::span(buf).data(), hidden_dim, out_span.data());

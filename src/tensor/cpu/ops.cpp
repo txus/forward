@@ -2,6 +2,31 @@
 
 namespace tensor {
 
+// constructors
+
+template <Device D> Tensor<int, D> arange(int start, int end, int step) {
+  std::vector<int> vec{};
+
+  for (int element = start; element < end; element += step) {
+    vec.push_back(element);
+  }
+
+  return Tensor<int, D>{Shape{vec.size()}, std::move(vec)};
+}
+
+template <Device D> Tensor<float, D> arange(float start, float end, float step) {
+  std::vector<float> vec{};
+
+  for (float element = start; element < end; element += step) {
+    vec.push_back(element);
+  }
+
+  return Tensor<float, D>{Shape{vec.size()}, std::move(vec)};
+}
+
+template Tensor<int, CPU> arange(int start, int end, int step = 1);
+template Tensor<float, CPU> arange(float start, float end, float step = 1);
+
 // element-wise add
 
 template <DType T, Device D>
@@ -28,6 +53,20 @@ Tensor<T, D> mul(TensorView<T, D> tensor_a, TensorView<T, D> tensor_b) {
 }
 
 template Tensor<bfloat16, CPU> mul(TensorView<bfloat16, CPU>, TensorView<bfloat16, CPU>);
+
+template <DType T, Device D> Tensor<T, D> pow(T scalar, const TensorView<T, D>& tensor) {
+  return tensor.template map<T>([scalar](T val) { return std::pow(scalar, val); });
+}
+
+template Tensor<bfloat16, CPU> pow(bfloat16 scalar, const TensorView<bfloat16, CPU>& tensor);
+template Tensor<float, CPU> pow(float scalar, const TensorView<float, CPU>& tensor);
+
+template <DType T, Device D> Tensor<T, D> pow(const TensorView<T, D>& tensor, T scalar) {
+  return tensor.template map<T>([scalar](T val) { return std::pow(val, scalar); });
+}
+
+template Tensor<bfloat16, CPU> pow(const TensorView<bfloat16, CPU>& tensor, bfloat16 scalar);
+template Tensor<float, CPU> pow(const TensorView<float, CPU>& tensor, float scalar);
 
 // matmul
 
@@ -103,5 +142,19 @@ Tensor<T, D> matmul(TensorView<T, D> tensor_a, TensorView<T, D> tensor_b) {
 }
 
 template Tensor<bfloat16, CPU> matmul(TensorView<bfloat16, CPU>, TensorView<bfloat16, CPU>);
+template Tensor<float, CPU> matmul(TensorView<float, CPU>, TensorView<float, CPU>);
+
+template <DType T, Device D>
+Tensor<T, D> cat(TensorView<T, D> tensor_a, TensorView<T, D> tensor_b, size_t dim) {
+  Shape new_shape = tensor_a.shape()[dim] * 2;
+
+  Tensor<T, D> out{new_shape};
+
+  auto out_span = out.span();
+
+  // ???
+
+  return out;
+}
 
 } // namespace tensor

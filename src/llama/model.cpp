@@ -6,26 +6,35 @@
 #include <llama/model.hpp>
 #include <nlohmann/json.hpp>
 #include <nn/act.hpp>
+#include <nn/rms_norm.hpp>
 #include <tensor/tensor.hpp>
 using json = nlohmann::json;
 
 using namespace llama;
 using namespace tensor;
 
-template <tensor::DType T, tensor::Device D>
-Model<T, D>::Model(ModelConfig config) : config(config) {} // NOLINT
+template <DType T, Device D>
+Model<T, D>::Model(ModelConfig config) : config(config), norm(config.rms_norm_eps) {} // NOLINT
 
-template <tensor::DType T, tensor::Device D> Model<T, D>::Model(std::string_view model_path) {
+template <DType T, Device D> Model<T, D>::Model(std::string_view model_path) {
   std::ifstream file_stream((std::string(model_path)));
 
   assert(file_stream.is_open());
 
   json data = json::parse(file_stream);
 
-  config = ModelConfig{.vocab_size = data["vocab_size"],
-                       .hidden_dim = data["hidden_size"],
-                       .num_hidden_layers = data["num_hidden_layers"],
-                       .hidden_act = data["hidden_act"]};
+  config = ModelConfig{
+      .vocab_size = data["vocab_size"],
+      .head_dim = data["head_dim"],
+      .rope_theta = data["rope_theta"],
+      .hidden_size = data["hidden_size"],
+      .intermediate_size = data["intermediate_size"],
+      .num_hidden_layers = data["num_hidden_layers"],
+      .rms_norm_eps = data["rms_norm_eps"],
+      .hidden_act = data["hidden_act"],
+  };
+
+  norm = nn::RMSNorm<T, D>(config.rms_norm_eps);
 }
 
 template <tensor::DType T, tensor::Device D>
