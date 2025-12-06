@@ -1,4 +1,3 @@
-SHELL = /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 
 .PHONY: all

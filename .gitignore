@@ -2,3 +2,6 @@
 tests/model
 .cmake/
 CLAUDE.md
+
+.envrc
+.direnv/
