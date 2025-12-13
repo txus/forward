@@ -3,6 +3,7 @@
 #include <llama/config.hpp>
 #include <llama/layer.hpp>
 #include <nn/embedding.hpp>
+#include <nn/linear.hpp>
 #include <nn/rms_norm.hpp>
 #include <tensor/tensor.hpp>
 #include <unordered_map>
@@ -22,6 +23,7 @@ public:
   nn::Embedding<T, D> embed;
   std::vector<llama::Layer<T, D>> layers{};
   nn::RMSNorm<T, D> norm;
+  nn::Linear<T, D> lm_head;
 
   void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map);
 

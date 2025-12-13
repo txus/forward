@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 
   Model<bfloat16, CPU> mod("./tests/model/config.json");
 
-  loader::inspect_safetensors("./tests/model/model.safetensors");
+  // loader::inspect_safetensors("./tests/model/model.safetensors");
 
   auto weights = loader::load_weights<bfloat16, CPU>(
       "./tests/model/model.safetensors",

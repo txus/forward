@@ -111,12 +111,6 @@ Tensor<T, D> matmul(const TensorView<T, D>& tensor_a, const TensorView<T, D>& te
   // b: [K, N] (2D) or [..., K, N] (batched)
   // out: [..., M, N]
   //
-  fmt::println("tensor a shape {}", tensor_a.shape);
-  fmt::println("tensor b shape {}", tensor_b.shape);
-
-  fmt::println("tensor a stride", tensor_a.stride);
-  fmt::println("tensor b stride", tensor_b.stride);
-
   size_t a_ndim = tensor_a.shape.size();
   size_t b_ndim = tensor_b.shape.size();
 
