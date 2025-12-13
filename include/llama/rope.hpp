@@ -7,14 +7,14 @@ namespace llama {
 
 template <tensor::DType T, tensor::Device D> class RoPE {
 private:
-  std::tuple<tensor::Tensor<T, D>, tensor::Tensor<T, D>> cos_sin;
+  std::tuple<tensor::Tensor<float, D>, tensor::Tensor<float, D>> cos_sin; // float32
 
 public:
   explicit RoPE(const llama::ModelConfig& config);
   ~RoPE() = default;
 
-  tensor::TensorView<const T, D> cos() const;
-  tensor::TensorView<const T, D> sin() const;
+  tensor::TensorView<const float, D> cos() const;
+  tensor::TensorView<const float, D> sin() const;
 
   tensor::Tensor<T, D> forward(tensor::TensorView<T, D> inputs) const;
 };

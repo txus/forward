@@ -2,7 +2,7 @@
 
 .PHONY: all
 all:
-	@cmake -S . -B build -GNinja && cmake --build build --parallel --
+	@cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Debug && cmake --build build --parallel --
 
 .PHONY: release
 release:

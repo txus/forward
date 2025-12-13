@@ -4,55 +4,90 @@ namespace tensor {
 
 // constructors
 
-template <Device D> Tensor<int, D> arange(int start, int end, int step) {
-  std::vector<int> vec{};
+template <DType T, Device D> Tensor<T, D> arange(T start, T end, T step) {
+  std::vector<T> vec{};
 
-  for (int element = start; element < end; element += step) {
+  for (T element = start; element < end; element += step) {
     vec.push_back(element);
   }
 
-  return Tensor<int, D>{Shape{vec.size()}, std::move(vec)};
-}
-
-template <Device D> Tensor<float, D> arange(float start, float end, float step) {
-  std::vector<float> vec{};
-
-  for (float element = start; element < end; element += step) {
-    vec.push_back(element);
-  }
-
-  return Tensor<float, D>{Shape{vec.size()}, std::move(vec)};
+  return Tensor<T, D>{Shape{vec.size()}, std::move(vec)};
 }
 
 template Tensor<int, CPU> arange(int start, int end, int step = 1);
 template Tensor<float, CPU> arange(float start, float end, float step = 1);
+template Tensor<bfloat16, CPU> arange(bfloat16 start, bfloat16 end, bfloat16 step = 1);
 
-// element-wise add
+// element-wise ops
 
-template <DType T, Device D>
-Tensor<T, D> add(TensorView<T, D> tensor_a, TensorView<T, D> tensor_b) {
-  Tensor<T, D> out{tensor_a.shape};
-  for (int i = 0; i < out.size(); ++i) {
-    out.span()[i] = tensor_a.span()[i] + tensor_b.span()[i];
+template <DType T, Device D, typename Func>
+Tensor<T, D> element_wise(const TensorView<T, D>& tensor_a, const TensorView<T, D>& tensor_b,
+                          Func func) {
+  Shape out_shape = broadcast_shape(tensor_a.shape, tensor_b.shape);
+  Shape a_strides = broadcast_strides(tensor_a.shape, tensor_a.stride, out_shape);
+  Shape b_strides = broadcast_strides(tensor_b.shape, tensor_b.stride, out_shape);
+
+  Tensor<T, D> out{out_shape};
+  auto out_span = out.span();
+  auto a_span = tensor_a.span();
+  auto b_span = tensor_b.span();
+
+  // Total elements in output
+  size_t total = out.size();
+
+  for (size_t out_idx = 0; out_idx < total; ++out_idx) {
+    // Convert flat index to N-dimensional indices
+    // Then compute a_idx and b_idx using broadcast strides
+
+    size_t a_idx = 0;
+    size_t b_idx = 0;
+    size_t remainder = out_idx;
+
+    for (size_t dim = 0; dim < out_shape.size(); ++dim) {
+      // How many elements in all dims after this one?
+      size_t dim_stride = 1;
+      for (size_t the_dim = dim + 1; the_dim < out_shape.size(); ++the_dim) {
+        dim_stride *= out_shape[the_dim];
+      }
+
+      size_t coord = remainder / dim_stride; // index in this dimension
+      remainder = remainder % dim_stride;
+
+      a_idx += coord * a_strides[dim];
+      b_idx += coord * b_strides[dim];
+    }
+
+    out_span[out_idx] = func(a_span[a_idx], b_span[b_idx]);
   }
+
   return out;
 }
 
-template Tensor<bfloat16, CPU> add(TensorView<bfloat16, CPU>, TensorView<bfloat16, CPU>);
-template Tensor<int, CPU> add(TensorView<int, CPU>, TensorView<int, CPU>);
-
-// element-wise mul
-
 template <DType T, Device D>
-Tensor<T, D> mul(TensorView<T, D> tensor_a, TensorView<T, D> tensor_b) {
-  Tensor<T, D> out{tensor_a.shape};
-  for (int i = 0; i < out.size(); ++i) {
-    out.span()[i] = tensor_a.span()[i] * tensor_b.span()[i];
-  }
-  return out;
+Tensor<T, D> add(const TensorView<T, D>& tensor_a, const TensorView<T, D>& tensor_b) {
+  return element_wise(tensor_a, tensor_b, [](T val_a, T val_b) { return val_a + val_b; });
 }
 
-template Tensor<bfloat16, CPU> mul(TensorView<bfloat16, CPU>, TensorView<bfloat16, CPU>);
+template Tensor<bfloat16, CPU> add(const TensorView<bfloat16, CPU>&,
+                                   const TensorView<bfloat16, CPU>&);
+template Tensor<float, CPU> add(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
+template Tensor<int, CPU> add(const TensorView<int, CPU>&, const TensorView<int, CPU>&);
+
+template <DType T, Device D>
+Tensor<T, D> mul(const TensorView<T, D>& tensor_a, const TensorView<T, D>& tensor_b) {
+  return element_wise(tensor_a, tensor_b, [](T val_a, T val_b) { return val_a * val_b; });
+}
+
+template Tensor<bfloat16, CPU> mul(const TensorView<bfloat16, CPU>&,
+                                   const TensorView<bfloat16, CPU>&);
+template Tensor<float, CPU> mul(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
+
+template <DType T, Device D> Tensor<T, D> mul(const TensorView<T, D>& tensor, T scalar) {
+  return tensor.template map<T>([scalar](T val) { return scalar * val; });
+}
+
+template Tensor<bfloat16, CPU> mul(const TensorView<bfloat16, CPU>& tensor, bfloat16 scalar);
+template Tensor<float, CPU> mul(const TensorView<float, CPU>& tensor, float scalar);
 
 template <DType T, Device D> Tensor<T, D> pow(T scalar, const TensorView<T, D>& tensor) {
   return tensor.template map<T>([scalar](T val) { return std::pow(scalar, val); });
@@ -71,10 +106,16 @@ template Tensor<float, CPU> pow(const TensorView<float, CPU>& tensor, float scal
 // matmul
 
 template <DType T, Device D>
-Tensor<T, D> matmul(TensorView<T, D> tensor_a, TensorView<T, D> tensor_b) {
+Tensor<T, D> matmul(const TensorView<T, D>& tensor_a, const TensorView<T, D>& tensor_b) {
   // a: [..., M, K]
   // b: [K, N] (2D) or [..., K, N] (batched)
   // out: [..., M, N]
+  //
+  fmt::println("tensor a shape {}", tensor_a.shape);
+  fmt::println("tensor b shape {}", tensor_b.shape);
+
+  fmt::println("tensor a stride", tensor_a.stride);
+  fmt::println("tensor b stride", tensor_b.stride);
 
   size_t a_ndim = tensor_a.shape.size();
   size_t b_ndim = tensor_b.shape.size();
@@ -141,20 +182,119 @@ Tensor<T, D> matmul(TensorView<T, D> tensor_a, TensorView<T, D> tensor_b) {
   return out;
 }
 
-template Tensor<bfloat16, CPU> matmul(TensorView<bfloat16, CPU>, TensorView<bfloat16, CPU>);
-template Tensor<float, CPU> matmul(TensorView<float, CPU>, TensorView<float, CPU>);
+template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,
+                                      const TensorView<bfloat16, CPU>&);
+template Tensor<float, CPU> matmul(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
 
 template <DType T, Device D>
-Tensor<T, D> cat(TensorView<T, D> tensor_a, TensorView<T, D> tensor_b, size_t dim) {
-  Shape new_shape = tensor_a.shape()[dim] * 2;
+Tensor<T, D> cat(const TensorView<T, D>& tensor_a, const TensorView<T, D>& tensor_b, int dim) {
+  auto shape_a = tensor_a.shape;
+  auto shape_b = tensor_b.shape;
+
+  if (dim == -1) {
+    dim = shape_a.size() - 1;
+  }
+
+  Shape new_shape{shape_a};
+  new_shape[dim] += shape_b[dim];
+
+  // flatten the batch dimensions before dim
+  size_t outer_iterations = 1;
+  for (size_t i = 0; i < dim && i < shape_a.size(); ++i) {
+    outer_iterations *= shape_a[i];
+  }
+
+  // flatten the dimensions after dim
+  size_t chunk_size_a = 1;
+  size_t chunk_size_b = 1;
+  for (size_t i = dim; i >= dim && i < shape_a.size(); ++i) {
+    chunk_size_a *= shape_a[i];
+    chunk_size_b *= shape_b[i];
+  }
 
   Tensor<T, D> out{new_shape};
 
+  auto a_span = tensor_a.span();
+  auto b_span = tensor_b.span();
   auto out_span = out.span();
 
-  // ???
+  size_t a_offset = 0;
+  size_t b_offset = 0;
+  size_t out_offset = 0;
+
+  for (size_t i = 0; i < outer_iterations; ++i) {
+    std::copy(&a_span[a_offset], &a_span[a_offset + chunk_size_a], &out_span[out_offset]);
+    out_offset += chunk_size_a;
+
+    std::copy(&b_span[b_offset], &b_span[b_offset + chunk_size_b], &out_span[out_offset]);
+    out_offset += chunk_size_b;
+
+    a_offset += chunk_size_a;
+    b_offset += chunk_size_b;
+  }
 
   return out;
 }
 
+template Tensor<bfloat16, CPU> cat(const TensorView<bfloat16, CPU>&,
+                                   const TensorView<bfloat16, CPU>&, int);
+template Tensor<float, CPU> cat(const TensorView<float, CPU>&, const TensorView<float, CPU>&, int);
+
+template <DType T, Device D>
+Tensor<T, D> slice(const TensorView<T, D>& view, int dim, size_t start, size_t end) {
+  auto shape = view.shape;
+
+  if (dim == -1) {
+    dim = shape.size() - 1;
+  }
+
+  Shape new_shape{shape};
+  new_shape[dim] = end - start;
+
+  // flatten the batch dimensions before dim
+  size_t outer_iterations = 1;
+  for (size_t i = 0; i < dim && i < shape.size(); ++i) {
+    outer_iterations *= shape[i];
+  }
+
+  // Product of dimensions AFTER dim (not including dim)
+  size_t inner_stride = 1;
+  for (size_t i = dim + 1; i < shape.size(); ++i) {
+    inner_stride *= shape[i];
+  }
+
+  // How many elements to copy per outer iteration
+  size_t chunk_to_copy = (end - start) * inner_stride;
+
+  // How far to advance in source per outer iteration (full original size)
+  size_t source_stride = shape[dim] * inner_stride;
+
+  Tensor<T, D> out{new_shape};
+
+  auto view_span = view.span();
+  auto out_span = out.span();
+
+  size_t source_offset = 0;
+  size_t out_offset = 0;
+
+  for (size_t i = 0; i < outer_iterations; ++i) {
+    // Skip to 'start' position, then copy the slice
+    size_t read_from = source_offset + (start * inner_stride);
+
+    std::copy(&view_span[read_from], &view_span[read_from + chunk_to_copy], &out_span[out_offset]);
+
+    // Advance output by what we copied
+    out_offset += chunk_to_copy;
+
+    // Advance source by the FULL original row size
+    source_offset += source_stride;
+  }
+
+  return out;
+}
+
+template Tensor<bfloat16, CPU> slice(const TensorView<bfloat16, CPU>& view, int dim, size_t start,
+                                     size_t end);
+template Tensor<float, CPU> slice(const TensorView<float, CPU>& view, int dim, size_t start,
+                                  size_t end);
 } // namespace tensor

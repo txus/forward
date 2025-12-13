@@ -22,6 +22,11 @@ struct bfloat16 {
     return std::bit_cast<float>(f32_bits);
   };
 
+  bfloat16 operator+=(bfloat16 other) {
+    bits = (*this + other).bits;
+    return *this;
+  }
+
   bfloat16 operator+(bfloat16 other) const {
     return {float(*this) + float(other)};
   }

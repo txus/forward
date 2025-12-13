@@ -7,7 +7,7 @@
 using namespace tensor;
 
 TEST(TensorCPUTest, Arange) {
-  Tensor<int, CPU> result = arange<CPU>(0, 10, 2);
+  Tensor<int, CPU> result = arange<int, CPU>(0, 10, 2);
 
   std::vector<int> exp = {0, 2, 4, 6, 8};
 
@@ -72,6 +72,47 @@ TEST(TensorCPUTest, MatmulBF16) {
   auto b_v = tensor_b.view();
 
   Tensor<bfloat16, CPU> result = matmul(a_v, b_v);
+
+  tensor_is_close<bfloat16>(result.span(), exp.span());
+}
+
+TEST(TensorCPUTest, CatF16) {
+  Tensor<bfloat16, CPU> tensor_a({2, 4});
+  Tensor<bfloat16, CPU> tensor_b({2, 2});
+
+  tensor_a.fill_(bfloat16(2.0));
+  tensor_b.fill_(bfloat16(3.0));
+
+  auto a_v = tensor_a.view();
+  auto b_v = tensor_b.view();
+
+  std::vector<bfloat16> exp = {2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0};
+
+  Tensor<bfloat16, CPU> result = cat(a_v, b_v, 1);
+
+  Shape expected_shape = {2, 6};
+
+  EXPECT_EQ(result.shape(), expected_shape);
+
+  tensor_is_close<bfloat16>(result.span(), std::span(exp));
+}
+
+TEST(TensorCPUTest, SliceF16) {
+  Tensor<bfloat16, CPU> tensor({1, 4});
+  Tensor<bfloat16, CPU> exp({1, 2});
+
+  tensor.fill_(bfloat16(2.0));
+  exp.fill_(bfloat16(2.0));
+
+  auto view = tensor.view();
+
+  Tensor<bfloat16, CPU> result = slice(view, -1, 0, 2);
+
+  fmt::println("result, {}", result.view());
+
+  Shape expected_shape = {1, 2};
+
+  EXPECT_EQ(result.shape(), expected_shape);
 
   tensor_is_close<bfloat16>(result.span(), exp.span());
 }

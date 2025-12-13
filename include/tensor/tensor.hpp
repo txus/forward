@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <functional>
 #include <span>
 #include <stdexcept>
 #include <tensor/device.hpp>
@@ -41,6 +40,29 @@ inline Shape get_all_strides(const Shape& shape) {
     strides.push_back(get_stride(shape, i));
   }
   return strides;
+}
+
+inline Shape broadcast_shape(const Shape& shape_a, const Shape& shape_b) {
+  assert(shape_a.size() == shape_b.size());
+
+  Shape out;
+  for (size_t i = 0; i < shape_a.size(); ++i) {
+    assert(shape_a[i] == shape_b[i] || shape_a[i] == 1 || shape_b[i] == 1);
+    out.push_back(std::max(shape_a[i], shape_b[i]));
+  }
+  return out;
+}
+
+inline Shape broadcast_strides(const Shape& shape, const Shape& strides, const Shape& out_shape) {
+  Shape result;
+  for (size_t i = 0; i < shape.size(); ++i) {
+    if (shape[i] == 1 && out_shape[i] > 1) {
+      result.push_back(0); // broadcast: don't advance
+    } else {
+      result.push_back(strides[i]);
+    }
+  }
+  return result;
 }
 
 template <DType T, Device D> class Tensor;
@@ -103,15 +125,15 @@ template <DType T, Device D> struct TensorView {
     return tensor;
   }
 
-  template <DType OutT> Tensor<OutT, D> map(std::function<OutT(T)> func) const {
+  template <DType OutT, typename Func> Tensor<OutT, D> map(Func func) const {
     Tensor<OutT, D> result{shape};
 
     std::transform(data.begin(), data.end(), result.span().begin(), func);
     return result;
   }
 
-  Tensor<float, D> to_float() const {
-    return map<float>([](T val) { return static_cast<float>(val); });
+  template <DType OutT> Tensor<OutT, D> to() const {
+    return map<OutT>([](T val) { return static_cast<OutT>(val); });
   }
 
   TensorView<T, D> view_as(Shape new_shape) const {
@@ -121,15 +143,19 @@ template <DType T, Device D> struct TensorView {
     }
     assert(total_elems == data.size());
 
-    TensorView<T, D> new_view;
-    new_view.shape = std::move(new_shape);
-    new_view.stride = get_all_strides(new_shape);
-    new_view.data = data;
-    return new_view;
+    return TensorView{data, new_shape, get_all_strides(new_shape)};
   }
 
   Tensor<T, D> operator/(float other) const {
     return map<T>([other](T val) { return val / other; });
+  }
+
+  Tensor<T, D> cos() const {
+    return map<T>([](T val) { return std::cos(val); });
+  }
+
+  Tensor<T, D> sin() const {
+    return map<T>([](T val) { return std::sin(val); });
   }
 
   T item() const {
@@ -220,6 +246,28 @@ public:
 
 } // namespace tensor
 
+template <> struct fmt::formatter<tensor::Shape> {
+  constexpr auto static parse(format_parse_context& ctx) {
+    return ctx.begin(); // no format options
+  }
+
+  template <typename FormatContext> auto format(tensor::Shape shape, FormatContext& ctx) const {
+    auto out = ctx.out();
+
+    fmt::format_to(out, fmt::emphasis::italic, "[");
+
+    for (std::size_t i = 0; i < shape.size(); ++i) {
+      if (i > 0) {
+        out = fmt::format_to(out, ", ");
+      }
+      out = fmt::format_to(out, fmt::fg(fmt::color::aqua), "{}", shape[i]);
+    }
+    fmt::format_to(out, fmt::emphasis::italic, "]");
+
+    return out;
+  }
+};
+
 template <tensor::DType T, tensor::Device D> struct fmt::formatter<tensor::TensorView<T, D>> {
   // no custom format spec for now -> just {}
   constexpr auto parse(format_parse_context& ctx) {
@@ -232,16 +280,7 @@ template <tensor::DType T, tensor::Device D> struct fmt::formatter<tensor::Tenso
 
     fmt::format_to(out, "<Tensor<{}, {}> ", tensor::dtype::dtype_name<T>::value,
                    tensor::device::device_name<D>::value);
-    fmt::format_to(out, fmt::emphasis::italic, "shape=[");
-
-    for (std::size_t i = 0; i < tensor_view.shape.size(); ++i) {
-      if (i > 0) {
-        out = fmt::format_to(out, ", ");
-      }
-      out = fmt::format_to(out, fmt::fg(fmt::color::aqua), "{}", tensor_view.shape[i]);
-    }
-
-    out = fmt::format_to(out, fmt::emphasis::italic, "] ");
+    fmt::format_to(out, "shape={}", tensor_view.shape);
 
     out = format_tensor_view(out, tensor_view);
 
