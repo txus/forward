@@ -2,12 +2,13 @@
 #include <gtest/gtest.h>
 
 #include <common/test_utils.hpp>
+#include <llama/grouped_query_attention.hpp>
 #include <llama/model.hpp>
 
 using namespace llama;
 using namespace tensor;
 
-TEST(LlamaModelTest, Forward) {
+TEST(LlamaGQATest, Forward) {
   const size_t batch_size = 1;
   const size_t seq_len = 4;
   const size_t hidden_size = 16;
@@ -25,15 +26,26 @@ TEST(LlamaModelTest, Forward) {
                           .num_hidden_layers = 1,
                           .num_key_value_heads = num_kv_heads};
 
-  Model<bfloat16, CPU> mod{conf};
+  fmt::println("hidden {}", hidden_size);
+  fmt::println("head dim {}", head_dim);
+  fmt::println("num heads {}", num_attention_heads);
+  fmt::println("num kv heads {}", num_kv_heads);
 
-  auto weights = empty_weights(mod.config);
+  GroupedQueryAttention<bfloat16, CPU> gqa{conf};
 
-  mod.load_weights(weights);
+  auto weights = empty_weights(conf);
 
-  auto input_ = Tensor<int, CPU>{{1, 4}};
+  gqa.load_weights(weights, 0);
 
-  auto view = input_.view();
+  Tensor<bfloat16, CPU> input_{{batch_size, seq_len, hidden_size}};
+  input_.fill_(0.1);
+  auto input = input_.view();
 
-  auto output = mod.forward(view);
+  RoPE<bfloat16, CPU> rope{conf};
+
+  auto attn_mask = causal_attention_mask<int, CPU>(seq_len);
+
+  auto output = gqa.forward(input, attn_mask.view(), rope);
+
+  fmt::println("Output: {}", output.view());
 }

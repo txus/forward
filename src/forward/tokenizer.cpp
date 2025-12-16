@@ -31,7 +31,13 @@ Tokenizer::Tokenizer(std::string_view tokenizer_path) {
 Tokenizer::~Tokenizer() = default;
 
 std::vector<int> Tokenizer::encode(std::string_view prompt) {
-  return impl_->Encode(std::string(prompt));
+  std::vector<int> out;
+  auto tokens = impl_->Encode(std::string(prompt));
+  out.push_back(128000); // bos
+  for (auto tok : tokens) {
+    out.push_back(tok);
+  }
+  return out;
 }
 std::string Tokenizer::decode(std::vector<int>& token_ids) {
   return impl_->Decode(token_ids);

@@ -13,11 +13,11 @@ template <DType T, Device D>
 void MLP<T, D>::load_weights(std::unordered_map<std::string, Tensor<T, D> /*unused*/>& weight_map,
                              size_t layer_idx) {
   up_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.mlp.up_proj.weight", layer_idx)).view());
+      weight_map.at(fmt::format("model.layers.{}.mlp.up_proj.weight", layer_idx)).view(), true);
   gate_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.mlp.gate_proj.weight", layer_idx)).view());
+      weight_map.at(fmt::format("model.layers.{}.mlp.gate_proj.weight", layer_idx)).view(), true);
   down_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.mlp.down_proj.weight", layer_idx)).view());
+      weight_map.at(fmt::format("model.layers.{}.mlp.down_proj.weight", layer_idx)).view(), true);
 }
 
 template <DType T, Device D> Tensor<T, D> MLP<T, D>::forward(TensorView<T, D> inputs) const {

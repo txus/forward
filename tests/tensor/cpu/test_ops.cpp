@@ -116,3 +116,18 @@ TEST(TensorCPUTest, SliceF16) {
 
   tensor_is_close<bfloat16>(result.span(), exp.span());
 }
+
+TEST(TensorCPUTest, TrilBF16) {
+  Tensor<bfloat16, CPU> tensor({4, 4});
+  tensor.fill_(1.0);
+
+  Tensor<bfloat16, CPU> no_diag = tril<bfloat16>(tensor.view(), false);
+
+  std::vector<bfloat16> exp = {1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1};
+
+  tensor_is_close<bfloat16>(no_diag.span(), std::span(exp));
+  Tensor<bfloat16, CPU> diag = tril<bfloat16>(tensor.view(), true);
+
+  exp = {1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1};
+  tensor_is_close<bfloat16>(diag.span(), std::span(exp));
+}

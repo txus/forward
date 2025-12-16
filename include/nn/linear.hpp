@@ -11,7 +11,7 @@ public:
   Linear() = default;
   ~Linear() = default;
 
-  void set_weights(tensor::TensorView<T, D> weights);
+  void set_weights(tensor::TensorView<T, D> weights, bool transpose = false);
 
   tensor::Tensor<T, D> forward(tensor::TensorView<T, D> inputs) const;
 };

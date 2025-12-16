@@ -2,6 +2,7 @@
 
 #include <common/test_utils.hpp>
 #include <nn/act.hpp>
+#include <tensor/ops.hpp>
 #include <tensor/tensor.hpp>
 
 using namespace nn;
@@ -10,11 +11,8 @@ using namespace tensor;
 TEST(NNActTest, SiLU) {
   size_t length = 2;
 
-  Tensor<bfloat16, CPU> inputs_{{length}};
-  // arange
-  for (int i = 0; i < inputs_.size(); ++i) {
-    inputs_.span()[i] = float(i);
-  }
+  Tensor<bfloat16, CPU> inputs_ =
+      arange<bfloat16, CPU>(bfloat16(0.0), bfloat16(length), bfloat16(1.0)); // NOLINT
   auto inputs = inputs_.view();
 
   SiLU silu;

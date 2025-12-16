@@ -1,6 +1,7 @@
 #include <fmt/format.h>
 
 #include <forward/loader.hpp>
+#include <forward/sampler.hpp>
 #include <forward/tokenizer.hpp>
 #include <llama/model.hpp>
 #include <tensor/tensor.hpp>
@@ -16,10 +17,13 @@ int main(int argc, char* argv[]) {
 
   tokenizer::Tokenizer tok("./tests/model/tokenizer.json");
 
+  sampler::GreedySampler<bfloat16, CPU> sampler{sampler::GreedyConfig{}, tok};
+
   Model<bfloat16, CPU> mod("./tests/model/config.json");
 
   // loader::inspect_safetensors("./tests/model/model.safetensors");
 
+  fmt::println("Loading weights...");
   auto weights = loader::load_weights<bfloat16, CPU>(
       "./tests/model/model.safetensors",
       // prologue
@@ -50,6 +54,42 @@ int main(int argc, char* argv[]) {
       "model.layers.13.post_attention_layernorm.weight",
       "model.layers.14.post_attention_layernorm.weight",
       "model.layers.15.post_attention_layernorm.weight",
+      // q proj
+      "model.layers.0.self_attn.q_proj.weight", "model.layers.1.self_attn.q_proj.weight",
+      "model.layers.2.self_attn.q_proj.weight", "model.layers.3.self_attn.q_proj.weight",
+      "model.layers.4.self_attn.q_proj.weight", "model.layers.5.self_attn.q_proj.weight",
+      "model.layers.6.self_attn.q_proj.weight", "model.layers.7.self_attn.q_proj.weight",
+      "model.layers.8.self_attn.q_proj.weight", "model.layers.9.self_attn.q_proj.weight",
+      "model.layers.10.self_attn.q_proj.weight", "model.layers.11.self_attn.q_proj.weight",
+      "model.layers.12.self_attn.q_proj.weight", "model.layers.13.self_attn.q_proj.weight",
+      "model.layers.14.self_attn.q_proj.weight", "model.layers.15.self_attn.q_proj.weight",
+      // k proj
+      "model.layers.0.self_attn.k_proj.weight", "model.layers.1.self_attn.k_proj.weight",
+      "model.layers.2.self_attn.k_proj.weight", "model.layers.3.self_attn.k_proj.weight",
+      "model.layers.4.self_attn.k_proj.weight", "model.layers.5.self_attn.k_proj.weight",
+      "model.layers.6.self_attn.k_proj.weight", "model.layers.7.self_attn.k_proj.weight",
+      "model.layers.8.self_attn.k_proj.weight", "model.layers.9.self_attn.k_proj.weight",
+      "model.layers.10.self_attn.k_proj.weight", "model.layers.11.self_attn.k_proj.weight",
+      "model.layers.12.self_attn.k_proj.weight", "model.layers.13.self_attn.k_proj.weight",
+      "model.layers.14.self_attn.k_proj.weight", "model.layers.15.self_attn.k_proj.weight",
+      // v proj
+      "model.layers.0.self_attn.v_proj.weight", "model.layers.1.self_attn.v_proj.weight",
+      "model.layers.2.self_attn.v_proj.weight", "model.layers.3.self_attn.v_proj.weight",
+      "model.layers.4.self_attn.v_proj.weight", "model.layers.5.self_attn.v_proj.weight",
+      "model.layers.6.self_attn.v_proj.weight", "model.layers.7.self_attn.v_proj.weight",
+      "model.layers.8.self_attn.v_proj.weight", "model.layers.9.self_attn.v_proj.weight",
+      "model.layers.10.self_attn.v_proj.weight", "model.layers.11.self_attn.v_proj.weight",
+      "model.layers.12.self_attn.v_proj.weight", "model.layers.13.self_attn.v_proj.weight",
+      "model.layers.14.self_attn.v_proj.weight", "model.layers.15.self_attn.v_proj.weight",
+      // o proj
+      "model.layers.0.self_attn.o_proj.weight", "model.layers.1.self_attn.o_proj.weight",
+      "model.layers.2.self_attn.o_proj.weight", "model.layers.3.self_attn.o_proj.weight",
+      "model.layers.4.self_attn.o_proj.weight", "model.layers.5.self_attn.o_proj.weight",
+      "model.layers.6.self_attn.o_proj.weight", "model.layers.7.self_attn.o_proj.weight",
+      "model.layers.8.self_attn.o_proj.weight", "model.layers.9.self_attn.o_proj.weight",
+      "model.layers.10.self_attn.o_proj.weight", "model.layers.11.self_attn.o_proj.weight",
+      "model.layers.12.self_attn.o_proj.weight", "model.layers.13.self_attn.o_proj.weight",
+      "model.layers.14.self_attn.o_proj.weight", "model.layers.15.self_attn.o_proj.weight",
       // MLP up proj
       "model.layers.0.mlp.up_proj.weight", "model.layers.1.mlp.up_proj.weight",
       "model.layers.2.mlp.up_proj.weight", "model.layers.3.mlp.up_proj.weight",
@@ -81,16 +121,13 @@ int main(int argc, char* argv[]) {
       "model.norm.weight");
   mod.load_weights(weights);
 
-  const auto* prompt = "Hello, world";
-  auto token_ids = tok.encode(prompt);
+  fmt::println("Weights loaded! Performing inference...");
 
-  auto input_ids_ = Tensor<int, CPU>{{1, token_ids.size()}, std::move(token_ids)};
+  std::string prompt = "The capital of france is";
 
-  auto input_ids = input_ids_.view();
+  auto out = sampler.generate(mod, prompt, 2);
 
-  auto result = mod.forward(input_ids);
-
-  fmt::println("Result: {}", result.view());
+  fmt::println("Result: {}", out);
 
   return 0;
 }

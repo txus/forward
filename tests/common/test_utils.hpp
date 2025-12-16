@@ -34,6 +34,18 @@ empty_weights(const llama::ModelConfig& config) {
     out.insert_or_assign(fmt::format("model.layers.{}.post_attention_layernorm.weight", layer_idx),
                          make_tensor(shape, 0.1));
 
+    out.insert_or_assign(
+        fmt::format("model.layers.{}.self_attn.q_proj.weight", layer_idx),
+        make_tensor({config.num_attention_heads * config.head_dim, config.hidden_size}, 0.1));
+    out.insert_or_assign(
+        fmt::format("model.layers.{}.self_attn.k_proj.weight", layer_idx),
+        make_tensor({config.num_key_value_heads * config.head_dim, config.hidden_size}, 0.1));
+    out.insert_or_assign(
+        fmt::format("model.layers.{}.self_attn.v_proj.weight", layer_idx),
+        make_tensor({config.num_key_value_heads * config.head_dim, config.hidden_size}, 0.1));
+    out.insert_or_assign(fmt::format("model.layers.{}.self_attn.o_proj.weight", layer_idx),
+                         make_tensor({config.hidden_size, config.hidden_size}, 0.1));
+
     out.insert_or_assign(fmt::format("model.layers.{}.mlp.up_proj.weight", layer_idx),
                          make_tensor({config.intermediate_size, config.hidden_size}, 0.1));
     out.insert_or_assign(fmt::format("model.layers.{}.mlp.gate_proj.weight", layer_idx),

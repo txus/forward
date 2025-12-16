@@ -65,6 +65,21 @@ inline Shape broadcast_strides(const Shape& shape, const Shape& strides, const S
   return result;
 }
 
+inline std::vector<size_t> linear_to_multidim(size_t linear_idx, Shape shape) {
+  std::vector<size_t> index;
+
+  for (size_t dim = 0; dim < shape.size(); ++dim) {
+    size_t stride = 1;
+    for (size_t dim_ = dim + 1; dim_ < shape.size(); ++dim_) {
+      stride *= shape[dim_];
+    }
+
+    index.push_back(linear_idx / stride % shape[dim]);
+  }
+
+  return index;
+}
+
 template <DType T, Device D> class Tensor;
 
 template <DType T, Device D> struct TensorView {
@@ -108,32 +123,106 @@ template <DType T, Device D> struct TensorView {
     return TensorView{std::span<T>(data.data() + offset, sub_size), new_shape, new_strides};
   }
 
-  void transpose() {
-    assert(shape.size() == 2);
-    Shape new_shape = {shape[1], shape[0]};
-    shape = new_shape;
+  void transpose(size_t dim_a, size_t dim_b) {
+    assert(shape.size() >= std::max(dim_a, dim_b) + 1);
 
-    Shape new_strides = {stride[1], stride[0]};
-    stride = new_strides;
+    Shape new_shape{};
+    Shape new_stride{};
+    for (size_t dim = 0; dim < shape.size(); ++dim) {
+      if (dim == dim_a) {
+        new_shape.push_back(shape[dim_b]);
+        new_stride.push_back(stride[dim_b]);
+      } else if (dim == dim_b) {
+        new_shape.push_back(shape[dim_a]);
+        new_stride.push_back(stride[dim_a]);
+      } else {
+        new_shape.push_back(shape[dim]);
+        new_stride.push_back(stride[dim]);
+      }
+    }
+
+    shape = new_shape;
+    stride = new_stride;
   }
 
-  Tensor<T, D> copy() const {
-    Tensor<T, D> tensor{shape};
+  void transpose() {
+    assert(shape.size() == 2);
+    transpose(0, 1);
+  }
 
-    assert(tensor.size() == data.size());
-    std::copy_n(data.data(), data.size(), tensor.data());
-    return tensor;
+  Tensor<T, D> repeat_interleave(size_t dim, size_t repeats) const {
+    assert(dim < shape.size());
+
+    Shape temp_shape;
+    Shape temp_stride;
+
+    for (size_t dim_ = 0; dim_ <= dim; ++dim_) {
+      temp_shape.push_back(shape[dim_]);
+      temp_stride.push_back(stride[dim_]);
+    }
+
+    temp_shape.push_back(repeats);
+    temp_stride.push_back(0);
+
+    for (size_t dim_ = dim + 1; dim_ < shape.size(); ++dim_) {
+      temp_shape.push_back(shape[dim_]);
+      temp_stride.push_back(stride[dim_]);
+    }
+
+    TensorView temp_view{data, temp_shape, temp_stride};
+
+    Tensor<T, D> materialized = temp_view.copy();
+
+    Shape final_shape;
+    for (size_t dim_ = 0; dim_ < shape.size(); ++dim_) {
+      if (dim_ == dim) {
+        final_shape.push_back(shape[dim_] * repeats); // Expanded dimension
+      } else {
+        final_shape.push_back(shape[dim_]);
+      }
+    }
+
+    return materialized.view().view_as(final_shape).copy();
+  }
+
+  [[nodiscard]] bool is_contiguous() const {
+    size_t last_stride = stride[0] + 1;
+    for (size_t dim = 0; dim < shape.size(); ++dim) {
+      if (last_stride <= stride[dim]) {
+        return false;
+      }
+      last_stride = stride[dim];
+    }
+    return true;
   }
 
   template <DType OutT, typename Func> Tensor<OutT, D> map(Func func) const {
     Tensor<OutT, D> result{shape};
 
-    std::transform(data.begin(), data.end(), result.span().begin(), func);
+    auto result_span = result.span();
+
+    size_t total_elements = data.size();
+
+    for (size_t linear_idx = 0; linear_idx < total_elements; ++linear_idx) {
+      std::vector<size_t> indices = linear_to_multidim(linear_idx, shape);
+
+      size_t offset = 0;
+      for (size_t dim = 0; dim < shape.size(); ++dim) {
+        offset += indices[dim] * stride[dim];
+      }
+
+      result_span[linear_idx] = func(data[offset]);
+    }
+
     return result;
   }
 
   template <DType OutT> Tensor<OutT, D> to() const {
     return map<OutT>([](T val) { return static_cast<OutT>(val); });
+  }
+
+  Tensor<T, D> copy() const {
+    return map<T>([](T val) { return val; });
   }
 
   TensorView<T, D> view_as(Shape new_shape) const {
@@ -156,6 +245,10 @@ template <DType T, Device D> struct TensorView {
 
   Tensor<T, D> sin() const {
     return map<T>([](T val) { return std::sin(val); });
+  }
+
+  Tensor<T, D> exp() const {
+    return map<T>([](T val) { return std::exp(val); });
   }
 
   T item() const {

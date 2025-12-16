@@ -3,23 +3,28 @@
 
 #include <common/test_utils.hpp>
 #include <llama/layer.hpp>
+#include <llama/model.hpp>
 
 using namespace llama;
 using namespace tensor;
 
 TEST(LlamaLayerTest, Forward) {
   const size_t batch_size = 1;
-  const size_t seq_len = 2;
-  const size_t hidden_size = 4;
-  const size_t intermediate_size = 8;
+  const size_t seq_len = 4;
+  const size_t hidden_size = 16;
 
-  llama::ModelConfig conf{
-      .vocab_size = 128,
-      .hidden_size = hidden_size,
-      .intermediate_size = intermediate_size,
-      .num_hidden_layers = 1,
-      .hidden_act = "silu",
-  };
+  const size_t head_dim = 4;
+  const size_t num_attention_heads = 4;
+  const size_t num_kv_heads = 1;
+
+  llama::ModelConfig conf{.vocab_size = 128,
+                          .head_dim = head_dim,
+                          .rope_theta = 10000,
+                          .hidden_size = hidden_size,
+                          .max_position_embeddings = 128,
+                          .num_attention_heads = num_attention_heads,
+                          .num_hidden_layers = 1,
+                          .num_key_value_heads = num_kv_heads};
 
   Layer<bfloat16, CPU> layer{conf};
 
@@ -31,7 +36,11 @@ TEST(LlamaLayerTest, Forward) {
   input_.fill_(0.1);
   auto input = input_.view();
 
-  auto output = layer.forward(input);
+  RoPE<bfloat16, CPU> rope{conf};
+
+  auto attn_mask = causal_attention_mask<int, CPU>(seq_len);
+
+  auto output = layer.forward(input, attn_mask.view(), rope);
 
   fmt::println("Output: {}", output.view());
 }

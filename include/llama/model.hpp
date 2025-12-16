@@ -10,6 +10,9 @@
 
 namespace llama {
 
+template <tensor::DType T, tensor::Device D>
+tensor::Tensor<T, D> causal_attention_mask(size_t seq_len);
+
 template <tensor::DType T, tensor::Device D> class Model {
 private:
   bool loaded_ = false;
@@ -24,6 +27,7 @@ public:
   std::vector<llama::Layer<T, D>> layers{};
   nn::RMSNorm<T, D> norm;
   nn::Linear<T, D> lm_head;
+  RoPE<T, D> rope;
 
   void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map);
 
