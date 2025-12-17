@@ -5,7 +5,8 @@ using namespace nn;
 using namespace tensor;
 
 template <DType T, Device D>
-Tensor<T, D> Softmax::operator()(const TensorView<T, D>& input, int dim) const {
+Tensor<std::remove_const_t<T>, D> Softmax::operator()(const TensorView<T, D>& input,
+                                                      int dim) const {
   Tensor<T, D> out{{input.shape}};
 
   auto maxes = max(input, dim, true);

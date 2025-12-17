@@ -5,3 +5,6 @@ CLAUDE.md
 
 .envrc
 .direnv/
+
+tests/reference/.venv
+*.safetensors

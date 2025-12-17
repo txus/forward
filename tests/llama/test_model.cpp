@@ -25,11 +25,11 @@ TEST(LlamaModelTest, Forward) {
                           .num_hidden_layers = 1,
                           .num_key_value_heads = num_kv_heads};
 
+  Loader<bfloat16, CPU> weights_loader(TEST_MODEL_PATH "/model.safetensors");
+
   Model<bfloat16, CPU> mod{conf};
 
-  auto weights = empty_weights(mod.config);
-
-  mod.load_weights(weights);
+  mod.load_weights(weights_loader);
 
   auto input_ = Tensor<int, CPU>{{1, 4}};
 

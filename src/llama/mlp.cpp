@@ -10,30 +10,37 @@ template <DType T, Device D> MLP<T, D>::MLP(const ModelConfig& config) {
 }
 
 template <DType T, Device D>
-void MLP<T, D>::load_weights(std::unordered_map<std::string, Tensor<T, D> /*unused*/>& weight_map,
-                             size_t layer_idx) {
-  up_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.mlp.up_proj.weight", layer_idx)).view(), true);
-  gate_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.mlp.gate_proj.weight", layer_idx)).view(), true);
-  down_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.mlp.down_proj.weight", layer_idx)).view(), true);
+void MLP<T, D>::load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx) {
+  up_proj.load_weights(loader, fmt::format("model.layers.{}.mlp.up_proj.weight", layer_idx), true);
+  gate_proj.load_weights(loader, fmt::format("model.layers.{}.mlp.gate_proj.weight", layer_idx),
+                         true);
+  down_proj.load_weights(loader, fmt::format("model.layers.{}.mlp.down_proj.weight", layer_idx),
+                         true);
 }
 
-template <DType T, Device D> Tensor<T, D> MLP<T, D>::forward(TensorView<T, D> inputs) const {
+template <DType T, Device D>
+Tensor<std::remove_const_t<T>, D> MLP<T, D>::forward(TensorView<T, D> inputs) {
   auto up_proj_t = up_proj.forward(inputs);
   auto up_proj_v = up_proj_t.view();
+
+  fmt::println("mlp.up_proj {}", up_proj_v);
 
   auto gate_proj_t = gate_proj.forward(inputs);
   auto gate_proj_v = gate_proj_t.view();
 
+  fmt::println("mlp.gate_proj {}", gate_proj_v);
+
   auto activated_t = std::visit([&](auto& function) { return function(gate_proj_v); }, act_fn);
   auto activated_v = activated_t.view();
+
+  fmt::println("mlp.act_fn {}", activated_v);
 
   auto gated_t = mul<T, D>(activated_v, up_proj_v);
   auto gated_v = gated_t.view();
 
   auto down_proj_t = down_proj.forward(gated_v);
+
+  fmt::println("mlp.down_proj {}", down_proj_t.view());
 
   return down_proj_t;
 }

@@ -1,17 +1,27 @@
-#include <forward/loader.hpp>
 #include <nn/embedding.hpp>
-#include <utility>
+#include <tensor/loader.hpp>
 
 using namespace nn;
 using namespace tensor;
 
-template <DType T, Device D> void Embedding<T, D>::set_weights(TensorView<T, D> weights) {
+template <DType T, Device D>
+void Embedding<T, D>::load_weights(const tensor::Loader<T, D>& loader) {
+  weights_ = loader.load("model.embed_tokens.weight");
+}
+
+template <DType T, Device D> void Embedding<T, D>::load_weights(TensorView<const T, D> weights) {
   weights_ = std::move(weights);
 }
 
+template <DType T, Device D> void Embedding<T, D>::load_weights(TensorView<T, D> weights) {
+  weights_ = TensorView<const T, D>{weights.span(), weights.shape, weights.stride};
+}
+
 template <DType T, Device D>
-Tensor<T, D> Embedding<T, D>::forward(TensorView<int, D> token_ids) const {
-  const auto w_shape = weights_.shape;
+Tensor<std::remove_const_t<T>, D>
+Embedding<T, D>::forward(const TensorView<int, D>& token_ids) const {
+  auto weights = weights_;
+  const auto w_shape = weights.shape;
 
   const size_t vocab_size = w_shape[0];
   const size_t hidden_dim = w_shape[1];
@@ -21,7 +31,7 @@ Tensor<T, D> Embedding<T, D>::forward(TensorView<int, D> token_ids) const {
 
   Tensor<T, D> out{{batch_size, seq_len, hidden_dim}};
 
-  const auto w_span = weights_.span();
+  const auto w_span = weights.span();
   const auto ids_span = token_ids.span();
   auto out_span = out.span();
 

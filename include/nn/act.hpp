@@ -7,7 +7,7 @@ namespace nn {
 
 struct SiLU {
   template <tensor::DType T, tensor::Device D>
-  tensor::Tensor<T, D> operator()(tensor::TensorView<T, D> input) const;
+  tensor::Tensor<std::remove_const_t<T>, D> operator()(const tensor::TensorView<T, D>& input) const;
 };
 
 using Activation = std::variant<SiLU>;

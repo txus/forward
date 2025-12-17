@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <tensor/device.hpp>
 #include <tensor/dtype.hpp>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -89,7 +90,7 @@ template <DType T, Device D> struct TensorView {
 
   template <typename... Ix>
     requires(std::conjunction_v<std::is_integral<Ix>...>)
-  TensorView get(Ix... dims) const {
+  TensorView<T, D> get(Ix... dims) {
     size_t indices[] = {static_cast<size_t>(dims)...}; // NOLINT
     size_t ndim = sizeof...(Ix);
 
@@ -123,6 +124,43 @@ template <DType T, Device D> struct TensorView {
     return TensorView{std::span<T>(data.data() + offset, sub_size), new_shape, new_strides};
   }
 
+  template <typename... Ix>
+    requires(std::conjunction_v<std::is_integral<Ix>...>)
+  TensorView<const T, D> get(Ix... dims) const {
+    size_t indices[] = {static_cast<size_t>(dims)...}; // NOLINT
+    size_t ndim = sizeof...(Ix);
+
+    assert(ndim <= shape.size());
+
+    size_t offset = 0;
+    for (size_t idx = 0; idx < ndim; ++idx) {
+      assert(indices[idx] < shape[idx]);
+      size_t stride_ = stride[idx];
+      offset += indices[idx] * stride_;
+    }
+
+    Shape new_shape;
+    for (size_t dim = ndim; dim < shape.size(); ++dim) {
+      new_shape.push_back(shape[dim]);
+    }
+
+    Shape new_strides;
+    for (size_t dim = ndim; dim < stride.size(); ++dim) {
+      new_strides.push_back(stride[dim]);
+    }
+
+    size_t sub_size = 1;
+    for (auto dim : new_shape) {
+      sub_size *= dim;
+    }
+    if (new_shape.empty()) {
+      sub_size = 1; // scalar
+    }
+
+    return TensorView<const T, D>{std::span<const T>(data.data() + offset, sub_size), new_shape,
+                                  new_strides};
+  }
+
   void transpose(size_t dim_a, size_t dim_b) {
     assert(shape.size() >= std::max(dim_a, dim_b) + 1);
 
@@ -150,7 +188,7 @@ template <DType T, Device D> struct TensorView {
     transpose(0, 1);
   }
 
-  Tensor<T, D> repeat_interleave(size_t dim, size_t repeats) const {
+  Tensor<std::remove_const_t<T>, D> repeat_interleave(size_t dim, size_t repeats) const {
     assert(dim < shape.size());
 
     Shape temp_shape;
@@ -186,12 +224,16 @@ template <DType T, Device D> struct TensorView {
   }
 
   [[nodiscard]] bool is_contiguous() const {
-    size_t last_stride = stride[0] + 1;
-    for (size_t dim = 0; dim < shape.size(); ++dim) {
-      if (last_stride <= stride[dim]) {
+    if (shape.empty()) {
+      return true;
+    }
+
+    size_t expected_stride = 1;
+    for (int dim = static_cast<int>(shape.size()) - 1; dim >= 0; --dim) {
+      if (stride[dim] != expected_stride) {
         return false;
       }
-      last_stride = stride[dim];
+      expected_stride *= shape[dim];
     }
     return true;
   }
@@ -221,8 +263,21 @@ template <DType T, Device D> struct TensorView {
     return map<OutT>([](T val) { return static_cast<OutT>(val); });
   }
 
-  Tensor<T, D> copy() const {
-    return map<T>([](T val) { return val; });
+  void check_for_nans() const {
+    for (size_t i = 0; i < span().size(); ++i) {
+      if (std::isnan(span()[i])) {
+        fmt::println("Tensor has NaN at index {}: {}", i, span()[i]);
+        break;
+      }
+      if (std::isinf(span()[i])) {
+        fmt::println("Tensor has Inf at index {}: {}", i, span()[i]);
+        break;
+      }
+    }
+  }
+
+  Tensor<std::remove_const_t<T>, D> copy() const {
+    return map<std::remove_const_t<T>>([](T val) { return val; });
   }
 
   TensorView<T, D> view_as(Shape new_shape) const {
@@ -235,20 +290,16 @@ template <DType T, Device D> struct TensorView {
     return TensorView{data, new_shape, get_all_strides(new_shape)};
   }
 
-  Tensor<T, D> operator/(float other) const {
-    return map<T>([other](T val) { return val / other; });
+  Tensor<std::remove_const_t<T>, D> cos() const {
+    return map<std::remove_const_t<T>>([](T val) { return std::cos(val); });
   }
 
-  Tensor<T, D> cos() const {
-    return map<T>([](T val) { return std::cos(val); });
+  Tensor<std::remove_const_t<T>, D> sin() const {
+    return map<std::remove_const_t<T>>([](T val) { return std::sin(val); });
   }
 
-  Tensor<T, D> sin() const {
-    return map<T>([](T val) { return std::sin(val); });
-  }
-
-  Tensor<T, D> exp() const {
-    return map<T>([](T val) { return std::exp(val); });
+  Tensor<std::remove_const_t<T>, D> exp() const {
+    return map<std::remove_const_t<T>>([](T val) { return std::exp(val); });
   }
 
   T item() const {
@@ -270,6 +321,7 @@ private:
   Shape shape_;
 
 public:
+  explicit Tensor() : shape_({0}) {}
   explicit Tensor(Shape shape) : shape_(std::move(shape)) {
     size_t total = 1;
     for (auto& dim : shape_) {
@@ -284,6 +336,7 @@ public:
   TensorView<T, D> view() {
     return TensorView<T, D>{span(), shape(), get_all_strides(shape())};
   }
+
   TensorView<const T, D> view() const {
     return TensorView<const T, D>{span(), shape(), get_all_strides(shape())};
   }

@@ -3,8 +3,8 @@
 #include <llama/config.hpp>
 #include <nn/act.hpp>
 #include <nn/linear.hpp>
+#include <tensor/loader.hpp>
 #include <tensor/tensor.hpp>
-#include <unordered_map>
 
 namespace llama {
 template <tensor::DType T, tensor::Device D> class MLP {
@@ -18,9 +18,8 @@ public:
   explicit MLP(const ModelConfig& config);
   ~MLP() = default;
 
-  void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map,
-                    size_t layer_idx);
+  void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<T, D> inputs) const;
+  tensor::Tensor<std::remove_const_t<T>, D> forward(tensor::TensorView<T, D> inputs);
 };
 } // namespace llama

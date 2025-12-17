@@ -19,10 +19,9 @@ TEST(NNEmbeddingTest, Forward) {
     weights_.set_(i, float(i));
   }
 
-  auto weights = weights_.view();
-
   Embedding<bfloat16, CPU> sut;
-  sut.set_weights(weights);
+
+  sut.load_weights(weights_.view());
 
   Tensor<int, CPU> inputs_{{batch_size, seq_len}};
   inputs_.fill_(1);
@@ -41,13 +40,13 @@ TEST(NNEmbeddingTest, Forward) {
 
   // the first 4 tokens tokens in the sequence are literally the first 4 tokens
   // in the vocab
-  tensor_is_close<bfloat16>(result.get(0, 0).span(), weights.get(0).span());
-  tensor_is_close<bfloat16>(result.get(0, 1).span(), weights.get(1).span());
-  tensor_is_close<bfloat16>(result.get(0, 2).span(), weights.get(2).span());
-  tensor_is_close<bfloat16>(result.get(0, 3).span(), weights.get(3).span());
+  tensor_is_close<bfloat16>(result.get(0, 0).span(), weights_.view().get(0).span());
+  tensor_is_close<bfloat16>(result.get(0, 1).span(), weights_.view().get(1).span());
+  tensor_is_close<bfloat16>(result.get(0, 2).span(), weights_.view().get(2).span());
+  tensor_is_close<bfloat16>(result.get(0, 3).span(), weights_.view().get(3).span());
 
   // and now they cycle back -- tokens 5 and 6 in the sequence are 0 and 1 in
   // the vocab
-  tensor_is_close<bfloat16>(result.get(0, 4).span(), weights.get(0).span());
-  tensor_is_close<bfloat16>(result.get(0, 5).span(), weights.get(1).span());
+  tensor_is_close<bfloat16>(result.get(0, 4).span(), weights_.view().get(0).span());
+  tensor_is_close<bfloat16>(result.get(0, 5).span(), weights_.view().get(1).span());
 }

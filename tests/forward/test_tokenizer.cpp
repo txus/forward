@@ -1,3 +1,4 @@
+#include <fmt/format.h>
 #include <gtest/gtest.h>
 
 #include <forward/tokenizer.hpp>
@@ -11,5 +12,5 @@ TEST(ForwardTokenizerTest, Roundtrip) {
   std::vector<int> input_ids = tok.encode(prompt);
   auto decoded = tok.decode(input_ids);
 
-  EXPECT_EQ(decoded, prompt);
+  EXPECT_EQ(decoded, fmt::format("<|begin_of_text|>{}", prompt));
 }

@@ -16,23 +16,20 @@ Layer<T, D>::Layer(const ModelConfig& _config)
       attention(GroupedQueryAttention<T, D>{_config}) {}
 
 template <DType T, Device D>
-void Layer<T, D>::load_weights(std::unordered_map<std::string, Tensor<T, D> /*unused*/>& weight_map,
-                               size_t layer_idx) {
-  prenorm.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.input_layernorm.weight", layer_idx)).view());
-  postnorm.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.post_attention_layernorm.weight", layer_idx))
-          .view());
+void Layer<T, D>::load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx) {
+  prenorm.load_weights(loader, fmt::format("model.layers.{}.input_layernorm.weight", layer_idx));
+  postnorm.load_weights(loader,
+                        fmt::format("model.layers.{}.post_attention_layernorm.weight", layer_idx));
 
-  attention.load_weights(weight_map, layer_idx);
+  attention.load_weights(loader, layer_idx);
 
-  mlp.load_weights(weight_map, layer_idx);
+  mlp.load_weights(loader, layer_idx);
 }
 
 template <DType T, Device D>
-Tensor<T, D> Layer<T, D>::forward(TensorView<T, D> inputs,
-                                  const tensor::TensorView<int, D>& attn_mask,
-                                  const RoPE<T, D>& rope) const {
+Tensor<std::remove_const_t<T>, D> Layer<T, D>::forward(const TensorView<T, D>& inputs,
+                                                       const TensorView<int, D>& attn_mask,
+                                                       const RoPE<T, D>& rope) {
   // prenorm
   auto residual_t = prenorm.forward(std::move(inputs));
   auto residual_v = residual_t.view();

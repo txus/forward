@@ -19,4 +19,6 @@ struct ModelConfig {
   std::string hidden_act = "silu";
 };
 
+ModelConfig load_config(std::string_view model_path);
+
 } // namespace llama

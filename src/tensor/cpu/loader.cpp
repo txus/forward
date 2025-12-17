@@ -1,7 +1,7 @@
 #include <cstdlib>
-#include <forward/loader.hpp>
 #include <iostream>
 #include <print>
+#include <tensor/loader.hpp>
 #include <tensor/tensor.hpp>
 
 #define SAFETENSORS_CPP_IMPLEMENTATION
@@ -100,12 +100,12 @@ std::string to_string_snipped(const safetensors::tensor_t& tensor, const uint8_t
   return string_stream.str();
 }
 
-safetensors::safetensors_t load(std::string_view(file_path)) {
-  safetensors::safetensors_t safetensors;
+std::unique_ptr<safetensors::safetensors_t> load_safetensors(std::string_view file_path) {
+  auto safetensors = std::make_unique<safetensors::safetensors_t>();
 
   std::string warn;
   std::string err;
-  bool ret = safetensors::mmap_from_file(std::string(file_path), &safetensors, &warn, &err);
+  bool ret = safetensors::mmap_from_file(std::string(file_path), safetensors.get(), &warn, &err);
 
   if (warn.size() != 0U) {
     std::println(std::cerr, "WARN: {}", warn);
@@ -116,7 +116,7 @@ safetensors::safetensors_t load(std::string_view(file_path)) {
     throw "fatal error";
   }
 
-  if (!safetensors::validate_data_offsets(safetensors, err)) {
+  if (!safetensors::validate_data_offsets(*safetensors, err)) {
     std::println(std::cerr, "Invalid data offsets\nErr: {}", err);
     throw "fatal error";
   }
@@ -124,32 +124,21 @@ safetensors::safetensors_t load(std::string_view(file_path)) {
   return safetensors;
 }
 
-namespace loader {
+namespace tensor {
 
-std::vector<std::string> all_tensor_names(std::string_view file_path) {
-  std::vector<std::string> out;
+template <DType T, Device D>
+Loader<T, D>::Loader(std::string_view file_path) : safetensors_(load_safetensors(file_path)){};
+template <DType T, Device D> Loader<T, D>::~Loader() = default;
 
-  safetensors::safetensors_t safetensors = load(file_path);
-
-  out.reserve(safetensors.tensors.size());
-  for (size_t i = 0; i < safetensors.tensors.size(); i++) {
-    out.push_back(safetensors.tensors.keys()[i]);
-  }
-
-  return out;
-}
-
-void inspect_safetensors(std::string_view file_path) {
-  safetensors::safetensors_t safetensors = load(file_path);
-
-  const uint8_t* databuffer{safetensors.databuffer_addr};
+template <DType T, Device D> void Loader<T, D>::inspect() const {
+  const uint8_t* databuffer{safetensors_->databuffer_addr};
 
   safetensors::tensor_t tensor;
 
-  for (size_t i = 0; i < safetensors.tensors.size(); i++) {
-    std::string key = safetensors.tensors.keys()[i];
+  for (size_t i = 0; i < safetensors_->tensors.size(); i++) {
+    std::string key = safetensors_->tensors.keys()[i];
     safetensors::tensor_t tensor;
-    safetensors.tensors.at(i, &tensor);
+    safetensors_->tensors.at(i, &tensor);
 
     std::cout << key << ": " << safetensors::get_dtype_str(tensor.dtype) << " ";
     std::cout << "[";
@@ -166,13 +155,13 @@ void inspect_safetensors(std::string_view file_path) {
     std::cout << "  " << to_string_snipped(tensor, databuffer) << "\n";
 
     // Print metadata
-    if (safetensors.metadata.size() != 0U) {
+    if (safetensors_->metadata.size() != 0U) {
       std::cout << "\n";
       std::cout << "__metadata__\n";
-      for (size_t i = 0; i < safetensors.metadata.size(); i++) {
-        std::string key = safetensors.metadata.keys()[i];
+      for (size_t i = 0; i < safetensors_->metadata.size(); i++) {
+        std::string key = safetensors_->metadata.keys()[i];
         std::string value;
-        safetensors.metadata.at(i, &value);
+        safetensors_->metadata.at(i, &value);
 
         std::cout << "  " << key << ":" << value << "\n";
       }
@@ -180,12 +169,14 @@ void inspect_safetensors(std::string_view file_path) {
   }
 }
 
-tensor::Tensor<tensor::bfloat16, tensor::CPU> load_from_safetensors(std::string_view file_path,
-                                                                    std::string_view tensor_name) {
-  safetensors::safetensors_t safetensors = load(file_path);
+// bfloat16 and CPU only for now
+template <DType T, Device D>
+[[nodiscard]] TensorView<const T, D> Loader<T, D>::load(std::string_view tensor_name,
+                                                        bool transpose) const {
+  fmt::println("Loading {}...", tensor_name);
 
   safetensors::tensor_t tensor;
-  bool res = safetensors.tensors.at(std::string(tensor_name), &tensor);
+  bool res = safetensors_->tensors.at(std::string(tensor_name), &tensor);
   if (!res) {
     throw std::runtime_error("Tensor not found");
   }
@@ -195,19 +186,26 @@ tensor::Tensor<tensor::bfloat16, tensor::CPU> load_from_safetensors(std::string_
   }
 
   size_t nitems = safetensors::get_shape_size(tensor);
+  // size_t bytes = nitems * sizeof(bfloat16);
 
-  std::vector<tensor::bfloat16> data(nitems);
+  const auto* bf16_data =
+      reinterpret_cast<const bfloat16*>(safetensors_->databuffer_addr + // NOLINT
+                                        tensor.data_offsets[0]);        // NOLINT
 
-  // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
-  const auto* const bf16_data = reinterpret_cast<const tensor::bfloat16*>(
-      safetensors.databuffer_addr + tensor.data_offsets[0]);
-  // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
+  Shape shape = tensor.shape;
 
-  std::memcpy(data.data(), safetensors.databuffer_addr + tensor.data_offsets[0],
-              nitems * sizeof(tensor::bfloat16));
+  std::span<const bfloat16> data = std::span(bf16_data, nitems);
 
-  tensor::Tensor<tensor::bfloat16, tensor::CPU> out(tensor.shape, std::move(data));
+  TensorView<const T, D> view{data, shape, get_all_strides(shape)};
 
-  return out;
+  if (transpose) {
+    assert(shape.size() >= 2 && "Cannot transpose tensor with < 2 dims");
+    view.transpose(0, 1);
+  }
+
+  return view;
 }
-} // namespace loader
+
+template class Loader<bfloat16, CPU>;
+
+} // namespace tensor

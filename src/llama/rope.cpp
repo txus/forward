@@ -13,18 +13,18 @@ precompute_rope_values(size_t head_dim, float theta_base, size_t context_length)
   // compute the inverse frequencies
   Tensor<int, D> range = arange<int, D>(0, head_dim, 2);
   auto range_float = range.view().template to<float>();
-  auto scaled = range_float.view() / float(head_dim);
+  auto scaled = div(range_float.view(), float(head_dim));
   auto powd = pow(theta_base, scaled.view());
   auto inv_freq_ = pow(powd.view(), float(-1.0));
 
   Tensor<float, D> positions = arange<float, D>(float(0.0), float(context_length), float(1.0));
 
-  TensorView<float, D> lhs = positions.view().view_as({positions.shape()[0], 1});
-  TensorView<float, D> rhs = inv_freq_.view().view_as({1, inv_freq_.shape()[0]});
+  Tensor<float, D> lhs = positions.view().view_as({positions.shape()[0], 1}).copy();
+  Tensor<float, D> rhs = inv_freq_.view().view_as({1, inv_freq_.shape()[0]}).copy();
 
-  Tensor<float, D> angles = matmul(lhs, rhs);    // context_length, head_dim // 2
-                                                 //
-  angles = cat(angles.view(), angles.view(), 1); // context length, head_Dim
+  Tensor<float, D> angles = matmul(lhs.view(), rhs.view()); // context_length, head_dim // 2
+                                                            //
+  angles = cat(angles.view(), angles.view(), 1);            // context length, head_Dim
 
   auto sin = angles.view().sin();
   auto cos = angles.view().cos();
@@ -38,7 +38,8 @@ RoPE<T, D>::RoPE(const ModelConfig& config)
     : cos_sin(precompute_rope_values<D>(config.head_dim, config.rope_theta,
                                         config.max_position_embeddings)){};
 
-template <DType T, Device D> Tensor<T, D> RoPE<T, D>::forward(TensorView<T, D> inputs) const {
+template <DType T, Device D>
+Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs) const {
   auto cos = std::get<0>(cos_sin);
   auto sin = std::get<1>(cos_sin);
 

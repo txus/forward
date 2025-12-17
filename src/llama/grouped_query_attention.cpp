@@ -16,26 +16,22 @@ GroupedQueryAttention<T, D>::GroupedQueryAttention(const ModelConfig& config)
 }
 
 template <DType T, Device D>
-void GroupedQueryAttention<T, D>::load_weights(
-    std::unordered_map<std::string, Tensor<T, D> /*unused*/>& weight_map, size_t layer_idx) {
-  q_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.self_attn.q_proj.weight", layer_idx)).view(),
-      true);
-  k_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.self_attn.k_proj.weight", layer_idx)).view(),
-      true);
-  v_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.self_attn.v_proj.weight", layer_idx)).view(),
-      true);
-  out_proj.set_weights(
-      weight_map.at(fmt::format("model.layers.{}.self_attn.o_proj.weight", layer_idx)).view(),
-      true);
+void GroupedQueryAttention<T, D>::load_weights(const tensor::Loader<T, D>& loader,
+                                               size_t layer_idx) {
+  q_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.q_proj.weight", layer_idx),
+                      true);
+  k_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.k_proj.weight", layer_idx),
+                      true);
+  v_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.v_proj.weight", layer_idx),
+                      true);
+  out_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.o_proj.weight", layer_idx),
+                        true);
 }
 
 template <DType T, Device D>
-Tensor<T, D> GroupedQueryAttention<T, D>::forward(TensorView<T, D> inputs,
-                                                  const tensor::TensorView<int, D>& attn_mask,
-                                                  const RoPE<T, D>& rope) const {
+Tensor<std::remove_const_t<T>, D>
+GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
+                                     const TensorView<int, D>& attn_mask, const RoPE<T, D>& rope) {
   size_t batch_size = inputs.shape[0];
   size_t seq_len = inputs.shape[1];
 
@@ -53,21 +49,23 @@ Tensor<T, D> GroupedQueryAttention<T, D>::forward(TensorView<T, D> inputs,
   queries_v.transpose(1, 2); // (batch, num_heads, seq_len, head_dim)
   keys_v.transpose(1, 2);    // (batch, num_kv_groups, seq_len, head_dim)
   values_v.transpose(1, 2);  // (batch, num_kv_groups, seq_len, head_dim)
-  //
+
   queries = rope.forward(queries_v);
   queries_v = queries.view();
   keys = rope.forward(keys_v); // (batch, num_heads, seq_len, head_dim)
+  keys_v = keys.view();
 
   // repeat-expand to (batch, [num_kv_groups * group_size], seq_len, head_dim)
-  keys = keys.view().repeat_interleave(1, group_size);
+  keys = keys_v.repeat_interleave(1, group_size);
   values = values_v.repeat_interleave(1, group_size);
 
-  auto transposed_keys = keys.view();
-  transposed_keys.transpose(2, 3); // (batch, [num_kv_groups*group_size], head_dim, seq_len)
+  auto transposed_keys_ = keys.view();
+  transposed_keys_.transpose(2, 3); // (batch, [num_kv_groups*group_size], head_dim, seq_len)
+  auto transposed_keys = transposed_keys_.copy();
 
   // scores are (batch, num_heads, seq_len, seq_len)
   // -- for each query (row), how much does it attend to the key (col)?
-  auto attn_scores = matmul(queries_v, transposed_keys);
+  auto attn_scores = matmul(queries_v, transposed_keys.view());
 
   // apply causal mask
   attn_scores = masked_fill(attn_scores.view(), attn_mask.view_as({1, 1, seq_len, seq_len}),
@@ -80,15 +78,18 @@ Tensor<T, D> GroupedQueryAttention<T, D>::forward(TensorView<T, D> inputs,
   auto weighted_values_ = matmul(attn_weights.view(), values.view());
 
   auto weighted_values_v = weighted_values_.view();
-  weighted_values_v.transpose(1, 2); // [batch, num_heads, seq, head_dim]
-                                     // → [batch, seq, num_heads, head_dim]
 
-  auto weighted_values = weighted_values_v
-                             .copy() // Materialize!
-                             .view()
-                             .view_as({batch_size, seq_len, d_out});
+  weighted_values_v.transpose(1, 2);
 
-  auto out = out_proj.forward(weighted_values);
+  auto copied = weighted_values_v.copy();
+
+  auto viewed = copied.view();
+
+  auto reshaped_ = viewed.view_as({batch_size, seq_len, d_out});
+
+  auto reshaped = reshaped_.copy();
+
+  auto out = out_proj.forward(reshaped.view());
 
   return out;
 }

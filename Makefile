@@ -4,6 +4,9 @@
 all:
 	@cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Debug && cmake --build build --parallel --
 
+rebuild:
+	@cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Debug
+
 .PHONY: release
 release:
 	@cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --

@@ -16,6 +16,6 @@ public:
   tensor::TensorView<const float, D> cos() const;
   tensor::TensorView<const float, D> sin() const;
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<T, D> inputs) const;
+  tensor::Tensor<std::remove_const_t<T>, D> forward(tensor::TensorView<T, D> inputs) const;
 };
 } // namespace llama

@@ -1,26 +1,38 @@
 #include <cmath>
 #include <nn/rms_norm.hpp>
-#include <utility>
+#include <tensor/loader.hpp>
 
 using namespace nn;
 using namespace tensor;
 
 template <DType T, Device D> RMSNorm<T, D>::RMSNorm(float eps) : eps(eps){};
 
-template <DType T, Device D> void RMSNorm<T, D>::set_weights(TensorView<T, D> weights) {
+template <DType T, Device D>
+void RMSNorm<T, D>::load_weights(const tensor::Loader<T, D>& loader, std::string_view name) {
+  weights_ = loader.load(name);
+}
+template <DType T, Device D>
+void RMSNorm<T, D>::load_weights(tensor::TensorView<const T, D> weights) {
   weights_ = std::move(weights);
 }
 
-template <DType T, Device D> Tensor<T, D> RMSNorm<T, D>::forward(TensorView<T, D> inputs) const {
+template <DType T, Device D> void RMSNorm<T, D>::load_weights(tensor::TensorView<T, D> weights) {
+  weights_ = TensorView<const T, D>{weights.span(), weights.shape, weights.stride};
+}
+
+template <DType T, Device D>
+Tensor<std::remove_const_t<T>, D> RMSNorm<T, D>::forward(const TensorView<T, D>& inputs) const {
+  auto weights = weights_;
+
   const size_t batch_size = inputs.shape[0];
   const size_t seq_len = inputs.shape[1];
   const size_t hidden_dim = inputs.shape[2];
 
-  assert(weights_.shape[0] == hidden_dim);
+  assert(weights.shape[0] == hidden_dim);
 
-  const auto w_span = weights_.span();
+  const auto w_span = weights.span();
 
-  Tensor<T, D> out_{{batch_size, seq_len, hidden_dim}};
+  Tensor<std::remove_const_t<T>, D> out_{{batch_size, seq_len, hidden_dim}};
 
   auto out = out_.view();
 

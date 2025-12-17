@@ -3,8 +3,8 @@
 #include <llama/rope.hpp>
 #include <nn/linear.hpp>
 #include <nn/softmax.hpp>
+#include <tensor/loader.hpp>
 #include <tensor/tensor.hpp>
-#include <unordered_map>
 
 namespace llama {
 
@@ -28,11 +28,10 @@ public:
   explicit GroupedQueryAttention(const ModelConfig& config);
   ~GroupedQueryAttention() = default;
 
-  void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map,
-                    size_t layer_idx);
+  void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<T, D> inputs,
-                               const tensor::TensorView<int, D>& attn_mask,
-                               const RoPE<T, D>& rope) const;
+  tensor::Tensor<std::remove_const_t<T>, D> forward(const tensor::TensorView<T, D>& inputs,
+                                                    const tensor::TensorView<int, D>& attn_mask,
+                                                    const RoPE<T, D>& rope);
 };
 } // namespace llama

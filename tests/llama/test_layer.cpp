@@ -26,11 +26,13 @@ TEST(LlamaLayerTest, Forward) {
                           .num_hidden_layers = 1,
                           .num_key_value_heads = num_kv_heads};
 
+  Loader<bfloat16, CPU> weights_loader(TEST_MODEL_PATH "/model.safetensors");
+
   Layer<bfloat16, CPU> layer{conf};
 
   auto weights = empty_weights(conf);
 
-  layer.load_weights(weights, 0);
+  layer.load_weights(weights_loader, 0);
 
   Tensor<bfloat16, CPU> input_{{batch_size, seq_len, hidden_size}};
   input_.fill_(0.1);

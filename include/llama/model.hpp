@@ -5,8 +5,8 @@
 #include <nn/embedding.hpp>
 #include <nn/linear.hpp>
 #include <nn/rms_norm.hpp>
+#include <tensor/loader.hpp>
 #include <tensor/tensor.hpp>
-#include <unordered_map>
 
 namespace llama {
 
@@ -29,8 +29,8 @@ public:
   nn::Linear<T, D> lm_head;
   RoPE<T, D> rope;
 
-  void load_weights(std::unordered_map<std::string, tensor::Tensor<T, D>>& weight_map);
+  void load_weights(const tensor::Loader<T, D>& loader);
 
-  tensor::Tensor<T, D> forward(tensor::TensorView<int, D> token_ids) const;
+  tensor::Tensor<std::remove_const_t<T>, D> forward(const tensor::TensorView<int, D>& token_ids);
 };
 } // namespace llama

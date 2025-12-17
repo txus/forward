@@ -1,3 +1,4 @@
 #pragma once
 
 #define TEST_MODEL_PATH "@CMAKE_CURRENT_SOURCE_DIR@/model"
+#define TEST_ACTIVATIONS_PATH "@CMAKE_CURRENT_SOURCE_DIR@/reference/activations.safetensors"

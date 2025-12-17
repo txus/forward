@@ -12,9 +12,8 @@ TEST(NNRMSNormTest, Forward) {
   size_t batch_size = 1;
   size_t seq_len = 4;
 
-  Tensor<bfloat16, CPU> weights_{{hidden_dim}};
-  weights_.fill_(0.1001);
-  auto weights = weights_.view();
+  Tensor<bfloat16, CPU> weights{{hidden_dim}};
+  weights.fill_(0.1001);
 
   Tensor<bfloat16, CPU> inputs_{{batch_size, seq_len, hidden_dim}};
   // arange
@@ -24,7 +23,7 @@ TEST(NNRMSNormTest, Forward) {
   auto inputs = inputs_.view();
 
   RMSNorm<bfloat16, CPU> sut;
-  sut.set_weights(weights);
+  sut.load_weights(weights.view());
 
   auto output = sut.forward(inputs);
 
