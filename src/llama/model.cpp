@@ -42,7 +42,7 @@ void Model<T, D>::load_weights(const tensor::Loader<T, D>& loader) {
 
   norm.load_weights(loader, "model.norm.weight");
 
-  lm_head.load_weights(loader, "model.embed_tokens.weight", true);
+  lm_head.load_weights(loader, "model.embed_tokens.weight");
 
   loaded_ = true;
 }

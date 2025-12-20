@@ -7,17 +7,19 @@ using namespace tensor;
 template <DType T, Device D>
 Tensor<std::remove_const_t<T>, D> Softmax::operator()(const TensorView<T, D>& input,
                                                       int dim) const {
-  Tensor<T, D> out{{input.shape}};
+  Tensor<float, D> f32 = input.template to<float>();
 
-  auto maxes = max(input, dim, true);
+  auto maxes = max(f32.view(), dim, true);
 
-  auto scaled = sub(input, maxes.view());
+  auto scaled = sub(f32.view(), maxes.view());
 
   auto expd = scaled.view().exp();
 
   auto expd_sum = sum(expd.view(), dim, true);
 
-  return div(expd.view(), expd_sum.view());
+  auto out = div(expd.view(), expd_sum.view());
+
+  return out.view().template to<T>();
 }
 
 template Tensor<bfloat16, CPU> Softmax::operator()(const TensorView<bfloat16, CPU>& input,

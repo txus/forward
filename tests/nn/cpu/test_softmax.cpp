@@ -14,7 +14,7 @@ TEST(NNSoftmaxTest, Softmax) {
 
   Tensor<bfloat16, CPU> raw_inputs = arange<bfloat16, CPU>(
       bfloat16(0.0), bfloat16(batch_size * vocab_size), bfloat16(1.0)); // NOLINT
-  auto inputs = raw_inputs.view().view_as({batch_size, vocab_size}).copy();
+  auto inputs = raw_inputs.view().reshape({batch_size, vocab_size});
 
   Softmax softmax;
 

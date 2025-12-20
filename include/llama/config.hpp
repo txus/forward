@@ -17,6 +17,12 @@ struct ModelConfig {
   size_t num_key_value_heads = 8;
   float rms_norm_eps = 1e-05;
   std::string hidden_act = "silu";
+
+  // LLaMA 3 RoPE scaling parameters
+  float rope_scaling_factor = 32.0;
+  float rope_scaling_low_freq_factor = 1.0;
+  float rope_scaling_high_freq_factor = 4.0;
+  size_t rope_scaling_original_max_position_embeddings = 8192;
 };
 
 ModelConfig load_config(std::string_view model_path);

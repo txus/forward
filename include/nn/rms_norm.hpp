@@ -8,11 +8,10 @@ namespace nn {
 template <tensor::DType T, tensor::Device D> class RMSNorm {
 private:
   tensor::TensorView<const T, D> weights_;
-  float eps = 1e-05;
+  float eps;
 
 public:
   explicit RMSNorm(float eps);
-  explicit RMSNorm() = default;
   ~RMSNorm() = default;
 
   void load_weights(const tensor::Loader<T, D>& loader, std::string_view name);

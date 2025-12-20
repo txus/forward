@@ -8,41 +8,29 @@
 using namespace llama;
 using namespace tensor;
 
-TEST(LlamaLayerTest, Forward) {
-  const size_t batch_size = 1;
-  const size_t seq_len = 4;
-  const size_t hidden_size = 16;
-
-  const size_t head_dim = 4;
-  const size_t num_attention_heads = 4;
-  const size_t num_kv_heads = 1;
-
-  llama::ModelConfig conf{.vocab_size = 128,
-                          .head_dim = head_dim,
-                          .rope_theta = 10000,
-                          .hidden_size = hidden_size,
-                          .max_position_embeddings = 128,
-                          .num_attention_heads = num_attention_heads,
-                          .num_hidden_layers = 1,
-                          .num_key_value_heads = num_kv_heads};
+TEST(LlamaLayerTest, Parity) {
+  Loader<bfloat16, CPU> act_loader(TEST_ACTIVATIONS_PATH);
+  auto input_activations = act_loader.load("embed_tokens").copy();
+  auto output_activations = act_loader.load("layers.0");
 
   Loader<bfloat16, CPU> weights_loader(TEST_MODEL_PATH "/model.safetensors");
 
+  llama::ModelConfig conf = load_config(std::string(TEST_MODEL_PATH "/config.json"));
+
+  fmt::println("INPUT SHAPE {}", input_activations.shape());
+  fmt::println("SEQ LEN {}", input_activations.shape()[1]);
+
+  auto seq_len = input_activations.shape()[1];
+
   Layer<bfloat16, CPU> layer{conf};
 
-  auto weights = empty_weights(conf);
-
   layer.load_weights(weights_loader, 0);
-
-  Tensor<bfloat16, CPU> input_{{batch_size, seq_len, hidden_size}};
-  input_.fill_(0.1);
-  auto input = input_.view();
 
   RoPE<bfloat16, CPU> rope{conf};
 
   auto attn_mask = causal_attention_mask<int, CPU>(seq_len);
 
-  auto output = layer.forward(input, attn_mask.view(), rope);
+  auto output = layer.forward(input_activations.view(), attn_mask.view(), rope);
 
-  fmt::println("Output: {}", output.view());
+  tensor_is_close<bfloat16>(output.view().span(), output_activations.span());
 }

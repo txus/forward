@@ -22,7 +22,7 @@ TEST(NNRMSNormTest, Forward) {
   }
   auto inputs = inputs_.view();
 
-  RMSNorm<bfloat16, CPU> sut;
+  RMSNorm<bfloat16, CPU> sut(1e-5);
   sut.load_weights(weights.view());
 
   auto output = sut.forward(inputs);

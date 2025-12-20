@@ -31,8 +31,12 @@ std::string Sampler<T, D, C>::generate(llama::Model<T, D> model, std::string_vie
     // token in the sequence
     auto seq_len = logits.shape()[1];
 
+    fmt::println("ALL TOKENS LOGITS {}", logits.view());
+
     // [batch_size, vocab_size]
     auto last_token_logits = slice(logits.view(), 1, seq_len - 1, seq_len);
+
+    fmt::println("LAST TOKEN LOGITS {}", last_token_logits.view());
 
     auto sampled_ids = sample(last_token_logits);
     auto sampled_span = sampled_ids.span();

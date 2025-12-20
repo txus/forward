@@ -8,9 +8,9 @@ using namespace tensor;
 
 template <DType T, Device D>
 GroupedQueryAttention<T, D>::GroupedQueryAttention(const ModelConfig& config)
-    : d_in(config.hidden_size), d_out(config.hidden_size), num_heads(config.num_attention_heads),
-      head_dim(d_out / num_heads), num_kv_groups(config.num_key_value_heads),
-      group_size(num_heads / num_kv_groups) {
+    : scale(T(1.0F / std::sqrt(static_cast<float>(config.head_dim)))), d_in(config.hidden_size),
+      d_out(config.hidden_size), num_heads(config.num_attention_heads), head_dim(d_out / num_heads),
+      num_kv_groups(config.num_key_value_heads), group_size(num_heads / num_kv_groups) {
   assert(d_out % num_heads == 0);
   assert(num_heads % num_kv_groups == 0);
 }
@@ -18,14 +18,10 @@ GroupedQueryAttention<T, D>::GroupedQueryAttention(const ModelConfig& config)
 template <DType T, Device D>
 void GroupedQueryAttention<T, D>::load_weights(const tensor::Loader<T, D>& loader,
                                                size_t layer_idx) {
-  q_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.q_proj.weight", layer_idx),
-                      true);
-  k_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.k_proj.weight", layer_idx),
-                      true);
-  v_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.v_proj.weight", layer_idx),
-                      true);
-  out_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.o_proj.weight", layer_idx),
-                        true);
+  q_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.q_proj.weight", layer_idx));
+  k_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.k_proj.weight", layer_idx));
+  v_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.v_proj.weight", layer_idx));
+  out_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.o_proj.weight", layer_idx));
 }
 
 template <DType T, Device D>
@@ -41,11 +37,15 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
   auto values = v_proj.forward(inputs);
 
   // reshape into heads (batch, seq_len, num_heads, head_dim)
-  auto queries_v = queries.view().view_as({batch_size, seq_len, num_heads, head_dim});
-  auto keys_v = keys.view().view_as({batch_size, seq_len, num_kv_groups, head_dim});
-  auto values_v = values.view().view_as({batch_size, seq_len, num_kv_groups, head_dim});
+  queries = queries.view().reshape({batch_size, seq_len, num_heads, head_dim});
+  keys = keys.view().reshape({batch_size, seq_len, num_kv_groups, head_dim});
+  values = values.view().reshape({batch_size, seq_len, num_kv_groups, head_dim});
 
   // transpose qs ,ks and vs
+  auto queries_v = queries.view();
+  auto keys_v = keys.view();
+  auto values_v = values.view();
+
   queries_v.transpose(1, 2); // (batch, num_heads, seq_len, head_dim)
   keys_v.transpose(1, 2);    // (batch, num_kv_groups, seq_len, head_dim)
   values_v.transpose(1, 2);  // (batch, num_kv_groups, seq_len, head_dim)
@@ -59,19 +59,19 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
   keys = keys_v.repeat_interleave(1, group_size);
   values = values_v.repeat_interleave(1, group_size);
 
+
   auto transposed_keys_ = keys.view();
   transposed_keys_.transpose(2, 3); // (batch, [num_kv_groups*group_size], head_dim, seq_len)
-  auto transposed_keys = transposed_keys_.copy();
 
   // scores are (batch, num_heads, seq_len, seq_len)
   // -- for each query (row), how much does it attend to the key (col)?
-  auto attn_scores = matmul(queries_v, transposed_keys.view());
+  auto attn_scores = matmul(queries_v, transposed_keys_);
 
-  // apply causal mask
-  attn_scores = masked_fill(attn_scores.view(), attn_mask.view_as({1, 1, seq_len, seq_len}),
-                            T(-std::numeric_limits<T>::infinity()));
+  attn_scores = mul(attn_scores.view(), scale);
 
-  attn_scores = div(attn_scores.view(), T(std::pow(head_dim, 0.5)));
+  auto attn_mask_reshaped = attn_mask.reshape({1, 1, seq_len, seq_len});
+  attn_scores = masked_fill(attn_scores.view(), attn_mask_reshaped.view(),
+                            T(-std::numeric_limits<float>::infinity()));
 
   auto attn_weights = softmax(attn_scores.view(), -1);
 
@@ -81,15 +81,9 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
 
   weighted_values_v.transpose(1, 2);
 
-  auto copied = weighted_values_v.copy();
+  auto materialized_weighted_values = weighted_values_v.reshape({batch_size, seq_len, d_out});
 
-  auto viewed = copied.view();
-
-  auto reshaped_ = viewed.view_as({batch_size, seq_len, d_out});
-
-  auto reshaped = reshaped_.copy();
-
-  auto out = out_proj.forward(reshaped.view());
+  auto out = out_proj.forward(materialized_weighted_values.view());
 
   return out;
 }

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <span>
 #include <stdexcept>
 #include <tensor/device.hpp>
@@ -220,7 +221,7 @@ template <DType T, Device D> struct TensorView {
       }
     }
 
-    return materialized.view().view_as(final_shape).copy();
+    return materialized.view().reshape(final_shape);
   }
 
   [[nodiscard]] bool is_contiguous() const {
@@ -243,7 +244,11 @@ template <DType T, Device D> struct TensorView {
 
     auto result_span = result.span();
 
-    size_t total_elements = data.size();
+    // Use logical size from shape, not underlying buffer size
+    size_t total_elements = 1;
+    for (size_t dim : shape) {
+      total_elements *= dim;
+    }
 
     for (size_t linear_idx = 0; linear_idx < total_elements; ++linear_idx) {
       std::vector<size_t> indices = linear_to_multidim(linear_idx, shape);
@@ -280,14 +285,64 @@ template <DType T, Device D> struct TensorView {
     return map<std::remove_const_t<T>>([](T val) { return val; });
   }
 
-  TensorView<T, D> view_as(Shape new_shape) const {
+  // Create a contiguous copy of this tensor, respecting non-standard strides
+  Tensor<std::remove_const_t<T>, D> contiguous() const {
+    Tensor<std::remove_const_t<T>, D> result{shape};
+    auto dst_span = result.span();
+
+    // Recursively iterate through all indices
+    std::function<void(size_t, std::vector<size_t>&)> iterate;
+    iterate = [&](size_t dim, std::vector<size_t>& indices) {
+      if (dim == shape.size()) {
+        // Compute source offset using actual strides
+        size_t src_offset = 0;
+        for (size_t d = 0; d < shape.size(); ++d) {
+          src_offset += indices[d] * stride[d];
+        }
+
+        // Compute destination offset assuming row-major (contiguous) layout
+        size_t dst_offset = 0;
+        for (size_t d = 0; d < shape.size(); ++d) {
+          size_t dst_stride = 1;
+          for (size_t dd = d + 1; dd < shape.size(); ++dd) {
+            dst_stride *= shape[dd];
+          }
+          dst_offset += indices[d] * dst_stride;
+        }
+
+        dst_span[dst_offset] = data[src_offset];
+        return;
+      }
+
+      for (size_t i = 0; i < shape[dim]; ++i) {
+        indices[dim] = i;
+        iterate(dim + 1, indices);
+      }
+    };
+
+    std::vector<size_t> indices(shape.size());
+    iterate(0, indices);
+
+    return result;
+  }
+
+  Tensor<std::remove_const_t<T>, D> reshape(Shape new_shape) const {
     size_t total_elems = 1;
     for (size_t dim : new_shape) {
       total_elems *= dim;
     }
     assert(total_elems == data.size());
 
-    return TensorView{data, new_shape, get_all_strides(new_shape)};
+    // If not contiguous, materialize first to ensure correct data layout
+    if (!is_contiguous()) {
+      auto materialized = contiguous();
+      return Tensor<std::remove_const_t<T>, D>{new_shape, std::vector<std::remove_const_t<T>>(
+        materialized.span().begin(), materialized.span().end())};
+    }
+
+    // Already contiguous, can safely create a tensor with the data
+    return Tensor<std::remove_const_t<T>, D>{new_shape, std::vector<std::remove_const_t<T>>(
+      data.begin(), data.end())};
   }
 
   Tensor<std::remove_const_t<T>, D> cos() const {

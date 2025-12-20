@@ -47,7 +47,8 @@ Tensor<std::remove_const_t<T>, D> RMSNorm<T, D>::forward(const TensorView<T, D>&
       // calculate RMS, accumulate in fp32
       float sum = 0.0;
       for (int channel_idx = 0; channel_idx < hidden_dim; ++channel_idx) {
-        sum += std::pow(hid_span[channel_idx], 2);
+        auto val = static_cast<float>(hid_span[channel_idx]);
+        sum += val * val;
       }
 
       float rms = 1.0 / std::sqrt(eps + (sum / hid_span.size())); // NOLINT(*-narrowing-conversions)

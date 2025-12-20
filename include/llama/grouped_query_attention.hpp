@@ -17,6 +17,8 @@ private:
   size_t num_kv_groups;
   size_t group_size;
 
+  T scale;
+
   nn::Linear<T, D> q_proj;
   nn::Linear<T, D> k_proj;
   nn::Linear<T, D> v_proj;

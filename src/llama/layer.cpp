@@ -30,28 +30,27 @@ template <DType T, Device D>
 Tensor<std::remove_const_t<T>, D> Layer<T, D>::forward(const TensorView<T, D>& inputs,
                                                        const TensorView<int, D>& attn_mask,
                                                        const RoPE<T, D>& rope) {
+  auto residual = inputs;
+
   // prenorm
-  auto residual_t = prenorm.forward(std::move(inputs));
-  auto residual_v = residual_t.view();
+  auto normalized = prenorm.forward(std::move(inputs));
 
-  auto attn_output = attention.forward(residual_v, attn_mask, rope);
-  auto attn_output_v = attn_output.view();
+  auto attn_output = attention.forward(normalized.view(), attn_mask, rope);
 
-  residual_t = add(attn_output_v, residual_v);
-  residual_v = residual_t.view();
+  // fmt::println("ATTN OUTPUT {}", attn_output.view());
+
+  auto residual_ = add(attn_output.view(), residual);
+  residual = residual_.view();
 
   // postnorm
-  residual_t = postnorm.forward(residual_v);
-  residual_v = residual_t.view();
+  normalized = postnorm.forward(residual);
 
   // mlp
-  residual_t = mlp.forward(residual_v);
-  auto mlp_output_v = residual_t.view();
+  auto mlp_out = mlp.forward(normalized.view());
 
-  residual_t = add(mlp_output_v, residual_v);
-  residual_v = residual_t.view();
+  residual_ = add(mlp_out.view(), residual);
 
-  return residual_t;
+  return residual_;
 }
 
 template class llama::Layer<bfloat16, CPU>;

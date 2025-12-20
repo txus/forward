@@ -12,19 +12,10 @@ Activation nn::make_activation(std::string_view name) {
 
 template <DType T, Device D>
 Tensor<std::remove_const_t<T>, D> SiLU::operator()(const TensorView<T, D>& input) const {
-  Tensor<std::remove_const_t<T>, D> out{{input.shape}};
-
-  auto in_span = input.span();
-  auto out_span = out.span();
-
-  for (size_t i = 0; i < in_span.size(); ++i) {
-    auto value = in_span[i];
-
+  return input.template map<std::remove_const_t<T>>([](T value) {
     std::remove_const_t<T> sigmoid = 1 / (1 + std::exp(-value));
-    out_span[i] = value * sigmoid;
-  }
-
-  return out;
+    return value * sigmoid;
+  });
 }
 
 template Tensor<bfloat16, CPU> SiLU::operator()(const TensorView<const bfloat16, CPU>& input) const;

@@ -10,9 +10,12 @@ struct bfloat16 {
   uint16_t bits;
 
   bfloat16() = default;
-  bfloat16(float value) { // extract top 16 bits
+  bfloat16(float value) {
     auto f32_bits = std::bit_cast<uint32_t>(value);
-    bits = static_cast<uint16_t>(f32_bits >> 16);
+
+    // Round to nearest even (same as PyTorch/NumPy)
+    uint32_t rounding_bias = 0x00007FFF + ((f32_bits >> 16) & 1);
+    bits = static_cast<uint16_t>((f32_bits + rounding_bias) >> 16);
   }
 
   // pad with zeros at the bottom
