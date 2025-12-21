@@ -41,9 +41,8 @@ std::string Sampler<T, D, C>::generate(llama::Model<T, D> model, std::string_vie
     auto sampled_ids = sample(last_token_logits);
     auto sampled_span = sampled_ids.span();
     for (auto tok_id : sampled_span) {
-      fmt::println("token: {}", tok_id);
-      token_ids.push_back(tok_id);
-      fmt::println("{}", tokenizer_->decode(token_ids));
+      token_ids = std::vector<int>{tok_id};
+      fmt::println("token: {} ({})", tok_id, tokenizer_->decode(token_ids));
       sampled_token_ids.push_back(tok_id);
     }
   }

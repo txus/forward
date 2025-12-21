@@ -1,5 +1,6 @@
 #pragma once
 
+#include <llama/kv_cache.hpp>
 #include <llama/rope.hpp>
 #include <nn/linear.hpp>
 #include <nn/softmax.hpp>
@@ -26,8 +27,10 @@ private:
 
   nn::Softmax softmax;
 
+  std::optional<KVCache<T, D>> cache;
+
 public:
-  explicit GroupedQueryAttention(const ModelConfig& config);
+  explicit GroupedQueryAttention(const ModelConfig& config, size_t cached_tokens = 0);
   ~GroupedQueryAttention() = default;
 
   void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);
@@ -35,5 +38,7 @@ public:
   tensor::Tensor<std::remove_const_t<T>, D> forward(const tensor::TensorView<T, D>& inputs,
                                                     const tensor::TensorView<int, D>& attn_mask,
                                                     const RoPE<T, D>& rope);
+
+  size_t get_cache_size();
 };
 } // namespace llama

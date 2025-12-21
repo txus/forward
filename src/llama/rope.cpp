@@ -1,8 +1,8 @@
 #include <fmt/core.h>
 
+#include <cmath>
 #include <llama/rope.hpp>
 #include <tensor/ops.hpp>
-#include <cmath>
 #include <tuple>
 
 using namespace llama;
@@ -45,8 +45,8 @@ precompute_rope_values(size_t head_dim, float theta_base, size_t context_length)
       inv_freq_.span()[i] = inv_f / factor;
     } else {
       // Medium frequency: smooth interpolation
-      float smooth = (old_context_len / wavelen - low_freq_factor) /
-                     (high_freq_factor - low_freq_factor);
+      float smooth =
+          (old_context_len / wavelen - low_freq_factor) / (high_freq_factor - low_freq_factor);
       float scaled_inv_freq = (1.0 - smooth) * (inv_f / factor) + smooth * inv_f;
       inv_freq_.span()[i] = scaled_inv_freq;
     }
@@ -74,7 +74,8 @@ RoPE<T, D>::RoPE(const ModelConfig& config)
                                         config.max_position_embeddings)){};
 
 template <DType T, Device D>
-Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs) const {
+Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
+                                                      size_t position_offset) const {
   auto cos = std::get<0>(cos_sin);
   auto sin = std::get<1>(cos_sin);
 
@@ -90,11 +91,11 @@ Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs) c
   Tensor<T, D> inputs_t = inputs.copy();
 
   // Slice and convert cos/sin to bfloat16
-  auto adj_cos_ = slice(cos.view(), 0, 0, seq_len);
+  auto adj_cos_ = slice(cos.view(), 0, position_offset, position_offset + seq_len);
   auto adj_cos_bf16 = adj_cos_.view().template to<T>();
   auto adj_cos = adj_cos_bf16.view().reshape({1, 1, seq_len, head_dim});
 
-  auto adj_sin_ = slice(sin.view(), 0, 0, seq_len);
+  auto adj_sin_ = slice(sin.view(), 0, position_offset, position_offset + seq_len);
   auto adj_sin_bf16 = adj_sin_.view().template to<T>();
   auto adj_sin = adj_sin_bf16.view().reshape({1, 1, seq_len, head_dim});
 

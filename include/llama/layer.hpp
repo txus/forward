@@ -16,7 +16,7 @@ private:
   GroupedQueryAttention<T, D> attention;
 
 public:
-  explicit Layer(const ModelConfig& config);
+  explicit Layer(const ModelConfig& config, size_t cached_tokens = 0);
   ~Layer() = default;
 
   void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);

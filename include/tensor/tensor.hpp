@@ -89,6 +89,14 @@ template <DType T, Device D> struct TensorView {
   Shape shape;
   Shape stride;
 
+  [[nodiscard]] size_t total_elements() const {
+    size_t out = 1;
+    for (auto dim : shape) {
+      out *= dim;
+    }
+    return out;
+  }
+
   template <typename... Ix>
     requires(std::conjunction_v<std::is_integral<Ix>...>)
   TensorView<T, D> get(Ix... dims) {
@@ -244,13 +252,9 @@ template <DType T, Device D> struct TensorView {
 
     auto result_span = result.span();
 
-    // Use logical size from shape, not underlying buffer size
-    size_t total_elements = 1;
-    for (size_t dim : shape) {
-      total_elements *= dim;
-    }
+    size_t total_elems = total_elements();
 
-    for (size_t linear_idx = 0; linear_idx < total_elements; ++linear_idx) {
+    for (size_t linear_idx = 0; linear_idx < total_elems; ++linear_idx) {
       std::vector<size_t> indices = linear_to_multidim(linear_idx, shape);
 
       size_t offset = 0;
@@ -262,6 +266,21 @@ template <DType T, Device D> struct TensorView {
     }
 
     return result;
+  }
+
+  template <typename Func> void each(Func func) const {
+    size_t total_elems = total_elements();
+
+    for (size_t linear_idx = 0; linear_idx < total_elems; ++linear_idx) {
+      std::vector<size_t> indices = linear_to_multidim(linear_idx, shape);
+
+      size_t offset = 0;
+      for (size_t dim = 0; dim < shape.size(); ++dim) {
+        offset += indices[dim] * stride[dim];
+      }
+
+      func(data[offset]);
+    }
   }
 
   template <DType OutT> Tensor<OutT, D> to() const {
@@ -285,29 +304,27 @@ template <DType T, Device D> struct TensorView {
     return map<std::remove_const_t<T>>([](T val) { return val; });
   }
 
-  // Create a contiguous copy of this tensor, respecting non-standard strides
   Tensor<std::remove_const_t<T>, D> contiguous() const {
     Tensor<std::remove_const_t<T>, D> result{shape};
     auto dst_span = result.span();
 
-    // Recursively iterate through all indices
     std::function<void(size_t, std::vector<size_t>&)> iterate;
     iterate = [&](size_t dim, std::vector<size_t>& indices) {
       if (dim == shape.size()) {
         // Compute source offset using actual strides
         size_t src_offset = 0;
-        for (size_t d = 0; d < shape.size(); ++d) {
-          src_offset += indices[d] * stride[d];
+        for (size_t dim_ = 0; dim_ < shape.size(); ++dim_) {
+          src_offset += indices[dim_] * stride[dim_];
         }
 
         // Compute destination offset assuming row-major (contiguous) layout
         size_t dst_offset = 0;
-        for (size_t d = 0; d < shape.size(); ++d) {
+        for (size_t dim_ = 0; dim_ < shape.size(); ++dim_) {
           size_t dst_stride = 1;
-          for (size_t dd = d + 1; dd < shape.size(); ++dd) {
+          for (size_t dd = dim_ + 1; dd < shape.size(); ++dd) {
             dst_stride *= shape[dd];
           }
-          dst_offset += indices[d] * dst_stride;
+          dst_offset += indices[dim_] * dst_stride;
         }
 
         dst_span[dst_offset] = data[src_offset];
@@ -336,13 +353,14 @@ template <DType T, Device D> struct TensorView {
     // If not contiguous, materialize first to ensure correct data layout
     if (!is_contiguous()) {
       auto materialized = contiguous();
-      return Tensor<std::remove_const_t<T>, D>{new_shape, std::vector<std::remove_const_t<T>>(
-        materialized.span().begin(), materialized.span().end())};
+      return Tensor<std::remove_const_t<T>, D>{
+          new_shape, std::vector<std::remove_const_t<T>>(materialized.span().begin(),
+                                                         materialized.span().end())};
     }
 
     // Already contiguous, can safely create a tensor with the data
-    return Tensor<std::remove_const_t<T>, D>{new_shape, std::vector<std::remove_const_t<T>>(
-      data.begin(), data.end())};
+    return Tensor<std::remove_const_t<T>, D>{
+        new_shape, std::vector<std::remove_const_t<T>>(data.begin(), data.end())};
   }
 
   Tensor<std::remove_const_t<T>, D> cos() const {
@@ -407,6 +425,22 @@ public:
     }
 
     span()[idx] = value;
+  }
+
+  void replace_from_(TensorView<T, D> source) {
+    if (source.total_elements() > data_.size()) {
+      fmt::print("Cannot write a source view sized {} onto a smaller tensor sized {}",
+                 source.total_elements(), size());
+      throw std::out_of_range("cannot write beyond size");
+    }
+
+    auto offset = 0;
+    auto ptr = span();
+
+    source.each([offset, ptr](T value) mutable {
+      ptr[offset] = value;
+      ++offset;
+    });
   }
 
   T item() const {

@@ -15,11 +15,13 @@ tensor::Tensor<T, D> causal_attention_mask(size_t seq_len);
 
 template <tensor::DType T, tensor::Device D> class Model {
 private:
+  size_t kv_cache_size;
+  size_t max_tokens;
   bool loaded_ = false;
 
 public:
-  explicit Model(ModelConfig config);
-  explicit Model(std::string_view model_path);
+  explicit Model(ModelConfig config, size_t max_tokens, size_t kv_cache_size = 0);
+  explicit Model(std::string_view model_path, size_t max_tokens, size_t kv_cache_size = 0);
   ~Model() = default;
 
   ModelConfig config;

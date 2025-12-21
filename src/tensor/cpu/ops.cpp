@@ -1,6 +1,7 @@
+#include <fmt/core.h>
+
 #include <algorithm>
 #include <tensor/ops.hpp>
-#include <fmt/core.h>
 
 namespace tensor {
 
@@ -581,6 +582,7 @@ template Tensor<bfloat16, CPU> tril(const TensorView<bfloat16, CPU>&, bool);
 template Tensor<int, CPU> tril(const TensorView<int, CPU>&, bool);
 template Tensor<bfloat16, CPU> slice(const TensorView<bfloat16, CPU>&, int, size_t, size_t);
 template Tensor<float, CPU> slice(const TensorView<float, CPU>&, int, size_t, size_t);
+template Tensor<int, CPU> slice(const TensorView<int, CPU>&, int, size_t, size_t);
 template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,
                                       const TensorView<bfloat16, CPU>&);
 template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,

@@ -15,11 +15,14 @@ int main(int argc, char* argv[]) {
     path = argv[1];
   }
 
+  size_t max_tokens = 128;
+  size_t kv_cache_size = 128;
+
   tokenizer::Tokenizer tok("./tests/model/tokenizer.json");
 
   sampler::GreedySampler<bfloat16, CPU> sampler{sampler::GreedyConfig{}, tok};
 
-  Model<bfloat16, CPU> mod("./tests/model/config.json");
+  Model<bfloat16, CPU> mod("./tests/model/config.json", max_tokens, kv_cache_size);
 
   // loader::inspect_safetensors("./tests/model/model.safetensors");
 
@@ -31,7 +34,7 @@ int main(int argc, char* argv[]) {
 
   std::string prompt = "The capital of france is";
 
-  auto out = sampler.generate(mod, prompt, 1);
+  auto out = sampler.generate(mod, prompt, 3);
 
   fmt::println("Result: {}", out);
 

@@ -21,19 +21,21 @@ template <DType T, Device D> Tensor<T, D> llama::causal_attention_mask(size_t se
 template Tensor<int, CPU> llama::causal_attention_mask(size_t seq_len);
 
 template <DType T, Device D>
-Model<T, D>::Model(ModelConfig config)
-    : config(config), norm(config.rms_norm_eps), rope(config) {} // NOLINT
+Model<T, D>::Model(ModelConfig config, size_t max_tokens, size_t kv_cache_size)
+    : max_tokens(max_tokens), kv_cache_size(kv_cache_size), config(config),
+      norm(config.rms_norm_eps), rope(config) {} // NOLINT
 
 template <DType T, Device D>
-Model<T, D>::Model(std::string_view model_path)
-    : config(load_config(model_path)), norm(config.rms_norm_eps), rope(config) {}
+Model<T, D>::Model(std::string_view model_path, size_t max_tokens, size_t kv_cache_size)
+    : max_tokens(max_tokens), kv_cache_size(kv_cache_size), config(load_config(model_path)),
+      norm(config.rms_norm_eps), rope(config) {}
 
 template <tensor::DType T, tensor::Device D>
 void Model<T, D>::load_weights(const tensor::Loader<T, D>& loader) {
   embed.load_weights(loader);
 
   for (int layer_idx = 0; std::cmp_less(layer_idx, config.num_hidden_layers); ++layer_idx) {
-    auto layer = Layer<T, D>{config};
+    auto layer = Layer<T, D>{config, kv_cache_size};
 
     layer.load_weights(loader, layer_idx);
 
@@ -53,7 +55,7 @@ Tensor<std::remove_const_t<T>, D> Model<T, D>::forward(const TensorView<int, D>&
 
   fmt::println("Embedding tokens {}", token_ids);
 
-  auto attn_mask = causal_attention_mask<int, CPU>(token_ids.shape[1]);
+  auto attn_mask = causal_attention_mask<int, CPU>(max_tokens);
 
   auto residual_stream = embed.forward(token_ids);
 

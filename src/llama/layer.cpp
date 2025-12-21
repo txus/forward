@@ -10,10 +10,10 @@ using namespace tensor;
 using namespace nn;
 
 template <DType T, Device D>
-Layer<T, D>::Layer(const ModelConfig& _config)
+Layer<T, D>::Layer(const ModelConfig& _config, size_t cached_tokens)
     : mlp(MLP<T, D>{_config}), prenorm(RMSNorm<T, D>{_config.rms_norm_eps}),
       postnorm(RMSNorm<T, D>{_config.rms_norm_eps}),
-      attention(GroupedQueryAttention<T, D>{_config}) {}
+      attention(GroupedQueryAttention<T, D>{_config, cached_tokens}) {}
 
 template <DType T, Device D>
 void Layer<T, D>::load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx) {
@@ -36,8 +36,6 @@ Tensor<std::remove_const_t<T>, D> Layer<T, D>::forward(const TensorView<T, D>& i
   auto normalized = prenorm.forward(std::move(inputs));
 
   auto attn_output = attention.forward(normalized.view(), attn_mask, rope);
-
-  // fmt::println("ATTN OUTPUT {}", attn_output.view());
 
   auto residual_ = add(attn_output.view(), residual);
   residual = residual_.view();
