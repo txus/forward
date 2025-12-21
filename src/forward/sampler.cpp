@@ -1,3 +1,4 @@
+#include <chrono>
 #include <forward/sampler.hpp>
 #include <forward/tokenizer.hpp>
 #include <tensor/ops.hpp>
@@ -13,41 +14,57 @@ Sampler<T, D, C>::Sampler(C config, tokenizer::Tokenizer& tokenizer)
     : config_(config), tokenizer_(&tokenizer){};
 
 template <DType T, Device D, Config C>
-std::string Sampler<T, D, C>::generate(llama::Model<T, D> model, std::string_view prompt,
-                                       size_t max_num_tokens) {
+std::tuple<std::string, float> Sampler<T, D, C>::generate(llama::Model<T, D> model,
+                                                          std::string_view prompt,
+                                                          size_t max_num_tokens) {
+
+  using std::chrono::duration;
+  using std::chrono::duration_cast;
+  using std::chrono::high_resolution_clock;
+  using std::chrono::seconds;
+
   fmt::println("Prompt: {}", prompt);
   std::vector<int> token_ids = tokenizer_->encode(prompt);
 
   std::vector<int> sampled_token_ids;
   sampled_token_ids.reserve(max_num_tokens);
 
+  auto before = high_resolution_clock::now();
+
   for (size_t remaining_tokens = max_num_tokens; remaining_tokens > 0; --remaining_tokens) {
     Tensor<int, D> inputs({1, token_ids.size()}, std::vector<int>(token_ids));
 
-    fmt::println("Tokenized input: {}", inputs.view());
+    // fmt::println("Tokenized input: {}", inputs.view());
 
     auto logits = model.forward(inputs.view());
     // logits is [batch_size, seq_len, vocab_size], we want the logits for the last
     // token in the sequence
     auto seq_len = logits.shape()[1];
 
-    fmt::println("ALL TOKENS LOGITS {}", logits.view());
+    // fmt::println("ALL TOKENS LOGITS {}", logits.view());
 
     // [batch_size, vocab_size]
     auto last_token_logits = slice(logits.view(), 1, seq_len - 1, seq_len);
 
-    fmt::println("LAST TOKEN LOGITS {}", last_token_logits.view());
+    // fmt::println("LAST TOKEN LOGITS {}", last_token_logits.view());
 
     auto sampled_ids = sample(last_token_logits);
     auto sampled_span = sampled_ids.span();
     for (auto tok_id : sampled_span) {
       token_ids = std::vector<int>{tok_id};
-      fmt::println("token: {} ({})", tok_id, tokenizer_->decode(token_ids));
+      // fmt::println("token: {} ({})", tok_id, tokenizer_->decode(token_ids));
       sampled_token_ids.push_back(tok_id);
     }
   }
 
-  return tokenizer_->decode(sampled_token_ids);
+  auto after = high_resolution_clock::now();
+
+  auto s_int = duration_cast<seconds>(after - before);
+
+  // tok / s
+  float tok_s = float(max_num_tokens) / s_int.count();
+
+  return {tokenizer_->decode(sampled_token_ids), tok_s};
 }
 
 template <DType T, Device D>

@@ -14,9 +14,9 @@ TEST(LlamaGQATest, Parity) {
   auto input_activations = act_loader.load("layers.0.input_layernorm").copy();
   auto output_activations = act_loader.load("layers.0.self_attn.o_proj");
 
-  Loader<bfloat16, CPU> weights_loader(TEST_MODEL_PATH "/model.safetensors");
+  Loader<bfloat16, CPU> weights_loader(TEST_WEIGHTS_PATH);
 
-  llama::ModelConfig conf = load_config(std::string(TEST_MODEL_PATH "/config.json"));
+  llama::ModelConfig conf = load_config(TEST_CONFIG_PATH);
 
   GroupedQueryAttention<bfloat16, CPU> gqa{conf};
 
@@ -38,9 +38,9 @@ TEST(LlamaGQATest, ParityWithKVCache) {
   auto input_activations = act_loader.load("layers.0.input_layernorm").copy();
   auto output_activations = act_loader.load("layers.0.self_attn.o_proj").copy();
 
-  Loader<bfloat16, CPU> weights_loader(TEST_MODEL_PATH "/model.safetensors");
+  Loader<bfloat16, CPU> weights_loader(TEST_WEIGHTS_PATH);
 
-  llama::ModelConfig conf = load_config(std::string(TEST_MODEL_PATH "/config.json"));
+  llama::ModelConfig conf = load_config(TEST_CONFIG_PATH);
 
   GroupedQueryAttention<bfloat16, CPU> gqa{conf, 128};
 

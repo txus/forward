@@ -53,14 +53,14 @@ template <tensor::DType T, tensor::Device D>
 Tensor<std::remove_const_t<T>, D> Model<T, D>::forward(const TensorView<int, D>& token_ids) {
   assert(loaded_);
 
-  fmt::println("Embedding tokens {}", token_ids);
+  // fmt::println("Embedding tokens {}", token_ids);
 
   auto attn_mask = causal_attention_mask<int, CPU>(max_tokens);
 
   auto residual_stream = embed.forward(token_ids);
 
   for (int layer_idx = 0; std::cmp_less(layer_idx, config.num_hidden_layers); ++layer_idx) {
-    fmt::println("[Layer {}]", layer_idx);
+    // fmt::println("[Layer {}]", layer_idx);
     auto input = residual_stream.view();
     residual_stream = layers[layer_idx].forward(input, attn_mask.view(), rope);
   }

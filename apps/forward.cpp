@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
   }
 
   size_t max_tokens = 128;
-  size_t kv_cache_size = 128;
+  size_t kv_cache_size = max_tokens;
 
   tokenizer::Tokenizer tok("./tests/model/tokenizer.json");
 
@@ -34,9 +34,18 @@ int main(int argc, char* argv[]) {
 
   std::string prompt = "The capital of france is";
 
-  auto out = sampler.generate(mod, prompt, 3);
+  fmt::println("Prompt: {}", prompt);
 
-  fmt::println("Result: {}", out);
+  auto gen_and_tok_s = sampler.generate(mod, prompt, 12);
+
+  auto out = std::get<0>(gen_and_tok_s);
+  auto tok_s = std::get<1>(gen_and_tok_s);
+
+  out = fmt::format(fmt::fg(fmt::color::aqua), "{}", out);
+
+  fmt::println("{}{}", prompt, out);
+
+  fmt::println("Tokens / sec: {}", tok_s);
 
   return 0;
 }

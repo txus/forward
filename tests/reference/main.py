@@ -38,11 +38,7 @@ activations = {}
 def get_activation(name):
     def hook(module, input, output):
         #print(f"{name} ({output[0].dtype}): {output[0]}")
-        #print(output[0])
         activations[name] = output[0].detach().unsqueeze(0)
-        # Print first 20-30 values of o_proj output for comparison
-        if name == "layers.0.self_attn.o_proj":
-            print(f"PT {name} output[0,0,:30]: {output[0][0, :30].tolist()}")
     return hook
  
 model.model.embed_tokens.register_forward_hook(get_activation('embed_tokens'))
@@ -65,8 +61,6 @@ for i, layer in enumerate(model.model.layers):
     layer.mlp.act_fn.register_forward_hook(get_activation(f'layers.{i}.mlp.act_fn'))
     layer.input_layernorm.register_forward_hook(get_activation(f'layers.{i}.input_layernorm'))
     layer.post_attention_layernorm.register_forward_hook(get_activation(f'layers.{i}.post_attention_layernorm'))
-
-    break
 
 # Run inference
 if PIPE:

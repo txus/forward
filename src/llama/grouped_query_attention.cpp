@@ -63,8 +63,6 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
     // used in RoPE
     position_offset += cached_tokens;
 
-    fmt::println("Reusing {} cached KVs", cached_tokens);
-
     auto last_queries = q_proj.forward(inputs);
     auto last_keys = k_proj.forward(inputs);
     auto last_values = v_proj.forward(inputs);
@@ -75,24 +73,19 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
     keys = std::get<0>(cached_output);
     values = std::get<1>(cached_output);
 
-    // Slice the mask to get rows for new queries only
-    // rows: [cached_tokens:input_seq_len]
-    // cols: [0:kvs_len]
     mask_to_use = slice(attn_mask, 0, cached_tokens, cached_tokens + input_seq_len);
     mask_to_use = slice(mask_to_use.view(), 1, 0, cached_tokens + input_seq_len);
+    attention_mask = mask_to_use.view();
   } else {
-    // project queries, keys and values: (batch, input_seq_len, (num_heads (or
-    // num_kv_groups))*head_dim)
     queries = q_proj.forward(inputs);
-
     keys = k_proj.forward(inputs);
     values = v_proj.forward(inputs);
-    attention_mask = attn_mask;
+    mask_to_use = slice(attn_mask, 0, 0, input_seq_len);
+    mask_to_use = slice(mask_to_use.view(), 1, 0, input_seq_len);
+    attention_mask = mask_to_use.view();
   }
   auto queries_len = queries.shape()[1];
   auto kvs_len = keys.shape()[1];
-
-  attention_mask = mask_to_use.view();
 
   // reshape into heads (batch, seq_len, num_heads, head_dim)
   queries = queries.view().reshape({batch_size, queries_len, num_heads, head_dim});

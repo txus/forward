@@ -6,7 +6,7 @@
 #include "common/test_config.h"
 
 TEST(ForwardTokenizerTest, Roundtrip) {
-  tokenizer::Tokenizer tok(TEST_MODEL_PATH "/tokenizer.json");
+  tokenizer::Tokenizer tok(TEST_TOKENIZER_PATH);
   const std::string_view prompt = "hello world";
 
   std::vector<int> input_ids = tok.encode(prompt);

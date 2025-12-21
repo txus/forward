@@ -1,4 +1,7 @@
 #pragma once
 
 #define TEST_MODEL_PATH "@CMAKE_CURRENT_SOURCE_DIR@/model"
+#define TEST_TOKENIZER_PATH "@CMAKE_CURRENT_SOURCE_DIR@/model/tokenizer.json"
+#define TEST_WEIGHTS_PATH "@CMAKE_CURRENT_SOURCE_DIR@/model/model.safetensors"
+#define TEST_CONFIG_PATH "@CMAKE_CURRENT_SOURCE_DIR@/model/config.json"
 #define TEST_ACTIVATIONS_PATH "@CMAKE_CURRENT_SOURCE_DIR@/reference/activations.safetensors"

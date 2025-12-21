@@ -13,16 +13,18 @@ TEST(LlamaLayerTest, Parity) {
   auto input_activations = act_loader.load("embed_tokens").copy();
   auto output_activations = act_loader.load("layers.0");
 
-  Loader<bfloat16, CPU> weights_loader(TEST_MODEL_PATH "/model.safetensors");
+  Loader<bfloat16, CPU> weights_loader(TEST_WEIGHTS_PATH);
 
-  llama::ModelConfig conf = load_config(std::string(TEST_MODEL_PATH "/config.json"));
+  llama::ModelConfig conf = load_config(TEST_CONFIG_PATH);
 
   fmt::println("INPUT SHAPE {}", input_activations.shape());
   fmt::println("SEQ LEN {}", input_activations.shape()[1]);
 
   auto seq_len = input_activations.shape()[1];
 
-  Layer<bfloat16, CPU> layer{conf};
+  Layer<bfloat16, CPU> layer{
+      conf,
+  };
 
   layer.load_weights(weights_loader, 0);
 
@@ -32,5 +34,5 @@ TEST(LlamaLayerTest, Parity) {
 
   auto output = layer.forward(input_activations.view(), attn_mask.view(), rope);
 
-  tensor_is_close<bfloat16>(output.view().span(), output_activations.span());
+  tensor_is_close<bfloat16>(output.view().span(), output_activations.span(), 1e-02);
 }

@@ -25,7 +25,8 @@ public:
   explicit Sampler(C config, tokenizer::Tokenizer& tokenizer);
   virtual ~Sampler() = default;
 
-  std::string generate(llama::Model<T, D> model, std::string_view prompt, size_t max_num_tokens);
+  std::tuple<std::string, float> generate(llama::Model<T, D> model, std::string_view prompt,
+                                          size_t max_num_tokens);
 };
 
 template <tensor::DType T, tensor::Device D> struct GreedySampler : Sampler<T, D, GreedyConfig> {

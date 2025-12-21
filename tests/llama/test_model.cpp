@@ -10,28 +10,18 @@ using namespace tensor;
 TEST(LlamaModelTest, Forward) {
   const size_t batch_size = 1;
   const size_t seq_len = 4;
-  const size_t hidden_size = 16;
 
-  const size_t head_dim = 4;
-  const size_t num_attention_heads = 4;
-  const size_t num_kv_heads = 1;
+  Loader<bfloat16, CPU> weights_loader(TEST_WEIGHTS_PATH);
+  llama::ModelConfig conf = load_config(TEST_CONFIG_PATH);
 
-  llama::ModelConfig conf{.vocab_size = 128,
-                          .head_dim = head_dim,
-                          .rope_theta = 10000,
-                          .hidden_size = hidden_size,
-                          .max_position_embeddings = 128,
-                          .num_attention_heads = num_attention_heads,
-                          .num_hidden_layers = 1,
-                          .num_key_value_heads = num_kv_heads};
-
-  Loader<bfloat16, CPU> weights_loader(TEST_MODEL_PATH "/model.safetensors");
-
-  Model<bfloat16, CPU> mod{conf};
+  Model<bfloat16, CPU> mod{
+      conf,
+      128,
+  };
 
   mod.load_weights(weights_loader);
 
-  auto input_ = Tensor<int, CPU>{{1, 4}};
+  auto input_ = Tensor<int, CPU>{{batch_size, seq_len}};
 
   auto view = input_.view();
 

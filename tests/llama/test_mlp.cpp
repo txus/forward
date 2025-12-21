@@ -16,9 +16,9 @@ TEST(LlamaMLPTest, Parity) {
 
   fmt::println("TEST INPUT (after layernorm) {}", input_activations.view());
 
-  Loader<bfloat16, CPU> weights_loader(TEST_MODEL_PATH "/model.safetensors");
+  Loader<bfloat16, CPU> weights_loader(TEST_WEIGHTS_PATH);
 
-  llama::ModelConfig conf = load_config(std::string(TEST_MODEL_PATH "/config.json"));
+  llama::ModelConfig conf = load_config(TEST_CONFIG_PATH);
 
   MLP<bfloat16, CPU> mlp{conf};
 

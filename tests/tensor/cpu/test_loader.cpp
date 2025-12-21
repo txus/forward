@@ -7,7 +7,7 @@
 using namespace tensor;
 
 TEST(TensorLoaderTest, LoadFromSafetensors) {
-  Loader<bfloat16, CPU> loader{TEST_MODEL_PATH "/model.safetensors"};
+  Loader<bfloat16, CPU> loader{TEST_WEIGHTS_PATH};
 
   auto embed_weights = loader.load("model.embed_tokens.weight");
 
