@@ -7,4 +7,3 @@ CLAUDE.md
 .direnv/
 
 tests/reference/.venv
-*.safetensors
