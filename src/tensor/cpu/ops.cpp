@@ -38,6 +38,7 @@ Tensor<std::remove_const_t<OutT>, D> element_wise(const TensorView<In1T, D>& ten
   // Total elements in output
   size_t total = out.size();
 
+#pragma omp parallel for
   for (size_t out_idx = 0; out_idx < total; ++out_idx) {
     // Convert flat index to N-dimensional indices
     // Then compute a_idx and b_idx using broadcast strides
@@ -224,13 +225,14 @@ Tensor<std::remove_const_t<T1>, D> matmul(const TensorView<T1, D>& tensor_a,
   size_t out_batch_stride = M * N;
   size_t out_stride_row = N;
 
+#pragma omp parallel for collapse(3)
   for (size_t batch = 0; batch < batch_size; ++batch) {
-    size_t a_batch_offset = batch * a_batch_stride;
-    size_t b_batch_offset = batch * b_batch_stride; // 0 for each batch if b is 2D
-    size_t out_batch_offset = batch * out_batch_stride;
-
     for (size_t row = 0; row < M; ++row) {
       for (size_t col = 0; col < N; ++col) {
+        size_t a_batch_offset = batch * a_batch_stride;
+        size_t b_batch_offset = batch * b_batch_stride; // 0 for each batch if b is 2D
+        size_t out_batch_offset = batch * out_batch_stride;
+
         float sum = 0.0; // accumulate in fp32
 
         for (size_t i = 0; i < K; ++i) {
@@ -282,19 +284,15 @@ Tensor<std::remove_const_t<T>, D> cat(const TensorView<T, D>& tensor_a,
   auto b_span = tensor_b.span();
   auto out_span = out.span();
 
-  size_t a_offset = 0;
-  size_t b_offset = 0;
-  size_t out_offset = 0;
-
+#pragma omp parallel for
   for (size_t i = 0; i < outer_iterations; ++i) {
+    size_t a_offset = i * chunk_size_a;
+    size_t b_offset = i * chunk_size_b;
+    size_t out_offset = i * (chunk_size_a + chunk_size_b);
+
     std::copy(&a_span[a_offset], &a_span[a_offset + chunk_size_a], &out_span[out_offset]);
-    out_offset += chunk_size_a;
-
-    std::copy(&b_span[b_offset], &b_span[b_offset + chunk_size_b], &out_span[out_offset]);
-    out_offset += chunk_size_b;
-
-    a_offset += chunk_size_a;
-    b_offset += chunk_size_b;
+    std::copy(&b_span[b_offset], &b_span[b_offset + chunk_size_b],
+              &out_span[out_offset + chunk_size_a]);
   }
 
   return out;
@@ -335,20 +333,15 @@ Tensor<std::remove_const_t<T>, D> slice(const TensorView<T, D>& view, int dim, s
   auto view_span = view.span();
   auto out_span = out.span();
 
-  size_t source_offset = 0;
-  size_t out_offset = 0;
-
+#pragma omp parallel for
   for (size_t i = 0; i < outer_iterations; ++i) {
+    size_t source_offset = i * source_stride;
+    size_t out_offset = i * chunk_to_copy;
+
     // Skip to 'start' position, then copy the slice
     size_t read_from = source_offset + (start * inner_stride);
 
     std::copy(&view_span[read_from], &view_span[read_from + chunk_to_copy], &out_span[out_offset]);
-
-    // Advance output by what we copied
-    out_offset += chunk_to_copy;
-
-    // Advance source by the FULL original row size
-    source_offset += source_stride;
   }
 
   return out;

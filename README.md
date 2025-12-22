@@ -10,6 +10,7 @@ Requirements:
 * A C++26 compatible compiler (tested with Clang 20 and GCC 14).
 * Git
 * Doxygen
+* OpenMP (for CPU) (`brew install libomp` on Mac)
 
 To use clang: just export these before you run cmake:
 

@@ -2,6 +2,19 @@ file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/tensor/*.
 
 add_library(tensor_cpu STATIC ops.cpp loader.cpp)
 
+# Find and enable OpenMP (required)
+# On macOS with Homebrew, help CMake find libomp
+if(APPLE)
+  if(EXISTS /opt/homebrew/opt/libomp)
+    set(OpenMP_ROOT /opt/homebrew/opt/libomp)
+  elseif(EXISTS /usr/local/opt/libomp)
+    set(OpenMP_ROOT /usr/local/opt/libomp)
+  endif()
+endif()
+
+find_package(OpenMP REQUIRED)
+target_link_libraries(tensor_cpu PUBLIC OpenMP::OpenMP_CXX)
+
 target_link_libraries(tensor_cpu
   PUBLIC tensor_core
   PRIVATE safetensors_cpp

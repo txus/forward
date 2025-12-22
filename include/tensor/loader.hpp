@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <tensor/tensor.hpp>
 
 namespace safetensors {
