@@ -14,20 +14,23 @@
     },
     {
       "name": "ninja-clangd",
-      "displayName": "Clangd-compatible build",
-      "description": "Build configuration for generating clangd-compatible compile_commands.json using clang++ as the CUDA compiler",
+      "environment": {
+        "NIX_HARDENING_ENABLE": ""
+      },
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build-clangd",
-      "toolchainFile": "${sourceDir}/cmake/ClangCudaToolchain.cmake",
+      "binaryDir": "${sourceDir}/build/clangd",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CLANGXX_PATH": "$env{CLANGXX_PATH}",
-        "CMAKE_CUDA_COMPILER": "$env{CLANGXX_PATH}",
-        "CMAKE_CUDA_HOST_COMPILER": "$env{CLANGXX_PATH}",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CUDA_COMPILER": "clang++",
+        "CMAKE_CUDA_HOST_COMPILER": "clang++",
         "CMAKE_CUDA_ARCHITECTURES": "120",
+        "CMAKE_CUDA_COMPILER_TOOLKIT_ROOT": "$env{CUDA_PATH}",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "TENSOR_BUILD_CUDA": "ON",
+        "CUDAToolkit_ROOT": "$env{CUDA_PATH}",
         "OpenMP_ROOT": "$env{OPENMP_ROOT}",
-        "TENSOR_BUILD_CUDA": "ON"
+        "CLANG_RESOURCE_DIR": "$env{CLANG_RESOURCE_DIR}"
       }
     },
     {
@@ -35,7 +38,7 @@
       "displayName": "Clangd-compatible build (no CUDA)",
       "description": "Clangd build for macOS or environments without CUDA",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build-clangd",
+      "binaryDir": "${sourceDir}/build/clangd",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "$env{CLANGXX_PATH}",

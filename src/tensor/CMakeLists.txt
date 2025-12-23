@@ -24,6 +24,19 @@ target_sources(tensor_core
 
 add_subdirectory(cpu)
 
+if(APPLE)
+  option(TENSOR_BUILD_CUDA "Build tensor_cuda library" OFF)
+else()
+  option(TENSOR_BUILD_CUDA "Build tensor_cuda library" ON)
+endif()
+
+if(TENSOR_BUILD_CUDA)
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  add_subdirectory(cuda)
+  target_compile_definitions(tensor_core INTERFACE TENSOR_HAS_CUDA)
+endif()
+
 source_group(
   TREE "${PROJECT_SOURCE_DIR}/include"
   PREFIX "Header Files"

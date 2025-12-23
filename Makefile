@@ -2,14 +2,19 @@
 
 .PHONY: all
 all:
-	@cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Debug && cmake --build build --parallel --
+	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Debug && cmake --build build --parallel --
 
+.PHONY: rebuild
 rebuild:
-	@cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Debug
+	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Debug
+
+.PHONY: dx
+dx:
+	@cmake --preset ninja-clangd && cmake --build --preset ninja-clangd -t tensor_cpu
 
 .PHONY: release
 release:
-	@cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
+	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
 
 .PHONY: app
 app:
@@ -28,7 +33,8 @@ tensor_cpu:
 
 .PHONY: tensor_cuda
 tensor_cuda:
-	@cmake --build build --target tensor_cuda
+	@cmake --build build --target test_tensor_cuda
+	@ctest --test-dir build -R "^TensorCUDA" --output-on-failure
 
 .PHONY: nn
 nn:

@@ -24,7 +24,7 @@ public:
   explicit TensorStorage(size_t size) : data_(size) {}
   explicit TensorStorage(std::vector<T>&& data) : data_(std::move(data)) {}
 
-  size_t size() const {
+  [[nodiscard]] size_t size() const {
     return data_.size();
   }
   pointer data() {
@@ -49,6 +49,7 @@ public:
   }
 };
 
+#ifdef TENSOR_HAS_CUDA
 template <DType T> class TensorStorage<T, CUDA> {
 private:
   T* data_ = nullptr;
@@ -68,7 +69,7 @@ public:
   TensorStorage(TensorStorage&& other) noexcept;
   TensorStorage& operator=(TensorStorage&& other) noexcept;
 
-  int size() const {
+  [[nodiscard]] int size() const {
     return size_;
   }
   pointer data() {
@@ -81,4 +82,6 @@ public:
   void resize(int size);
   void fill(T value);
 };
+#endif
+
 }; // namespace tensor

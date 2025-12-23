@@ -41,7 +41,13 @@
     cudaPackages_12.cuda_cudart
     cudaPackages_12.libcublas
     llvmPackages_20.openmp
+    llvmPackages_20.libcxx  # Use libc++ to avoid __noinline__ macro conflict with libstdc++
   ];
+
+  # Disable hardening flags incompatible with CUDA/NVPTX target
+  # zerocallusedregs: -fzero-call-used-regs=used-gpr is unsupported for nvptx64
+  # fortify: causes exception specification mismatches in CUDA
+  hardeningDisable = [ "zerocallusedregs" "fortify" ];
 
   shellHook = ''
     export CUDA_PATH="${pkgs.cudaPackages_12.cudatoolkit}"
@@ -56,6 +62,9 @@
     export CLANGXX_PATH="${pkgs.clang_20}/bin/clang++"
     export OPENMP_ROOT="${pkgs.llvmPackages_20.openmp}"
     export CUDA_TOOLKIT_ROOT="${pkgs.cudaPackages_12.cudatoolkit}"
+
+    # Clang resource directory for clangd (NixOS-specific)
+    export CLANG_RESOURCE_DIR="$(clang++ -print-resource-dir)"
 
     echo "C++/CUDA development environment loaded!"
     echo "Clang version: $(clang --version | head -n1)"

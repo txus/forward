@@ -1,13 +1,13 @@
 # Point clangd at the clangd-specific build directory
 CompileFlags:
-  CompilationDatabase: build-clangd
+  CompilationDatabase: build/clangd
 
-# Ensure CUDA files (.cu and .cuh) are treated as CUDA
+# CUDA kernel files (device code) - analyze with device-only mode
+# These contain __global__ functions that run on GPU
 ---
 If:
-  PathMatch: .*\.(cu|cuh)$
+  PathMatch: .*/kernels/.*\.cu$
 CompileFlags:
-  BuiltinHeaders: QueryDriver
   Remove:
     - --expt-relaxed-constexpr
     - -Xcompiler=*
@@ -15,9 +15,74 @@ CompileFlags:
   Add:
     - -xcuda
     - --cuda-gpu-arch=sm_120
+    - --cuda-device-only
 
-#Diagnostics:
-#  Suppress:
-#    - variadic_device_fn
-#    - attributes_not_allowed
-#    - template_arg_list_constraints_not_satisfied
+Diagnostics:
+  Suppress:
+    - variadic_device_fn
+    - attributes_not_allowed
+
+# CUDA kernel headers - also device code
+---
+If:
+  PathMatch: .*/kernels/.*\.cuh$
+CompileFlags:
+  Remove:
+    - --expt-relaxed-constexpr
+    - -Xcompiler=*
+    - -G
+  Add:
+    - -xcuda
+    - --cuda-gpu-arch=sm_120
+    - --cuda-device-only
+
+Diagnostics:
+  Suppress:
+    - variadic_device_fn
+    - attributes_not_allowed
+
+# CUDA host files (kernel launchers, memory management) - analyze with host-only mode
+# These contain code that runs on CPU and calls kernels
+---
+If:
+  PathMatch: .*\.cu$
+  PathExclude: .*/kernels/.*
+CompileFlags:
+  Remove:
+    - --expt-relaxed-constexpr
+    - -Xcompiler=*
+    - -G
+  Add:
+    - -xcuda
+    - --cuda-gpu-arch=sm_120
+    - --cuda-host-only
+
+Diagnostics:
+  Suppress:
+    - variadic_device_fn
+    - attributes_not_allowed
+    # clangd has issues resolving some templates in CUDA host-only mode
+    # These are false positives - the actual Clang build succeeds
+    - ovl_no_viable_function_in_call
+    - no_member
+    - template_arg_list_constraints_not_satisfied
+
+# CUDA utility headers (non-kernel) - host code
+---
+If:
+  PathMatch: .*\.cuh$
+  PathExclude: .*/kernels/.*
+CompileFlags:
+  Remove:
+    - --expt-relaxed-constexpr
+    - -Xcompiler=*
+    - -G
+  Add:
+    - -xcuda
+    - --cuda-gpu-arch=sm_120
+    - --cuda-host-only
+
+Diagnostics:
+  Suppress:
+    - variadic_device_fn
+    - attributes_not_allowed

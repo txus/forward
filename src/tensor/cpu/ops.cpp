@@ -559,11 +559,9 @@ template Tensor<int, CPU> argmax(const TensorView<float, CPU>& input, int dim, b
 template Tensor<int, CPU> argmax(const TensorView<int, CPU>& input, int dim, bool keepdim);
 
 template void replace_from_(Tensor<bfloat16, CPU>& destination,
-                             const TensorView<bfloat16, CPU>& source);
-template void replace_from_(Tensor<int, CPU>& destination,
-                             const TensorView<int, CPU>& source);
-template void replace_from_(Tensor<float, CPU>& destination,
-                             const TensorView<float, CPU>& source);
+                            const TensorView<bfloat16, CPU>& source);
+template void replace_from_(Tensor<int, CPU>& destination, const TensorView<int, CPU>& source);
+template void replace_from_(Tensor<float, CPU>& destination, const TensorView<float, CPU>& source);
 
 // Explicit instantiations for non-const T
 template Tensor<bfloat16, CPU> add(const TensorView<bfloat16, CPU>&,

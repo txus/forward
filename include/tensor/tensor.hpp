@@ -15,6 +15,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef TENSOR_HAS_CUDA
+#include <cuda_runtime.h>
+#endif
+
 namespace tensor {
 
 using namespace device;
@@ -465,6 +469,26 @@ public:
   void fill_(T value) {
     storage_.fill(value);
   }
+
+#ifdef TENSOR_HAS_CUDA
+  // Device transfer methods
+
+  Tensor<T, CUDA> cuda() const
+    requires std::same_as<D, device::CPU>
+  {
+    Tensor<T, CUDA> result{shape()};
+    cudaMemcpy(result.data(), data(), size() * sizeof(T), cudaMemcpyHostToDevice);
+    return result;
+  }
+
+  Tensor<T, CPU> cpu() const
+    requires std::same_as<D, device::CUDA>
+  {
+    Tensor<T, CPU> result{shape()};
+    cudaMemcpy(result.data(), data(), size() * sizeof(T), cudaMemcpyDeviceToHost);
+    return result;
+  }
+#endif
 
   // CPU specific useful things
 
