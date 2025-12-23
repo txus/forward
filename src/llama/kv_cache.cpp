@@ -34,8 +34,8 @@ KVCache<T, D>::forward(tensor::TensorView<T, D> new_keys, tensor::TensorView<T, 
     all_values = new_values.copy();
   }
 
-  k_cache.replace_from_(all_keys.view());
-  v_cache.replace_from_(all_values.view());
+  replace_from_(k_cache, all_keys.view());
+  replace_from_(v_cache, all_values.view());
 
   current_tokens += new_tokens_count;
 

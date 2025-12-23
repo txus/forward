@@ -14,7 +14,7 @@ template <DType T, Device D> void Embedding<T, D>::load_weights(TensorView<const
 }
 
 template <DType T, Device D> void Embedding<T, D>::load_weights(TensorView<T, D> weights) {
-  weights_ = TensorView<const T, D>{weights.span(), weights.shape, weights.stride};
+  weights_ = TensorView<const T, D>{weights.data, weights.data_size, weights.shape, weights.stride};
 }
 
 template <DType T, Device D>

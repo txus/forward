@@ -1,0 +1,62 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "ninja-nvcc",
+      "displayName": "Production build with NVCC",
+      "description": "Standard build using nvcc for CUDA compilation",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "ninja-clangd",
+      "displayName": "Clangd-compatible build",
+      "description": "Build configuration for generating clangd-compatible compile_commands.json using clang++ as the CUDA compiler",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-clangd",
+      "toolchainFile": "${sourceDir}/cmake/ClangCudaToolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CLANGXX_PATH": "$env{CLANGXX_PATH}",
+        "CMAKE_CUDA_COMPILER": "$env{CLANGXX_PATH}",
+        "CMAKE_CUDA_HOST_COMPILER": "$env{CLANGXX_PATH}",
+        "CMAKE_CUDA_ARCHITECTURES": "120",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "OpenMP_ROOT": "$env{OPENMP_ROOT}",
+        "TENSOR_BUILD_CUDA": "ON"
+      }
+    },
+    {
+      "name": "ninja-clangd-nocuda",
+      "displayName": "Clangd-compatible build (no CUDA)",
+      "description": "Clangd build for macOS or environments without CUDA",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-clangd",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "$env{CLANGXX_PATH}",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "TENSOR_BUILD_CUDA": "OFF",
+        "OpenMP_ROOT": "$env{OPENMP_ROOT}"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ninja-nvcc",
+      "configurePreset": "ninja-nvcc"
+    },
+    {
+      "name": "ninja-clangd",
+      "configurePreset": "ninja-clangd"
+    },
+    {
+      "name": "ninja-clangd-nocuda",
+      "configurePreset": "ninja-clangd-nocuda"
+    }
+  ]
+}

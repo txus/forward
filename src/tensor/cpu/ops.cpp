@@ -386,7 +386,7 @@ Tensor<std::remove_const_t<T>, D> reduce(const TensorView<T, D>& input, int dim,
   auto in_span = input.span();
   auto in_strides = input.stride;
 
-  size_t total_in = input.data.size();
+  size_t total_in = input.data_size;
 
   for (size_t in_idx = 0; in_idx < total_in; ++in_idx) {
     std::vector<size_t> indices = linear_to_multidim(in_idx, shape);
@@ -463,7 +463,7 @@ Tensor<int, D> reduce_with_index(const TensorView<T, D>& input, int dim, // NOLI
 
   auto in_span = input.span();
   auto in_strides = input.stride;
-  size_t total_in = input.data.size();
+  size_t total_in = input.data_size;
 
   for (size_t in_idx = 0; in_idx < total_in; ++in_idx) {
     std::vector<size_t> indices = linear_to_multidim(in_idx, shape);
@@ -537,9 +537,33 @@ Tensor<int, D> argmax(const TensorView<T, D>& input, int dim, bool keepdim) {
   );
 }
 
+template <DType T, Device D>
+void replace_from_(Tensor<T, D>& destination, const TensorView<T, D>& source) {
+  if (source.total_elements() > destination.size()) {
+    fmt::print("Cannot write a source view sized {} onto a smaller tensor sized {}",
+               source.total_elements(), destination.size());
+    throw std::out_of_range("cannot write beyond size");
+  }
+
+  auto offset = 0;
+  auto ptr = destination.span();
+
+  source.each([offset, ptr](T value) mutable {
+    ptr[offset] = value;
+    ++offset;
+  });
+}
+
 template Tensor<int, CPU> argmax(const TensorView<bfloat16, CPU>& input, int dim, bool keepdim);
 template Tensor<int, CPU> argmax(const TensorView<float, CPU>& input, int dim, bool keepdim);
 template Tensor<int, CPU> argmax(const TensorView<int, CPU>& input, int dim, bool keepdim);
+
+template void replace_from_(Tensor<bfloat16, CPU>& destination,
+                             const TensorView<bfloat16, CPU>& source);
+template void replace_from_(Tensor<int, CPU>& destination,
+                             const TensorView<int, CPU>& source);
+template void replace_from_(Tensor<float, CPU>& destination,
+                             const TensorView<float, CPU>& source);
 
 // Explicit instantiations for non-const T
 template Tensor<bfloat16, CPU> add(const TensorView<bfloat16, CPU>&,

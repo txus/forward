@@ -3,6 +3,7 @@
 #include <llama/config.hpp>
 #include <tensor/ops.hpp>
 #include <tensor/tensor.hpp>
+#include <tuple>
 
 namespace llama {
 template <tensor::DType T, tensor::Device D> class KVCache {

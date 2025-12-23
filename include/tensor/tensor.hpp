@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <tensor/device.hpp>
 #include <tensor/dtype.hpp>
+#include <tensor/storage.hpp>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -85,9 +86,36 @@ inline std::vector<size_t> linear_to_multidim(size_t linear_idx, Shape shape) {
 template <DType T, Device D> class Tensor;
 
 template <DType T, Device D> struct TensorView {
-  std::span<T> data{};
+  T* data = nullptr;
+  size_t data_size = 0;
+
   Shape shape;
   Shape stride;
+
+  // Default constructor
+  TensorView() = default;
+
+  // Main constructor
+  TensorView(T* data_, size_t size_, Shape shape_, Shape stride_)
+      : data(data_), data_size(size_), shape(std::move(shape_)), stride(std::move(stride_)) {}
+
+  // Converting constructor: allow TensorView<T, D> to convert to TensorView<const T, D>
+  template <typename U>
+    requires std::same_as<U, std::remove_const_t<T>> && std::is_const_v<T>
+  TensorView(const TensorView<U, D>& other)
+      : data(other.data), data_size(other.data_size), shape(other.shape), stride(other.stride) {}
+
+  std::span<T> span()
+    requires std::same_as<D, device::CPU>
+  {
+    return std::span<T>(data, data_size);
+  }
+
+  std::span<const T> span() const
+    requires std::same_as<D, device::CPU>
+  {
+    return std::span<const T>(data, data_size);
+  }
 
   [[nodiscard]] size_t total_elements() const {
     size_t out = 1;
@@ -130,7 +158,7 @@ template <DType T, Device D> struct TensorView {
       sub_size = 1; // scalar
     }
 
-    return TensorView{std::span<T>(data.data() + offset, sub_size), new_shape, new_strides};
+    return TensorView{data + offset, sub_size, new_shape, new_strides};
   }
 
   template <typename... Ix>
@@ -166,8 +194,7 @@ template <DType T, Device D> struct TensorView {
       sub_size = 1; // scalar
     }
 
-    return TensorView<const T, D>{std::span<const T>(data.data() + offset, sub_size), new_shape,
-                                  new_strides};
+    return TensorView{data + offset, sub_size, new_shape, new_strides};
   }
 
   void transpose(size_t dim_a, size_t dim_b) {
@@ -216,7 +243,12 @@ template <DType T, Device D> struct TensorView {
       temp_stride.push_back(stride[dim_]);
     }
 
-    TensorView temp_view{data, temp_shape, temp_stride};
+    size_t temp_size = 1;
+    for (auto dim_ : temp_shape) {
+      temp_size *= dim_;
+    }
+
+    TensorView temp_view{data, temp_size, temp_shape, temp_stride};
 
     Tensor<T, D> materialized = temp_view.copy();
 
@@ -348,19 +380,15 @@ template <DType T, Device D> struct TensorView {
     for (size_t dim : new_shape) {
       total_elems *= dim;
     }
-    assert(total_elems == data.size());
+    assert(total_elems == data_size);
 
-    // If not contiguous, materialize first to ensure correct data layout
-    if (!is_contiguous()) {
-      auto materialized = contiguous();
-      return Tensor<std::remove_const_t<T>, D>{
-          new_shape, std::vector<std::remove_const_t<T>>(materialized.span().begin(),
-                                                         materialized.span().end())};
-    }
+    auto out = Tensor<std::remove_const_t<T>, D>{new_shape};
 
-    // Already contiguous, can safely create a tensor with the data
-    return Tensor<std::remove_const_t<T>, D>{
-        new_shape, std::vector<std::remove_const_t<T>>(data.begin(), data.end())};
+    // TODO: check that this is correct
+
+    replace_from_(out, *this);
+
+    return out;
   }
 
   Tensor<std::remove_const_t<T>, D> cos() const {
@@ -376,7 +404,7 @@ template <DType T, Device D> struct TensorView {
   }
 
   T item() const {
-    assert(data.size() == 1);
+    assert(data_size == 1);
     return data[0];
   }
 
@@ -390,7 +418,7 @@ template <DType T, Device D> struct TensorView {
 
 template <DType T, Device D> class Tensor {
 private:
-  std::vector<T> data_{};
+  TensorStorage<T, D> storage_;
   Shape shape_;
 
 public:
@@ -400,25 +428,61 @@ public:
     for (auto& dim : shape_) {
       total *= dim;
     }
-    data_.resize(total);
+    storage_.resize(total);
   };
-  explicit Tensor(Shape shape, std::vector<T>&& data)
-      : shape_(std::move(shape)), data_(std::move(data)) {};
+
+  explicit Tensor(Shape shape, TensorStorage<T, D>&& storage)
+      : shape_(std::move(shape)), storage_(std::move(storage)) {}
+
+  explicit Tensor(Shape shape, std::vector<T>&& vec)
+    requires std::same_as<D, device::CPU>
+      : shape_(std::move(shape)), storage_(std::move(vec)) {}
+
   ~Tensor() = default;
 
+  typename TensorStorage<T, D>::pointer data() {
+    return storage_.data();
+  }
+  typename TensorStorage<T, D>::const_pointer data() const {
+    return storage_.data();
+  }
+
+  [[nodiscard]] size_t size() const {
+    return storage_.size();
+  }
+  [[nodiscard]] Shape shape() const {
+    return shape_;
+  }
+
   TensorView<T, D> view() {
-    return TensorView<T, D>{span(), shape(), get_all_strides(shape())};
+    return TensorView<T, D>{data(), size(), shape(), get_all_strides(shape())};
   }
 
   TensorView<const T, D> view() const {
-    return TensorView<const T, D>{span(), shape(), get_all_strides(shape())};
+    return TensorView<const T, D>{data(), size(), shape(), get_all_strides(shape())};
   }
 
   void fill_(T value) {
-    std::fill(data_.begin(), data_.end(), value);
+    storage_.fill(value);
   }
 
-  void set_(int idx, T value) {
+  // CPU specific useful things
+
+  std::span<T> span()
+    requires std::same_as<D, device::CPU>
+  {
+    return std::span<T>(data(), size());
+  }
+
+  std::span<const T> span() const
+    requires std::same_as<D, device::CPU>
+  {
+    return std::span<const T>(data(), size());
+  }
+
+  void set_(int idx, T value)
+    requires std::same_as<D, device::CPU>
+  {
     if (idx >= size()) {
       fmt::print("Error setting {} at idx {} on a tensor sized {}", value, idx, size());
       throw std::out_of_range("cannot set beyond size");
@@ -427,55 +491,16 @@ public:
     span()[idx] = value;
   }
 
-  void replace_from_(TensorView<T, D> source) {
-    if (source.total_elements() > data_.size()) {
-      fmt::print("Cannot write a source view sized {} onto a smaller tensor sized {}",
-                 source.total_elements(), size());
-      throw std::out_of_range("cannot write beyond size");
-    }
-
-    auto offset = 0;
-    auto ptr = span();
-
-    source.each([offset, ptr](T value) mutable {
-      ptr[offset] = value;
-      ++offset;
-    });
-  }
-
   T item() const {
     assert(shape().size() == 0);
-    return data_.data()[0];
-  }
-
-  [[nodiscard]] Shape shape() const {
-    return shape_;
-  }
-
-  std::span<T> span() {
-    return {data(), size()};
-  }
-
-  [[nodiscard]] std::span<const T> span() const {
-    return {data(), size()};
-  }
-
-  T* data() {
-    return data_.data();
-  }
-  const T* data() const {
-    return data_.data();
-  }
-
-  [[nodiscard]] size_t size() const {
-    return data_.size();
+    return storage_.data()[0];
   }
 
   T at(int idx) const {
     if (idx > size()) {
       throw std::out_of_range("cannot index past the tensor size");
     }
-    return data_[idx];
+    return storage_[idx];
   }
 };
 

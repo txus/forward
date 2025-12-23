@@ -1,2 +1,23 @@
+# Point clangd at the clangd-specific build directory
 CompileFlags:
-  CompilationDatabase: build/
+  CompilationDatabase: build-clangd
+
+# Ensure CUDA files (.cu and .cuh) are treated as CUDA
+---
+If:
+  PathMatch: .*\.(cu|cuh)$
+CompileFlags:
+  BuiltinHeaders: QueryDriver
+  Remove:
+    - --expt-relaxed-constexpr
+    - -Xcompiler=*
+    - -G
+  Add:
+    - -xcuda
+    - --cuda-gpu-arch=sm_120
+
+#Diagnostics:
+#  Suppress:
+#    - variadic_device_fn
+#    - attributes_not_allowed
+#    - template_arg_list_constraints_not_satisfied

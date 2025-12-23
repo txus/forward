@@ -16,10 +16,19 @@ app:
 	@cmake --build build --target forward
 	@./build/apps/forward
 
-.PHONY: tensor
-tensor:
-	@cmake --build build --target test_tensor
-	@ctest --test-dir build -R "^Tensor" --output-on-failure
+.PHONY: inspect
+inspect:
+	@cmake --build build --target inspect
+	@./build/apps/inspect
+
+.PHONY: tensor_cpu
+tensor_cpu:
+	@cmake --build build --target test_tensor_cpu
+	@ctest --test-dir build -R "^TensorCPU" --output-on-failure
+
+.PHONY: tensor_cuda
+tensor_cuda:
+	@cmake --build build --target tensor_cuda
 
 .PHONY: nn
 nn:

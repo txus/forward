@@ -28,6 +28,7 @@
     cudaPackages_12.cudatoolkit
     cudaPackages_12.cudnn
     cudaPackages_12.nsight_systems
+    cudaPackages_12.nsight_compute
     
     # Utilities
     bear
@@ -51,14 +52,29 @@
     export CXXFLAGS="-I${pkgs.cudaPackages_12.cudatoolkit}/include"
     export LDFLAGS="-L${pkgs.cudaPackages_12.cudatoolkit}/lib"
 
+    # For CMake presets
+    export CLANGXX_PATH="${pkgs.clang_20}/bin/clang++"
+    export OPENMP_ROOT="${pkgs.llvmPackages_20.openmp}"
+    export CUDA_TOOLKIT_ROOT="${pkgs.cudaPackages_12.cudatoolkit}"
+
     echo "C++/CUDA development environment loaded!"
     echo "Clang version: $(clang --version | head -n1)"
     echo "CMake version: $(cmake --version | head -n1)"
     echo "CUDA path: $CUDA_PATH"
     echo "LLDB: $(lldb --version | head -n1)"
     echo "OpenMP: ${pkgs.llvmPackages_20.openmp}"
+    echo ""
+    echo "CUDA Profiling Tools:"
+    echo "  - nsys: Nsight Systems (timeline profiler)"
+    echo "  - ncu:  Nsight Compute (kernel profiler)"
+    echo ""
+    echo "Build configurations:"
+    echo "  Debug:          cmake -B build -DCMAKE_BUILD_TYPE=Debug"
+    echo "  RelWithDebInfo: cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo"
+    echo "  Release:        cmake -B build -DCMAKE_BUILD_TYPE=Release"
 
     # Test stdlib.h is found
+    echo ""
     echo '#include <stdlib.h>' | clang++ -x c++ -E - > /dev/null 2>&1 && echo "✓ stdlib.h found" || echo "✗ stdlib.h NOT found"
   '';
 }

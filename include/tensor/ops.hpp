@@ -62,4 +62,9 @@ Tensor<std::remove_const_t<T>, D> max(const TensorView<T, D>& input, int dim, bo
 template <DType T, Device D>
 Tensor<int, D> argmax(const TensorView<T, D>& input, int dim, bool keepdim);
 
+// mutations
+
+template <DType T, Device D>
+void replace_from_(Tensor<T, D>& destination, const TensorView<T, D>& source);
+
 } // namespace tensor

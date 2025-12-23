@@ -194,9 +194,7 @@ template <DType T, Device D>
 
   Shape shape = tensor.shape;
 
-  std::span<const bfloat16> data = std::span(bf16_data, nitems);
-
-  TensorView<const T, D> view{data, shape, get_all_strides(shape)};
+  TensorView<const T, D> view{bf16_data, nitems, shape, get_all_strides(shape)};
 
   if (transpose) {
     assert(shape.size() >= 2 && "Cannot transpose tensor with < 2 dims");

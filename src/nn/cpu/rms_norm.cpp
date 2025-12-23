@@ -17,7 +17,7 @@ void RMSNorm<T, D>::load_weights(tensor::TensorView<const T, D> weights) {
 }
 
 template <DType T, Device D> void RMSNorm<T, D>::load_weights(tensor::TensorView<T, D> weights) {
-  weights_ = TensorView<const T, D>{weights.span(), weights.shape, weights.stride};
+  weights_ = TensorView<const T, D>{weights.data, weights.data_size, weights.shape, weights.stride};
 }
 
 template <DType T, Device D>
