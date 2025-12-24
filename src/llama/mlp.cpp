@@ -5,18 +5,18 @@
 using namespace llama;
 using namespace tensor;
 
-template <DType T, Device D> MLP<T, D>::MLP(const ModelConfig& config) {
+template <typename T, typename D> MLP<T, D>::MLP(const ModelConfig& config) {
   act_fn = nn::make_activation(config.hidden_act);
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 void MLP<T, D>::load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx) {
   up_proj.load_weights(loader, fmt::format("model.layers.{}.mlp.up_proj.weight", layer_idx));
   gate_proj.load_weights(loader, fmt::format("model.layers.{}.mlp.gate_proj.weight", layer_idx));
   down_proj.load_weights(loader, fmt::format("model.layers.{}.mlp.down_proj.weight", layer_idx));
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> MLP<T, D>::forward(TensorView<T, D> inputs) {
   auto up_proj_t = up_proj.forward(inputs);
   auto up_proj_v = up_proj_t.view();

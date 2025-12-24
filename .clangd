@@ -2,16 +2,22 @@
 CompileFlags:
   CompilationDatabase: build/clangd
 
-# Regular C++ files - no special handling needed
+# Regular C++ files - explicitly remove any CUDA flags that might be inferred
 ---
 If:
   PathMatch: .*\.(cpp|hpp|h)$
 CompileFlags:
   Remove:
     - -xcuda
+    - -x cuda
     - --cuda-gpu-arch=*
     - --cuda-host-only
     - --cuda-device-only
+    - -fcuda-is-device
+    - --offload-arch=*
+    - -fgpu-rdc
+  Add:
+    - -xc++
 
 # CUDA kernel files (device code) - analyze with device-only mode
 # These contain __global__ functions that run on GPU
@@ -32,6 +38,7 @@ Diagnostics:
   Suppress:
     - variadic_device_fn
     - attributes_not_allowed
+    - note_previous_decl
 
 # CUDA kernel headers - also device code
 ---
@@ -77,6 +84,14 @@ Diagnostics:
     - ovl_no_viable_function_in_call
     - no_member
     - template_arg_list_constraints_not_satisfied
+    # ODR violations from CUDA host/device compilation seeing headers differently
+    - module_odr_violation_function
+    - module_odr_violation_definition
+    # __noinline__ macro conflict between CUDA and libstdc++
+    - undeclared_var_use_suggest
+    - typename_invalid_functionspec
+    - expected_expression
+    - note_previous_decl
 
 # CUDA utility headers (non-kernel) - host code
 ---

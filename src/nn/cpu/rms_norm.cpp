@@ -5,25 +5,25 @@
 using namespace nn;
 using namespace tensor;
 
-template <DType T, Device D> RMSNorm<T, D>::RMSNorm(float eps) : eps(eps){};
+template <typename T, typename D> RMSNorm<T, D>::RMSNorm(float eps) : eps(eps){};
 
-template <DType T, Device D>
+template <typename T, typename D>
 void RMSNorm<T, D>::load_weights(const tensor::Loader<T, D>& loader, std::string_view name) {
   weights_ = loader.load(name);
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 void RMSNorm<T, D>::load_weights(tensor::Tensor<const T, D> weights) {
   weights_ = std::move(weights);
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 void RMSNorm<T, D>::load_weights(const tensor::Tensor<T, D>& weights) {
   auto storage = TensorStorage<const T, D>::borrow(weights.data(), weights.size());
   weights_ = Tensor<const T, D>{weights.shape(), std::move(storage)};
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<T, D> RMSNorm<T, D>::forward(const TensorView<T, D>& inputs) const {
   auto weights = weights_.view();
 

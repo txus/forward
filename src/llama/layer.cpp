@@ -9,13 +9,13 @@ using namespace llama;
 using namespace tensor;
 using namespace nn;
 
-template <DType T, Device D>
+template <typename T, typename D>
 Layer<T, D>::Layer(const ModelConfig& _config, size_t cached_tokens)
     : mlp(MLP<T, D>{_config}), prenorm(RMSNorm<T, D>{_config.rms_norm_eps}),
       postnorm(RMSNorm<T, D>{_config.rms_norm_eps}),
       attention(GroupedQueryAttention<T, D>{_config, cached_tokens}) {}
 
-template <DType T, Device D>
+template <typename T, typename D>
 void Layer<T, D>::load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx) {
   prenorm.load_weights(loader, fmt::format("model.layers.{}.input_layernorm.weight", layer_idx));
   postnorm.load_weights(loader,
@@ -26,7 +26,7 @@ void Layer<T, D>::load_weights(const tensor::Loader<T, D>& loader, size_t layer_
   mlp.load_weights(loader, layer_idx);
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> Layer<T, D>::forward(const TensorView<T, D>& inputs,
                                                        const TensorView<int, D>& attn_mask,
                                                        const RoPE<T, D>& rope) {

@@ -14,7 +14,7 @@ Sampler<T, D, C>::Sampler(C config, tokenizer::Tokenizer& tokenizer)
     : config_(config), tokenizer_(&tokenizer){};
 
 template <DType T, Device D, Config C>
-std::tuple<std::string, float> Sampler<T, D, C>::generate(llama::Model<T, D> model,
+std::tuple<std::string, float> Sampler<T, D, C>::generate(llama::Model<T, D>& model,
                                                           std::string_view prompt,
                                                           size_t max_num_tokens) {
 
@@ -48,7 +48,7 @@ std::tuple<std::string, float> Sampler<T, D, C>::generate(llama::Model<T, D> mod
 
     // fmt::println("LAST TOKEN LOGITS {}", last_token_logits.view());
 
-    auto sampled_ids = sample(last_token_logits);
+    auto sampled_ids = sample(std::move(last_token_logits));
     auto sampled_span = sampled_ids.span();
     for (auto tok_id : sampled_span) {
       token_ids = std::vector<int>{tok_id};

@@ -5,13 +5,17 @@
 
 namespace llama {
 
-template <tensor::DType T, tensor::Device D> class RoPE {
+template <typename T, typename D> class RoPE {
 private:
   std::tuple<tensor::Tensor<float, D>, tensor::Tensor<float, D>> cos_sin; // float32
 
 public:
   explicit RoPE(const llama::ModelConfig& config);
   ~RoPE() = default;
+  RoPE(RoPE&&) noexcept = default;
+  RoPE& operator=(RoPE&&) noexcept = default;
+  RoPE(const RoPE&) = delete;
+  RoPE& operator=(const RoPE&) = delete;
 
   tensor::TensorView<const float, D> cos() const;
   tensor::TensorView<const float, D> sin() const;

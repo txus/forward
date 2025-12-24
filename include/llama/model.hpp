@@ -10,10 +10,9 @@
 
 namespace llama {
 
-template <tensor::DType T, tensor::Device D>
-tensor::Tensor<T, D> causal_attention_mask(size_t seq_len);
+template <typename T, typename D> tensor::Tensor<T, D> causal_attention_mask(size_t seq_len);
 
-template <tensor::DType T, tensor::Device D> class Model {
+template <typename T, typename D> class Model {
 private:
   size_t kv_cache_size;
   size_t max_tokens;

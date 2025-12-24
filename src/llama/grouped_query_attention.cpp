@@ -6,7 +6,7 @@
 using namespace llama;
 using namespace tensor;
 
-template <DType T, Device D>
+template <typename T, typename D>
 GroupedQueryAttention<T, D>::GroupedQueryAttention(const ModelConfig& config, size_t cached_tokens)
     : scale(T(1.0F / std::sqrt(static_cast<float>(config.head_dim)))), d_in(config.hidden_size),
       d_out(config.hidden_size), num_heads(config.num_attention_heads), head_dim(d_out / num_heads),
@@ -15,11 +15,11 @@ GroupedQueryAttention<T, D>::GroupedQueryAttention(const ModelConfig& config, si
   assert(num_heads % num_kv_groups == 0);
 
   if (cached_tokens > 0) {
-    cache.emplace(KVCache<T, D>{config, cached_tokens});
+    cache.emplace(config, cached_tokens);
   }
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 void GroupedQueryAttention<T, D>::load_weights(const tensor::Loader<T, D>& loader,
                                                size_t layer_idx) {
   q_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.q_proj.weight", layer_idx));
@@ -28,14 +28,14 @@ void GroupedQueryAttention<T, D>::load_weights(const tensor::Loader<T, D>& loade
   out_proj.load_weights(loader, fmt::format("model.layers.{}.self_attn.o_proj.weight", layer_idx));
 }
 
-template <DType T, Device D> size_t GroupedQueryAttention<T, D>::get_cache_size() {
+template <typename T, typename D> size_t GroupedQueryAttention<T, D>::get_cache_size() {
   if (cache.has_value()) {
     return cache.value().get_current_tokens();
   }
   return 0;
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D>
 GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
                                      const TensorView<int, D>& attn_mask, const RoPE<T, D>& rope) {
@@ -69,9 +69,9 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
 
     auto cached_output = kv_cache.forward(last_keys.view(), last_values.view());
 
-    queries = last_queries;
-    keys = std::get<0>(cached_output);
-    values = std::get<1>(cached_output);
+    queries = std::move(last_queries);
+    keys = std::move(std::get<0>(cached_output));
+    values = std::move(std::get<1>(cached_output));
 
     mask_to_use = slice(attn_mask, 0, cached_tokens, cached_tokens + input_seq_len);
     mask_to_use = slice(mask_to_use.view(), 1, 0, cached_tokens + input_seq_len);

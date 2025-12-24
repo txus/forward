@@ -5,7 +5,7 @@
 
 namespace nn {
 
-template <tensor::DType T, tensor::Device D> class RMSNorm {
+template <typename T, typename D> class RMSNorm {
 private:
   tensor::Tensor<const T, D> weights_;
   float eps;
@@ -13,6 +13,10 @@ private:
 public:
   explicit RMSNorm(float eps);
   ~RMSNorm() = default;
+  RMSNorm(RMSNorm&&) noexcept = default;
+  RMSNorm& operator=(RMSNorm&&) noexcept = default;
+  RMSNorm(const RMSNorm&) = delete;
+  RMSNorm& operator=(const RMSNorm&) = delete;
 
   void load_weights(const tensor::Loader<T, D>& loader, std::string_view name);
   void load_weights(tensor::Tensor<const T, D> weights);

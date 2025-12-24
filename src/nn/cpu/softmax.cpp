@@ -4,7 +4,7 @@
 using namespace nn;
 using namespace tensor;
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> Softmax::operator()(const TensorView<T, D>& input,
                                                       int dim) const {
   Tensor<float, D> f32 = input.template to<float>();

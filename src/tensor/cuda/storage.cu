@@ -49,7 +49,7 @@ void TensorStorage<T, CUDA>::fill(T value) {
   int grid_size = cuda::get_grid_size(size_, block_size);
 
   // Convert to device-native type for kernel call
-  auto* device_data = reinterpret_cast<Cuda<T>*>(data_);
+  auto* device_data = reinterpret_cast<Cuda<T>*>(data_); // NOLINT
   Cuda<T> device_value = to_device_type(value, CUDA{});
 
   fill_kernel<<<grid_size, block_size>>>(device_data, device_value, size_);
