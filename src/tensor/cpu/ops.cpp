@@ -17,9 +17,9 @@ template <DType T, Device D> Tensor<T, D> arange(T start, T end, T step) {
   return Tensor<T, D>{Shape{vec.size()}, std::move(vec)};
 }
 
-template Tensor<int, CPU> arange(int start, int end, int step = 1);
-template Tensor<float, CPU> arange(float start, float end, float step = 1);
-template Tensor<bfloat16, CPU> arange(bfloat16 start, bfloat16 end, bfloat16 step = 1);
+template Tensor<int, CPU> arange(int start, int end, int step);
+template Tensor<float, CPU> arange(float start, float end, float step);
+template Tensor<bfloat16, CPU> arange(bfloat16 start, bfloat16 end, bfloat16 step);
 
 // element-wise ops
 
@@ -73,12 +73,6 @@ Tensor<std::remove_const_t<T>, D> add(const TensorView<T, D>& tensor_a,
   return element_wise<T, T, T, D>(tensor_a, tensor_b,
                                   [](T val_a, T val_b) { return val_a + val_b; });
 }
-
-template Tensor<bfloat16, CPU> add(const TensorView<const bfloat16, CPU>&,
-                                   const TensorView<const bfloat16, CPU>&);
-template Tensor<float, CPU> add(const TensorView<const float, CPU>&,
-                                const TensorView<const float, CPU>&);
-template Tensor<int, CPU> add(const TensorView<const int, CPU>&, const TensorView<const int, CPU>&);
 
 template <DType T, Device D>
 Tensor<std::remove_const_t<T>, D> sub(const TensorView<T, D>& tensor_a,

@@ -6,6 +6,7 @@
 #include <tensor/device_type.hpp>
 
 #include "kernels/arange.cuh"
+#include "kernels/add.cuh"
 #include "utils.cuh"
 
 namespace tensor {
@@ -27,7 +28,7 @@ template <typename T, typename D> Tensor<T, D> arange(T start, T end, T step) {
   int grid_size = cuda::get_grid_size(n_elements, block_size);
 
   // Convert to device-native types for kernel call
-  auto* device_data = reinterpret_cast<Cuda<T>*>(out.data());
+  auto* device_data = reinterpret_cast<Cuda<T>*>(out.data()); // NOLINT
   Cuda<T> device_start = to_device_type(start, D{});
   Cuda<T> device_end = to_device_type(end, D{});
   Cuda<T> device_step = to_device_type(step, D{});
@@ -40,5 +41,37 @@ template <typename T, typename D> Tensor<T, D> arange(T start, T end, T step) {
 template Tensor<int, CUDA> arange(int start, int end, int step);
 template Tensor<float, CUDA> arange(float start, float end, float step);
 template Tensor<bfloat16, CUDA> arange(bfloat16 start, bfloat16 end, bfloat16 step);
+
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> add(const TensorView<T, D>& tensor_a, const TensorView<T, D>& tensor_b) {
+  assert(tensor_a.is_contiguous() == tensor_b.is_contiguous() && "the two tensors should be contiguous");
+  assert(tensor_a.shape == tensor_b.shape && "the two tensors should be the same shape");
+
+  auto n_elements = tensor_a.data_size;
+  TensorStorage<std::remove_const_t<T>, D> storage(n_elements);
+
+  Tensor<std::remove_const_t<T>, D> out{tensor_a.shape, std::move(storage)};
+
+  int block_size = cuda::get_block_size();
+  int grid_size = cuda::get_grid_size(n_elements, block_size);
+
+  // Convert to device-native types for kernel call
+  auto* out_d = reinterpret_cast<Cuda<T>*>(out.data()); // NOLINT
+  auto* a_d = reinterpret_cast<Cuda<T>*>(tensor_a.data); // NOLINT
+  auto* b_d = reinterpret_cast<Cuda<T>*>(tensor_b.data); // NOLINT
+
+  add_kernel<<<grid_size, block_size>>>(out_d, a_d, b_d, n_elements);
+
+  return out;
+}
+
+//non const
+
+template Tensor<bfloat16, CUDA> add(const TensorView<bfloat16, CUDA>&,
+                                    const TensorView<bfloat16, CUDA>&);
+template Tensor<float, CUDA> add(const TensorView<float, CUDA>&,
+                                 const TensorView<float, CUDA>&);
+template Tensor<int, CUDA> add(const TensorView<int, CUDA>&, const TensorView<int, CUDA>&);
 
 } // namespace tensor

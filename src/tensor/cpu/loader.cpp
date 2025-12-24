@@ -6,16 +6,16 @@
 
 namespace tensor {
 
-template <DType T, Device D>
+template <typename T, typename D>
 Loader<T, D>::Loader(std::string_view file_path) : safetensors_(load_safetensors(file_path)){};
-template <DType T, Device D> Loader<T, D>::~Loader() = default;
+template <typename T, typename D> Loader<T, D>::~Loader() = default;
 
-template <DType T, Device D> void Loader<T, D>::inspect() const {
+template <typename T, typename D> void Loader<T, D>::inspect() const {
   inspect_safetensors(safetensors_);
 }
 
 // bfloat16 only for now
-template <DType T, Device D>
+template <typename T, typename D>
 [[nodiscard]] Tensor<const T, D> Loader<T, D>::load(std::string_view tensor_name) const {
   fmt::println("Loading {}...", tensor_name);
 

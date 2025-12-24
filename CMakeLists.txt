@@ -64,6 +64,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND DEFINED CLANG_RESOURCE_DIR AND NOT
   add_compile_options(-resource-dir=${CLANG_RESOURCE_DIR})
 endif()
 
+
 # Make dependencies available
 FetchContent_MakeAvailable(fmtlib json safetensors_cpp tokenizers_cpp)
 
