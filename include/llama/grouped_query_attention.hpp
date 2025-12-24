@@ -9,7 +9,7 @@
 
 namespace llama {
 
-template <tensor::DType T, tensor::Device D> class GroupedQueryAttention {
+template <typename T, typename D> class GroupedQueryAttention {
 private:
   size_t d_in;
   size_t d_out;
@@ -32,6 +32,10 @@ private:
 public:
   explicit GroupedQueryAttention(const ModelConfig& config, size_t cached_tokens = 0);
   ~GroupedQueryAttention() = default;
+  GroupedQueryAttention(GroupedQueryAttention&&) noexcept = default;
+  GroupedQueryAttention& operator=(GroupedQueryAttention&&) noexcept = default;
+  GroupedQueryAttention(const GroupedQueryAttention&) = delete;
+  GroupedQueryAttention& operator=(const GroupedQueryAttention&) = delete;
 
   void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);
 

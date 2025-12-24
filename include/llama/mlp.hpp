@@ -7,7 +7,7 @@
 #include <tensor/tensor.hpp>
 
 namespace llama {
-template <tensor::DType T, tensor::Device D> class MLP {
+template <typename T, typename D> class MLP {
 private:
   nn::Linear<T, D> up_proj;
   nn::Linear<T, D> gate_proj;
@@ -17,6 +17,10 @@ private:
 public:
   explicit MLP(const ModelConfig& config);
   ~MLP() = default;
+  MLP(MLP&&) noexcept = default;
+  MLP& operator=(MLP&&) noexcept = default;
+  MLP(const MLP&) = delete;
+  MLP& operator=(const MLP&) = delete;
 
   void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);
 

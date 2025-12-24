@@ -6,7 +6,7 @@
 namespace nn {
 
 struct SiLU {
-  template <tensor::DType T, tensor::Device D>
+  template <typename T, typename D>
   tensor::Tensor<std::remove_const_t<T>, D> operator()(const tensor::TensorView<T, D>& input) const;
 };
 

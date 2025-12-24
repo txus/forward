@@ -10,7 +10,7 @@ Activation nn::make_activation(std::string_view name) {
   throw std::runtime_error(fmt::format("Unknown activation: {}", name));
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> SiLU::operator()(const TensorView<T, D>& input) const {
   return input.template map<std::remove_const_t<T>>([](T value) {
     std::remove_const_t<T> sigmoid = 1 / (1 + std::exp(-value));

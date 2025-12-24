@@ -25,7 +25,7 @@ public:
   explicit Sampler(C config, tokenizer::Tokenizer& tokenizer);
   virtual ~Sampler() = default;
 
-  std::tuple<std::string, float> generate(llama::Model<T, D> model, std::string_view prompt,
+  std::tuple<std::string, float> generate(llama::Model<T, D>& model, std::string_view prompt,
                                           size_t max_num_tokens);
 };
 

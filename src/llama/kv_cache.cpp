@@ -6,11 +6,11 @@
 using namespace llama;
 using namespace tensor;
 
-template <DType T, Device D>
+template <typename T, typename D>
 KVCache<T, D>::KVCache(const ModelConfig& _config, size_t max_tokens)
     : max_tokens(max_tokens), num_heads(_config.num_key_value_heads), head_dim(_config.head_dim) {}
 
-template <DType T, Device D>
+template <typename T, typename D>
 std::tuple<tensor::Tensor<T, D>, tensor::Tensor<T, D>>
 KVCache<T, D>::forward(tensor::TensorView<T, D> new_keys, tensor::TensorView<T, D> new_values) {
   auto& k_cache = get_k_cache();
@@ -39,7 +39,7 @@ KVCache<T, D>::forward(tensor::TensorView<T, D> new_keys, tensor::TensorView<T, 
 
   current_tokens += new_tokens_count;
 
-  return std::tuple(all_keys, all_values);
+  return std::tuple(std::move(all_keys), std::move(all_values));
 }
 
 template class llama::KVCache<bfloat16, CPU>;

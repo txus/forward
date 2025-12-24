@@ -7,7 +7,7 @@ namespace tensor {
 
 // constructors
 
-template <DType T, Device D> Tensor<T, D> arange(T start, T end, T step) {
+template <typename T, typename D> Tensor<T, D> arange(T start, T end, T step) {
   std::vector<T> vec{};
 
   for (T element = start; element < end; element += step) {
@@ -17,13 +17,13 @@ template <DType T, Device D> Tensor<T, D> arange(T start, T end, T step) {
   return Tensor<T, D>{Shape{vec.size()}, std::move(vec)};
 }
 
-template Tensor<int, CPU> arange(int start, int end, int step);
-template Tensor<float, CPU> arange(float start, float end, float step);
-template Tensor<bfloat16, CPU> arange(bfloat16 start, bfloat16 end, bfloat16 step);
+template Tensor<int, CPU> arange(int start, int end, int step = 1);
+template Tensor<float, CPU> arange(float start, float end, float step = 1);
+template Tensor<bfloat16, CPU> arange(bfloat16 start, bfloat16 end, bfloat16 step = 1);
 
 // element-wise ops
 
-template <DType In1T, DType In2T, DType OutT, Device D, typename Func>
+template <typename In1T, typename In2T, typename OutT, typename D, typename Func>
 Tensor<std::remove_const_t<OutT>, D> element_wise(const TensorView<In1T, D>& tensor_a,
                                                   const TensorView<In2T, D>& tensor_b, Func func) {
   Shape out_shape = broadcast_shape(tensor_a.shape, tensor_b.shape);
@@ -67,53 +67,59 @@ Tensor<std::remove_const_t<OutT>, D> element_wise(const TensorView<In1T, D>& ten
   return out;
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> add(const TensorView<T, D>& tensor_a,
                                       const TensorView<T, D>& tensor_b) {
   return element_wise<T, T, T, D>(tensor_a, tensor_b,
                                   [](T val_a, T val_b) { return val_a + val_b; });
 }
 
-template <DType T, Device D>
+template Tensor<bfloat16, CPU> add(const TensorView<const bfloat16, CPU>&,
+                                   const TensorView<const bfloat16, CPU>&);
+template Tensor<float, CPU> add(const TensorView<const float, CPU>&,
+                                const TensorView<const float, CPU>&);
+template Tensor<int, CPU> add(const TensorView<const int, CPU>&, const TensorView<const int, CPU>&);
+
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> sub(const TensorView<T, D>& tensor_a,
                                       const TensorView<T, D>& tensor_b) {
   return element_wise<T, T, T, D>(tensor_a, tensor_b,
                                   [](T val_a, T val_b) { return val_a - val_b; });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> sub(const TensorView<T, D>& tensor,
                                       std::remove_const_t<T> scalar) {
   return tensor.template map<std::remove_const_t<T>>([scalar](T val) { return val - scalar; });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> mul(const TensorView<T, D>& tensor_a,
                                       const TensorView<T, D>& tensor_b) {
   return element_wise<T, T, T, D>(tensor_a, tensor_b,
                                   [](T val_a, T val_b) { return val_a * val_b; });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> mul(const TensorView<T, D>& tensor,
                                       std::remove_const_t<T> scalar) {
   return tensor.template map<std::remove_const_t<T>>([scalar](T val) { return scalar * val; });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> div(const TensorView<T, D>& tensor_a,
                                       const TensorView<T, D>& tensor_b) {
   return element_wise<T, T, T, D>(tensor_a, tensor_b,
                                   [](T val_a, T val_b) { return val_a / val_b; });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> div(const TensorView<T, D>& tensor,
                                       std::remove_const_t<T> scalar) {
   return tensor.template map<std::remove_const_t<T>>([scalar](T val) { return val / scalar; });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> masked_fill(const TensorView<T, D>& tensor_a,
                                               const TensorView<int, D>& mask,
                                               std::remove_const_t<T> masked_value) {
@@ -125,7 +131,7 @@ Tensor<std::remove_const_t<T>, D> masked_fill(const TensorView<T, D>& tensor_a,
   });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> tril(const TensorView<T, D>& tensor, const bool diagonal) {
   assert(tensor.shape.size() == 2);
   assert(tensor.is_contiguous());
@@ -155,14 +161,14 @@ Tensor<std::remove_const_t<T>, D> tril(const TensorView<T, D>& tensor, const boo
   return out;
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> pow(std::remove_const_t<T> scalar,
                                       const TensorView<T, D>& tensor) {
   return tensor.template map<std::remove_const_t<T>>(
       [scalar](T val) { return std::pow(scalar, val); });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> pow(const TensorView<T, D>& tensor,
                                       std::remove_const_t<T> scalar) {
   return tensor.template map<std::remove_const_t<T>>(
@@ -171,7 +177,7 @@ Tensor<std::remove_const_t<T>, D> pow(const TensorView<T, D>& tensor,
 
 // matmul
 
-template <DType T1, DType T2, Device D>
+template <typename T1, typename T2, typename D>
 Tensor<std::remove_const_t<T1>, D> matmul(const TensorView<T1, D>& tensor_a,
                                           const TensorView<T2, D>& tensor_b) {
   // a: [..., M, K]
@@ -245,7 +251,7 @@ Tensor<std::remove_const_t<T1>, D> matmul(const TensorView<T1, D>& tensor_a,
   return out;
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> cat(const TensorView<T, D>& tensor_a,
                                       const TensorView<T, D>& tensor_b, int dim) {
   auto shape_a = tensor_a.shape;
@@ -292,7 +298,7 @@ Tensor<std::remove_const_t<T>, D> cat(const TensorView<T, D>& tensor_a,
   return out;
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> slice(const TensorView<T, D>& view, int dim, size_t start,
                                         size_t end) {
   auto shape = view.shape;
@@ -341,7 +347,7 @@ Tensor<std::remove_const_t<T>, D> slice(const TensorView<T, D>& view, int dim, s
   return out;
 }
 
-template <DType T, Device D, typename ReduceFunc, typename InitFunc>
+template <typename T, typename D, typename ReduceFunc, typename InitFunc>
 Tensor<std::remove_const_t<T>, D> reduce(const TensorView<T, D>& input, int dim, // NOLINT
                                          bool keepdim,                           // NOLINT
                                          InitFunc init_fn,                       // NOLINT
@@ -415,7 +421,7 @@ Tensor<std::remove_const_t<T>, D> reduce(const TensorView<T, D>& input, int dim,
   return out;
 }
 
-template <DType T, Device D, typename CompareFunc>
+template <typename T, typename D, typename CompareFunc>
 Tensor<int, D> reduce_with_index(const TensorView<T, D>& input, int dim, // NOLINT
                                  bool keepdim,                           // NOLINT
                                  CompareFunc compare_fn) {
@@ -503,14 +509,14 @@ Tensor<int, D> reduce_with_index(const TensorView<T, D>& input, int dim, // NOLI
   return out;
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> sum(const TensorView<T, D>& input, int dim, bool keepdim) {
   return reduce(
       input, dim, keepdim, []() { return T(0.0); },
       [](T val_a, T val_b) { return T(val_a + val_b); });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> max(const TensorView<T, D>& input, int dim, bool keepdim) {
   return reduce(
       input, dim, keepdim,
@@ -523,7 +529,7 @@ Tensor<std::remove_const_t<T>, D> max(const TensorView<T, D>& input, int dim, bo
       });
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<int, D> argmax(const TensorView<T, D>& input, int dim, bool keepdim) {
   return reduce_with_index<T, D>(
       input, dim, keepdim,
@@ -531,7 +537,7 @@ Tensor<int, D> argmax(const TensorView<T, D>& input, int dim, bool keepdim) {
   );
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 void replace_from_(Tensor<T, D>& destination, const TensorView<T, D>& source) {
   if (source.total_elements() > destination.size()) {
     fmt::print("Cannot write a source view sized {} onto a smaller tensor sized {}",
@@ -591,6 +597,7 @@ template Tensor<bfloat16, CPU> tril(const TensorView<bfloat16, CPU>&, bool);
 template Tensor<int, CPU> tril(const TensorView<int, CPU>&, bool);
 template Tensor<bfloat16, CPU> slice(const TensorView<bfloat16, CPU>&, int, size_t, size_t);
 template Tensor<float, CPU> slice(const TensorView<float, CPU>&, int, size_t, size_t);
+template Tensor<float, CPU> slice(const TensorView<const float, CPU>&, int, size_t, size_t);
 template Tensor<int, CPU> slice(const TensorView<int, CPU>&, int, size_t, size_t);
 template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,
                                       const TensorView<bfloat16, CPU>&);

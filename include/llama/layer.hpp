@@ -8,7 +8,7 @@
 #include <tensor/tensor.hpp>
 
 namespace llama {
-template <tensor::DType T, tensor::Device D> class Layer {
+template <typename T, typename D> class Layer {
 private:
   nn::RMSNorm<T, D> prenorm;
   nn::RMSNorm<T, D> postnorm;
@@ -18,6 +18,10 @@ private:
 public:
   explicit Layer(const ModelConfig& config, size_t cached_tokens = 0);
   ~Layer() = default;
+  Layer(Layer&&) noexcept = default;
+  Layer& operator=(Layer&&) noexcept = default;
+  Layer(const Layer&) = delete;
+  Layer& operator=(const Layer&) = delete;
 
   void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);
 

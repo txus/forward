@@ -13,24 +13,24 @@ using json = nlohmann::json;
 using namespace llama;
 using namespace tensor;
 
-template <DType T, Device D> Tensor<T, D> llama::causal_attention_mask(size_t seq_len) {
+template <typename T, typename D> Tensor<T, D> llama::causal_attention_mask(size_t seq_len) {
   auto attn_mask = Tensor<T, D>{{seq_len, seq_len}};
   attn_mask.fill_(1);
   return tril(attn_mask.view(), false);
 }
 template Tensor<int, CPU> llama::causal_attention_mask(size_t seq_len);
 
-template <DType T, Device D>
+template <typename T, typename D>
 Model<T, D>::Model(ModelConfig config, size_t max_tokens, size_t kv_cache_size)
     : max_tokens(max_tokens), kv_cache_size(kv_cache_size), config(config),
       norm(config.rms_norm_eps), rope(config) {} // NOLINT
 
-template <DType T, Device D>
+template <typename T, typename D>
 Model<T, D>::Model(std::string_view model_path, size_t max_tokens, size_t kv_cache_size)
     : max_tokens(max_tokens), kv_cache_size(kv_cache_size), config(load_config(model_path)),
       norm(config.rms_norm_eps), rope(config) {}
 
-template <tensor::DType T, tensor::Device D>
+template <typename T, typename D>
 void Model<T, D>::load_weights(const tensor::Loader<T, D>& loader) {
   embed.load_weights(loader);
 
@@ -49,7 +49,7 @@ void Model<T, D>::load_weights(const tensor::Loader<T, D>& loader) {
   loaded_ = true;
 }
 
-template <tensor::DType T, tensor::Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> Model<T, D>::forward(const TensorView<int, D>& token_ids) {
   assert(loaded_);
 

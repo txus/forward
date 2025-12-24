@@ -8,7 +8,7 @@
 using namespace llama;
 using namespace tensor;
 
-template <Device D>
+template <typename D>
 inline std::tuple<Tensor<float, D>, Tensor<float, D>>
 precompute_rope_values(size_t head_dim, float theta_base, size_t context_length) {
   assert(head_dim % 2 == 0);
@@ -64,20 +64,19 @@ precompute_rope_values(size_t head_dim, float theta_base, size_t context_length)
   auto sin = angles.view().sin();
   auto cos = angles.view().cos();
 
-  auto out = std::tuple(cos, sin);
-  return out;
+  return std::make_tuple(std::move(cos), std::move(sin));
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 RoPE<T, D>::RoPE(const ModelConfig& config)
     : cos_sin(precompute_rope_values<D>(config.head_dim, config.rope_theta,
                                         config.max_position_embeddings)){};
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
                                                       size_t position_offset) const {
-  auto cos = std::get<0>(cos_sin);
-  auto sin = std::get<1>(cos_sin);
+  const auto& cos = std::get<0>(cos_sin);
+  const auto& sin = std::get<1>(cos_sin);
 
   Shape shape = inputs.shape;
   size_t batch_size = shape[0];
@@ -118,11 +117,11 @@ Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
   return out;
 }
 
-template <DType T, Device D> TensorView<const float, D> RoPE<T, D>::cos() const {
+template <typename T, typename D> TensorView<const float, D> RoPE<T, D>::cos() const {
   return std::get<0>(cos_sin).view();
 }
 
-template <DType T, Device D> TensorView<const float, D> RoPE<T, D>::sin() const {
+template <typename T, typename D> TensorView<const float, D> RoPE<T, D>::sin() const {
   return std::get<1>(cos_sin).view();
 }
 

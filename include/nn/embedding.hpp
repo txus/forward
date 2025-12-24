@@ -4,13 +4,17 @@
 #include <tensor/tensor.hpp>
 
 namespace nn {
-template <tensor::DType T, tensor::Device D> class Embedding {
+template <typename T, typename D> class Embedding {
 private:
   tensor::Tensor<const T, D> weights_;
 
 public:
   Embedding() = default;
   ~Embedding() = default;
+  Embedding(Embedding&&) noexcept = default;
+  Embedding& operator=(Embedding&&) noexcept = default;
+  Embedding(const Embedding&) = delete;
+  Embedding& operator=(const Embedding&) = delete;
 
   void load_weights(const tensor::Loader<T, D>& loader);
   void load_weights(tensor::Tensor<const T, D> weights);

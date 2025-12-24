@@ -5,14 +5,14 @@
 using namespace nn;
 using namespace tensor;
 
-template <DType T, Device D>
+template <typename T, typename D>
 void Linear<T, D>::load_weights(const tensor::Loader<T, D>& loader, std::string_view name) {
   weights_ = loader.load(name);
   weights_t_ = weights_.view();
   weights_t_.transpose();
 }
 
-template <DType T, Device D>
+template <typename T, typename D>
 Tensor<T, D> Linear<T, D>::forward(const TensorView<T, D>& inputs) {
   return matmul(inputs, weights_t_);
 }

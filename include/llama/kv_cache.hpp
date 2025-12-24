@@ -6,7 +6,7 @@
 #include <tuple>
 
 namespace llama {
-template <tensor::DType T, tensor::Device D> class KVCache {
+template <typename T, typename D> class KVCache {
 private:
   std::optional<tensor::Tensor<T, D>> k_cache;
   std::optional<tensor::Tensor<T, D>> v_cache;
@@ -20,6 +20,10 @@ private:
 public:
   explicit KVCache(const ModelConfig& config, size_t max_tokens);
   ~KVCache() = default;
+  KVCache(KVCache&&) noexcept = default;
+  KVCache& operator=(KVCache&&) noexcept = default;
+  KVCache(const KVCache&) = delete;
+  KVCache& operator=(const KVCache&) = delete;
 
   void initialize_if_needed(size_t batch_size) {
     if (!k_cache.has_value()) {
