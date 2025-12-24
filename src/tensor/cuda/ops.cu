@@ -3,31 +3,42 @@
 #include <fmt/core.h>
 
 #include <tensor/ops.hpp>
+#include <tensor/device_type.hpp>
+
+#include "kernels/arange.cuh"
+#include "utils.cuh"
 
 namespace tensor {
 
-// TODO: Implement CUDA kernels and operations here
-//
-// Suggested implementation order:
-// 1. Element-wise ops (add, mul, etc.) - easiest, good for learning CUDA
-// 2. Reductions (sum, max, argmax) - introduce shared memory
-// 3. Matrix multiplication (matmul) - use cuBLAS for performance
-// 4. Memory ops (cat, slice) - practice with memory patterns
-// 5. Advanced ops (tril, masked_fill) - combine techniques
+using namespace dtype;
+using namespace device;
+using namespace kernels;
 
-// Example skeleton for element-wise addition:
-//
-// __global__ void add_kernel(const float* a, const float* b, float* out, size_t n) {
-//   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-//   if (idx < n) {
-//     out[idx] = a[idx] + b[idx];
-//   }
-// }
-//
-// template <DType T, Device D>
-// Tensor<std::remove_const_t<T>, D> add(const TensorView<T, D>& tensor_a,
-//                                       const TensorView<T, D>& tensor_b) {
-//   // Implementation here
-// }
+template <typename T, typename D> Tensor<T, D> arange(T start, T end, T step) {
+  auto n_elements = static_cast<size_t>((end - start) / step);
+
+  TensorStorage<T, D> storage(n_elements);
+
+  Shape shape{n_elements};
+
+  Tensor<T, D> out{shape, std::move(storage)};
+
+  int block_size = cuda::get_block_size();
+  int grid_size = cuda::get_grid_size(n_elements, block_size);
+
+  // Convert to device-native types for kernel call
+  auto* device_data = reinterpret_cast<Cuda<T>*>(out.data());
+  Cuda<T> device_start = to_device_type(start, D{});
+  Cuda<T> device_end = to_device_type(end, D{});
+  Cuda<T> device_step = to_device_type(step, D{});
+
+  arange_kernel<<<grid_size, block_size>>>(device_data, device_start, device_end, device_step, n_elements);
+
+  return out;
+}
+
+template Tensor<int, CUDA> arange(int start, int end, int step);
+template Tensor<float, CUDA> arange(float start, float end, float step);
+template Tensor<bfloat16, CUDA> arange(bfloat16 start, bfloat16 end, bfloat16 step);
 
 } // namespace tensor

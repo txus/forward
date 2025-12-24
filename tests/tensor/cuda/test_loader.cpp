@@ -6,8 +6,8 @@
 
 using namespace tensor;
 
-TEST(TensorLoaderTest, LoadFromSafetensors) {
-  Loader<bfloat16, CPU> loader{TEST_WEIGHTS_PATH};
+TEST(TensorCUDALoaderTest, LoadFromSafetensors) {
+  Loader<bfloat16, CUDA> loader{TEST_WEIGHTS_PATH};
 
   auto embed_weights = loader.load("model.embed_tokens.weight");
 
@@ -15,9 +15,10 @@ TEST(TensorLoaderTest, LoadFromSafetensors) {
 
   EXPECT_EQ(embed_weights.shape(), shape);
 
-  auto weights_ = embed_weights.span();
+  auto cpu_weights = embed_weights.cpu();
+  auto weights_ = cpu_weights.span();
 
-  fmt::println("Weights {}", embed_weights.view());
+  fmt::println("Weights {}", cpu_weights.view());
 
   bfloat16 expected_first = 0.004517;
   bfloat16 expected_last = 0.006622;

@@ -1,6 +1,6 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/tensor/*.hpp")
 
-add_library(tensor_cuda STATIC storage.cu kernels/fill.cu)
+add_library(tensor_cuda STATIC storage.cu loader.cu ops.cu kernels/fill.cu kernels/arange.cu)
 
 set_target_properties(tensor_cuda PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON
@@ -81,6 +81,12 @@ elseif (CMAKE_CUDA_COMPILER_ID STREQUAL "Clang") # just for clangd
   endif()
   if(DEFINED CLANG_RESOURCE_DIR AND NOT CLANG_RESOURCE_DIR STREQUAL "")
     list(APPEND CLANG_CUDA_FLAGS -resource-dir=${CLANG_RESOURCE_DIR})
+  endif()
+  # NixOS clang wrapper injects GCC C++ includes which conflict with libc++
+  # Use -nostdinc++ to disable auto-injection, then explicitly add libc++ headers
+  # _ALLOW_UNSUPPORTED_LIBCPP bypasses CUDA's "libc++ not supported on x86" error
+  if(DEFINED LIBCXX_INCLUDE AND NOT LIBCXX_INCLUDE STREQUAL "")
+    list(APPEND CLANG_CUDA_FLAGS -nostdinc++ -cxx-isystem${LIBCXX_INCLUDE} -D_ALLOW_UNSUPPORTED_LIBCPP)
   endif()
   target_compile_options(tensor_cuda PRIVATE ${CLANG_CUDA_FLAGS})
 endif()

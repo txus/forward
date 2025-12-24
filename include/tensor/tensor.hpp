@@ -427,7 +427,11 @@ private:
 
 public:
   explicit Tensor() : shape_({0}) {}
-  explicit Tensor(Shape shape) : shape_(std::move(shape)) {
+
+  // Allocating constructor - only for mutable tensors
+  explicit Tensor(Shape shape)
+    requires(!std::is_const_v<T>)
+      : shape_(std::move(shape)) {
     size_t total = 1;
     for (auto& dim : shape_) {
       total *= dim;
@@ -435,14 +439,24 @@ public:
     storage_.resize(total);
   };
 
+  // Storage-taking constructor - works for both const and non-const
   explicit Tensor(Shape shape, TensorStorage<T, D>&& storage)
       : shape_(std::move(shape)), storage_(std::move(storage)) {}
 
-  explicit Tensor(Shape shape, std::vector<T>&& vec)
-    requires std::same_as<D, device::CPU>
+  // Vector constructor - only for mutable CPU tensors
+  explicit Tensor(Shape shape, std::vector<std::remove_const_t<T>>&& vec)
+    requires std::same_as<D, device::CPU> && (!std::is_const_v<T>)
       : shape_(std::move(shape)), storage_(std::move(vec)) {}
 
   ~Tensor() = default;
+
+  // Move constructor and assignment
+  Tensor(Tensor&&) noexcept = default;
+  Tensor& operator=(Tensor&&) noexcept = default;
+
+  // Delete copy (storage may be non-copyable)
+  Tensor(const Tensor&) = delete;
+  Tensor& operator=(const Tensor&) = delete;
 
   typename TensorStorage<T, D>::pointer data() {
     return storage_.data();
@@ -466,25 +480,32 @@ public:
     return TensorView<const T, D>{data(), size(), shape(), get_all_strides(shape())};
   }
 
-  void fill_(T value) {
+  // Copy to a new mutable tensor
+  Tensor<std::remove_const_t<T>, D> copy() const {
+    return view().copy();
+  }
+
+  void fill_(T value)
+    requires(!std::is_const_v<T>)
+  {
     storage_.fill(value);
   }
 
 #ifdef TENSOR_HAS_CUDA
   // Device transfer methods
 
-  Tensor<T, CUDA> cuda() const
+  Tensor<std::remove_const_t<T>, CUDA> cuda() const
     requires std::same_as<D, device::CPU>
   {
-    Tensor<T, CUDA> result{shape()};
+    Tensor<std::remove_const_t<T>, CUDA> result{shape()};
     cudaMemcpy(result.data(), data(), size() * sizeof(T), cudaMemcpyHostToDevice);
     return result;
   }
 
-  Tensor<T, CPU> cpu() const
+  Tensor<std::remove_const_t<T>, CPU> cpu() const
     requires std::same_as<D, device::CUDA>
   {
-    Tensor<T, CPU> result{shape()};
+    Tensor<std::remove_const_t<T>, CPU> result{shape()};
     cudaMemcpy(result.data(), data(), size() * sizeof(T), cudaMemcpyDeviceToHost);
     return result;
   }

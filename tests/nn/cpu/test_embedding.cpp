@@ -21,7 +21,7 @@ TEST(NNEmbeddingTest, Forward) {
 
   Embedding<bfloat16, CPU> sut;
 
-  sut.load_weights(weights_.view());
+  sut.load_weights(weights_);
 
   Tensor<int, CPU> inputs_{{batch_size, seq_len}};
   inputs_.fill_(1);

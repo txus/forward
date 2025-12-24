@@ -11,18 +11,21 @@ template <DType T, Device D>
 void RMSNorm<T, D>::load_weights(const tensor::Loader<T, D>& loader, std::string_view name) {
   weights_ = loader.load(name);
 }
+
 template <DType T, Device D>
-void RMSNorm<T, D>::load_weights(tensor::TensorView<const T, D> weights) {
+void RMSNorm<T, D>::load_weights(tensor::Tensor<const T, D> weights) {
   weights_ = std::move(weights);
 }
 
-template <DType T, Device D> void RMSNorm<T, D>::load_weights(tensor::TensorView<T, D> weights) {
-  weights_ = TensorView<const T, D>{weights.data, weights.data_size, weights.shape, weights.stride};
+template <DType T, Device D>
+void RMSNorm<T, D>::load_weights(const tensor::Tensor<T, D>& weights) {
+  auto storage = TensorStorage<const T, D>::borrow(weights.data(), weights.size());
+  weights_ = Tensor<const T, D>{weights.shape(), std::move(storage)};
 }
 
 template <DType T, Device D>
-Tensor<std::remove_const_t<T>, D> RMSNorm<T, D>::forward(const TensorView<T, D>& inputs) const {
-  auto weights = weights_;
+Tensor<T, D> RMSNorm<T, D>::forward(const TensorView<T, D>& inputs) const {
+  auto weights = weights_.view();
 
   const size_t batch_size = inputs.shape[0];
   const size_t seq_len = inputs.shape[1];
@@ -32,7 +35,7 @@ Tensor<std::remove_const_t<T>, D> RMSNorm<T, D>::forward(const TensorView<T, D>&
 
   const auto w_span = weights.span();
 
-  Tensor<std::remove_const_t<T>, D> out_{{batch_size, seq_len, hidden_dim}};
+  Tensor<T, D> out_{{batch_size, seq_len, hidden_dim}};
 
   auto out = out_.view();
 

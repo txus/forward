@@ -6,17 +6,16 @@
 namespace nn {
 template <tensor::DType T, tensor::Device D> class Embedding {
 private:
-  tensor::TensorView<const T, D> weights_;
+  tensor::Tensor<const T, D> weights_;
 
 public:
   Embedding() = default;
   ~Embedding() = default;
 
   void load_weights(const tensor::Loader<T, D>& loader);
-  void load_weights(tensor::TensorView<const T, D> weights);
-  void load_weights(tensor::TensorView<T, D> weights);
+  void load_weights(tensor::Tensor<const T, D> weights);
+  void load_weights(const tensor::Tensor<T, D>& weights); // borrows from mutable tensor
 
-  tensor::Tensor<std::remove_const_t<T>, D>
-  forward(const tensor::TensorView<int, D>& token_ids) const;
+  tensor::Tensor<T, D> forward(const tensor::TensorView<int, D>& token_ids) const;
 };
 } // namespace nn

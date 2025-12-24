@@ -7,16 +7,16 @@
 using namespace tensor;
 
 TEST(TensorCUDATest, FillAndGet) {
-  tensor::Tensor<int, tensor::CUDA> gpu_tensor({2, 4});
+  tensor::Tensor<bfloat16, tensor::CUDA> gpu_tensor({2, 4});
 
   gpu_tensor.fill_(4);
 
   // Copy back to CPU for verification
   auto cpu_tensor = gpu_tensor.cpu();
 
-  std::vector<int> fill_expected = {4, 4, 4, 4, 4, 4, 4, 4};
+  std::vector<bfloat16> fill_expected = {4, 4, 4, 4, 4, 4, 4, 4};
 
-  tensor_is_close<int>(cpu_tensor.span(), std::span(fill_expected));
+  tensor_is_close<bfloat16>(cpu_tensor.span(), std::span(fill_expected));
 
   // const auto sliced = tensor.view().get(0);
 

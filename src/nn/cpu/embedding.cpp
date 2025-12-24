@@ -9,18 +9,20 @@ void Embedding<T, D>::load_weights(const tensor::Loader<T, D>& loader) {
   weights_ = loader.load("model.embed_tokens.weight");
 }
 
-template <DType T, Device D> void Embedding<T, D>::load_weights(TensorView<const T, D> weights) {
+template <DType T, Device D>
+void Embedding<T, D>::load_weights(tensor::Tensor<const T, D> weights) {
   weights_ = std::move(weights);
 }
 
-template <DType T, Device D> void Embedding<T, D>::load_weights(TensorView<T, D> weights) {
-  weights_ = TensorView<const T, D>{weights.data, weights.data_size, weights.shape, weights.stride};
+template <DType T, Device D>
+void Embedding<T, D>::load_weights(const tensor::Tensor<T, D>& weights) {
+  auto storage = TensorStorage<const T, D>::borrow(weights.data(), weights.size());
+  weights_ = Tensor<const T, D>{weights.shape(), std::move(storage)};
 }
 
 template <DType T, Device D>
-Tensor<std::remove_const_t<T>, D>
-Embedding<T, D>::forward(const TensorView<int, D>& token_ids) const {
-  auto weights = weights_;
+Tensor<T, D> Embedding<T, D>::forward(const TensorView<int, D>& token_ids) const {
+  auto weights = weights_.view();
   const auto w_shape = weights.shape;
 
   const size_t vocab_size = w_shape[0];

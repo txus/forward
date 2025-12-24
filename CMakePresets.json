@@ -30,7 +30,8 @@
         "TENSOR_BUILD_CUDA": "ON",
         "CUDAToolkit_ROOT": "$env{CUDA_PATH}",
         "OpenMP_ROOT": "$env{OPENMP_ROOT}",
-        "CLANG_RESOURCE_DIR": "$env{CLANG_RESOURCE_DIR}"
+        "CLANG_RESOURCE_DIR": "$env{CLANG_RESOURCE_DIR}",
+        "LIBCXX_INCLUDE": "$env{LIBCXX_INCLUDE}"
       }
     },
     {

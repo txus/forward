@@ -2,6 +2,17 @@
 CompileFlags:
   CompilationDatabase: build/clangd
 
+# Regular C++ files - no special handling needed
+---
+If:
+  PathMatch: .*\.(cpp|hpp|h)$
+CompileFlags:
+  Remove:
+    - -xcuda
+    - --cuda-gpu-arch=*
+    - --cuda-host-only
+    - --cuda-device-only
+
 # CUDA kernel files (device code) - analyze with device-only mode
 # These contain __global__ functions that run on GPU
 ---

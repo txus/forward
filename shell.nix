@@ -66,6 +66,9 @@
     # Clang resource directory for clangd (NixOS-specific)
     export CLANG_RESOURCE_DIR="$(clang++ -print-resource-dir)"
 
+    # C++ standard library include path for clangd CUDA files (query-driver fails for -x cuda)
+    export LIBCXX_INCLUDE="${pkgs.llvmPackages_20.libcxx.dev}/include/c++/v1"
+
     echo "C++/CUDA development environment loaded!"
     echo "Clang version: $(clang --version | head -n1)"
     echo "CMake version: $(cmake --version | head -n1)"
