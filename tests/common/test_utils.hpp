@@ -3,10 +3,19 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <common/test_config.h>
 #include <llama/model.hpp>
 #include <span>
 #include <tensor/tensor.hpp>
 #include <utility>
+
+// Use this at the start of any test that requires a GPU to run
+#define SKIP_IF_NO_GPU()                                        \
+  do {                                                          \
+    if (SKIP_CUDA_TESTS) {                                      \
+      GTEST_SKIP() << "Skipping CUDA test (no GPU available)";  \
+    }                                                           \
+  } while (0)
 
 using namespace tensor;
 

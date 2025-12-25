@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <common/test_utils.hpp>
 #include <tensor/loader.hpp>
 
 #include "common/test_config.h"
@@ -7,6 +8,7 @@
 using namespace tensor;
 
 TEST(TensorCUDALoaderTest, LoadFromSafetensors) {
+  SKIP_IF_NO_GPU();
   Loader<bfloat16, CUDA> loader{TEST_WEIGHTS_PATH};
 
   auto embed_weights = loader.load("model.embed_tokens.weight");

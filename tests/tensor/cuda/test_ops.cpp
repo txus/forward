@@ -7,6 +7,7 @@
 using namespace tensor;
 
 TEST(TensorCUDATest, Arange) {
+  SKIP_IF_NO_GPU();
   Tensor<int, CUDA> result = arange<int, CUDA>(0, 10, 2);
 
   auto cpu = result.cpu();
@@ -17,6 +18,7 @@ TEST(TensorCUDATest, Arange) {
 }
 
 TEST(TensorCUDATest, AddInt) {
+  SKIP_IF_NO_GPU();
   Tensor<int, CUDA> tensor_a({2, 4});
   Tensor<int, CUDA> tensor_b({2, 4});
 
@@ -37,6 +39,7 @@ TEST(TensorCUDATest, AddInt) {
 }
 
 TEST(TensorCUDATest, AddBF16) {
+  SKIP_IF_NO_GPU();
   Tensor<bfloat16, CUDA> tensor_a({2, 4});
   Tensor<bfloat16, CUDA> tensor_b({2, 4});
 
@@ -57,6 +60,7 @@ TEST(TensorCUDATest, AddBF16) {
 }
 
 TEST(TensorCUDATest, SubBF16) {
+  SKIP_IF_NO_GPU();
   Tensor<bfloat16, CUDA> tensor_a({2, 4});
   Tensor<bfloat16, CUDA> tensor_b({2, 4});
 
@@ -77,6 +81,7 @@ TEST(TensorCUDATest, SubBF16) {
 }
 
 TEST(TensorCUDATest, SubScalarBF16) {
+  SKIP_IF_NO_GPU();
   Tensor<bfloat16, CUDA> tensor({2, 4});
   bfloat16 scalar{3.0};
 

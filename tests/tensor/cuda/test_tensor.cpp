@@ -7,6 +7,7 @@
 using namespace tensor;
 
 TEST(TensorCUDATest, FillAndGet) {
+  SKIP_IF_NO_GPU();
   tensor::Tensor<bfloat16, tensor::CUDA> gpu_tensor({2, 4});
 
   gpu_tensor.fill_(4);

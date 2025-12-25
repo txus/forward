@@ -7,6 +7,9 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+# Option to skip CUDA tests at runtime (for CI without GPU)
+option(SKIP_CUDA_TESTS "Skip CUDA tests at runtime (use when GPU unavailable)" OFF)
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/common/test_config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/common/test_config.h

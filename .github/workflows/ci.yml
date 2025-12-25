@@ -50,6 +50,20 @@ jobs:
           echo "CXX=g++" >> $GITHUB_ENV
         fi
 
+    - name: Install OpenMP
+      run: |
+        sudo apt-get update
+        if [[ "${{ matrix.compiler }}" == clang* ]]; then
+          sudo apt-get install -y libomp-20-dev
+        else
+          sudo apt-get install -y libgomp1
+        fi
+
+    - name: Set OpenMP environment for Clang
+      if: startsWith(matrix.compiler, 'clang')
+      run: |
+        echo "OpenMP_ROOT=/usr/lib/llvm-20" >> $GITHUB_ENV
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -107,3 +121,46 @@ jobs:
       with:
         files: build/test-results.xml
         check_name: Test Results (${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }})
+
+  # CUDA compilation check (no GPU required, just verifies code compiles)
+  cuda-build:
+    name: CUDA Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install CUDA Toolkit
+      uses: Jimver/cuda-toolkit@v0.2.21
+      id: cuda-toolkit
+      with:
+        cuda: '12.8.0'
+        method: 'network'
+        sub-packages: '["nvcc", "cudart", "cublas", "thrust"]'
+
+    - name: Install OpenMP
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgomp1
+
+    - name: Cache CMake dependencies
+      uses: actions/cache@v4
+      with:
+        path: .cmake/fetchcontent
+        key: ${{ runner.os }}-cuda-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-cuda-cmake-
+
+    - name: Configure CMake with CUDA
+      run: |
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DTENSOR_BUILD_CUDA=ON \
+          -DSKIP_CUDA_TESTS=ON \
+          -DCMAKE_CUDA_ARCHITECTURES=89
+
+    - name: Build (including CUDA)
+      run: cmake --build build --config Release --parallel
+
+    - name: Run tests (CUDA tests will be skipped)
+      run: ctest --test-dir build --output-on-failure

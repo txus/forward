@@ -5,3 +5,6 @@
 #define TEST_WEIGHTS_PATH "@CMAKE_CURRENT_SOURCE_DIR@/model/model.safetensors"
 #define TEST_CONFIG_PATH "@CMAKE_CURRENT_SOURCE_DIR@/model/config.json"
 #define TEST_ACTIVATIONS_PATH "@CMAKE_CURRENT_SOURCE_DIR@/reference/activations.safetensors"
+
+// Set to 1 when running in CI without a GPU (CUDA code compiles but can't run)
+#cmakedefine01 SKIP_CUDA_TESTS
