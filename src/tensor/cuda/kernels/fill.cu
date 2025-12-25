@@ -13,7 +13,6 @@ __global__ void fill_kernel(DeviceT* out, DeviceT value, size_t n) {
   }
 }
 
-// Explicit instantiations
 template __global__ void fill_kernel<Cuda<float>>(Cuda<float>*, Cuda<float>, size_t);
 template __global__ void fill_kernel<Cuda<int>>(Cuda<int>*, Cuda<int>, size_t);
 template __global__ void fill_kernel<Cuda<bfloat16>>(Cuda<bfloat16>*, Cuda<bfloat16>, size_t);

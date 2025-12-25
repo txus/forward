@@ -14,7 +14,6 @@ __global__ void add_kernel(DeviceT* out, DeviceT* tensor_a, DeviceT* tensor_b, s
   }
 }
 
-// Explicit instantiations
 template __global__ void add_kernel<Cuda<float>>(Cuda<float>*, Cuda<float>*, Cuda<float>*, size_t);
 template __global__ void add_kernel<Cuda<int>>(Cuda<int>*, Cuda<int>*, Cuda<int>*, size_t);
 template __global__ void add_kernel<Cuda<bfloat16>>(Cuda<bfloat16>*, Cuda<bfloat16>*, Cuda<bfloat16>*, size_t);
