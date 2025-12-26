@@ -40,10 +40,10 @@ TEST(TensorCUDATest, AddInt) {
 
 TEST(TensorCUDATest, AddBF16) {
   SKIP_IF_NO_GPU();
-  Tensor<bfloat16, CUDA> tensor_a({2, 4});
-  Tensor<bfloat16, CUDA> tensor_b({2, 4});
+  Tensor<bfloat16, CUDA> tensor_a({16384, 2048});
+  Tensor<bfloat16, CUDA> tensor_b({16384, 2048});
 
-  Tensor<bfloat16, CPU> exp({2, 4});
+  Tensor<bfloat16, CPU> exp({16384, 2048});
 
   tensor_a.fill_(bfloat16(4.0));
   tensor_b.fill_(bfloat16(3.0));

@@ -13,7 +13,8 @@ using namespace kernels;
 template <typename T>
 TensorStorage<T, CUDA>::TensorStorage(int size) : size_(size) {
   if (size > 0) {
-    cudaMalloc(&data_, size * sizeof(T));
+    size_t padded_size = (size + 7) & ~7; // Round up to multiple of 8 for vectorized kernels
+    cudaMalloc(&data_, padded_size * sizeof(T));
   }
 }
 
@@ -36,8 +37,8 @@ void TensorStorage<T, CUDA>::resize(int size) {
   if (data_) { cudaFree(data_); }
   size_ = size;
   if (size > 0) {
-    cudaMalloc(&data_, size * sizeof(T));
-
+    size_t padded_size = (size + 7) & ~7; // Round up to multiple of 8 for vectorized kernels
+    cudaMalloc(&data_, padded_size * sizeof(T));
   }
 }
 
@@ -60,7 +61,8 @@ void TensorStorage<T, CUDA>::fill(T value) {
 template <typename T>
 TensorStorage<const T, CUDA>::TensorStorage(int size) : size_(size) {
   if (size > 0) {
-    cudaMalloc(&data_, size * sizeof(T));
+    size_t padded_size = (size + 7) & ~7; // Round up to multiple of 8 for vectorized kernels
+    cudaMalloc(&data_, padded_size * sizeof(T));
   }
 }
 

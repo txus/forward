@@ -31,8 +31,7 @@ public:
   explicit TensorStorage(size_t size) : data_(new T[size]), size_(size) {}
 
   // Owning storage from vector (copies into shared_ptr)
-  explicit TensorStorage(std::vector<T>&& vec)
-      : data_(new T[vec.size()]), size_(vec.size()) {
+  explicit TensorStorage(std::vector<T>&& vec) : data_(new T[vec.size()]), size_(vec.size()) {
     std::copy(vec.begin(), vec.end(), data_.get());
   }
 
@@ -107,7 +106,7 @@ public:
 template <typename T> class TensorStorage<T, CUDA> {
 private:
   T* data_ = nullptr;
-  int size_ = 0;
+  unsigned int size_ = 0;
 
 public:
   using pointer = T*;

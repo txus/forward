@@ -16,6 +16,16 @@ dx:
 release:
 	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
 
+.PHONY: prepare_profile
+prepare_profile:
+	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --target test_tensor_cuda
+	@echo 'sudo ncu ctest --kernel-name "add_kernel" --test-dir build -R "^TensorCUDATest.AddBF16"'
+
+.PHONY: profile
+profile:
+	@cmake --build build --parallel --target test_tensor_cuda
+	@echo 'sudo ncu ctest --kernel-name "add_kernel" --test-dir build -R "^TensorCUDATest.AddBF16"'
+
 .PHONY: app
 app:
 	@cmake --build build --target forward

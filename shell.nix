@@ -1,5 +1,15 @@
 { pkgs ? import <nixpkgs> { config.allowUnfree = true; } }:
 
+let
+  # Wrapper for ncu to fix section path issue on NixOS
+  # The ncu binary looks for sections at ../../sections relative to the binary,
+  # but in the Nix store they're at a different path
+  ncuWrapper = pkgs.writeShellScriptBin "ncu" ''
+    exec ${pkgs.cudaPackages_12.nsight_compute}/bin/ncu \
+      --section-folder ${pkgs.cudaPackages_12.nsight_compute}/sections \
+      "$@"
+  '';
+in
 (pkgs.mkShell.override { stdenv = pkgs.clangStdenv; }) {
   nativeBuildInputs = with pkgs; [
     # Use clang from stdenv
@@ -28,7 +38,7 @@
     cudaPackages_12.cudatoolkit
     cudaPackages_12.cudnn
     cudaPackages_12.nsight_systems
-    cudaPackages_12.nsight_compute
+    ncuWrapper  # Wrapper that fixes section path for ncu (replaces nsight_compute)
     
     # Utilities
     bear
