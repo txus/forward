@@ -17,7 +17,26 @@ TEST(TensorCUDATest, Arange) {
   tensor_is_close<int>(cpu.span(), std::span(exp));
 }
 
-TEST(TensorCUDATest, AddBF16) {
+TEST(TensorCUDATest, ReplaceFromBf16) {
+  SKIP_IF_NO_GPU();
+  Tensor<bfloat16, CUDA> input({16384, 2048});
+  input.fill_(bfloat16(4.0));
+
+  Tensor<bfloat16, CUDA> output({16384, 2048});
+
+  Tensor<bfloat16, CPU> exp({16384, 2048});
+  exp.fill_(bfloat16(4.0));
+
+  auto input_v = input.view();
+
+  replace_from_(output, input_v);
+
+  auto cpu = output.cpu();
+
+  tensor_is_close<bfloat16>(cpu.span(), exp.span());
+}
+
+TEST(TensorCUDATest, AddBf16) {
   SKIP_IF_NO_GPU();
   Tensor<bfloat16, CUDA> tensor_a({16384, 2048});
   Tensor<bfloat16, CUDA> tensor_b({16384, 2048});

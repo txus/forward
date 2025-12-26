@@ -6,15 +6,15 @@ namespace tensor::kernels {
 
 using namespace dtype;
 
-__global__ void div_float_kernel(Cuda<float>* out, Cuda<float>* tensor_a, Cuda<float>* tensor_b, size_t n) {
+__global__ void div_float_kernel(Cuda<float>* out, const Cuda<float>* tensor_a, const Cuda<float>* tensor_b, size_t n) {
   // we load 4 fp32 values at a time = 128 bits
   auto base = (blockIdx.x * blockDim.x) + threadIdx.x;
   auto idx = base * 4;
 
   if (idx + 3 < n) {
     // load 2 doubles = 4 floats = 128 bits
-    double2 a_vec = reinterpret_cast<double2*>(tensor_a)[base]; // NOLINT
-    double2 b_vec = reinterpret_cast<double2*>(tensor_b)[base]; // NOLINT
+    double2 a_vec = reinterpret_cast<const double2*>(tensor_a)[base]; // NOLINT
+    double2 b_vec = reinterpret_cast<const double2*>(tensor_b)[base]; // NOLINT
 
     // reinterpret as a pair of floats
     float* a2 = reinterpret_cast<float*>(&a_vec); // NOLINT
@@ -47,22 +47,22 @@ Tensor<float, CUDA> div_float(const TensorView<float, CUDA>& tensor_a, const Ten
   int grid_size = cuda::get_grid_size(n_elements / 4, block_size);
 
   auto* out_d = reinterpret_cast<Cuda<float>*>(out.data()); // NOLINT
-  auto* a_d = reinterpret_cast<Cuda<float>*>(tensor_a.data); // NOLINT
-  auto* b_d = reinterpret_cast<Cuda<float>*>(tensor_b.data); // NOLINT
+  auto* a_d = reinterpret_cast<const Cuda<float>*>(tensor_a.data); // NOLINT
+  auto* b_d = reinterpret_cast<const Cuda<float>*>(tensor_b.data); // NOLINT
 
   div_float_kernel<<<grid_size, block_size>>>(out_d, a_d, b_d, n_elements);
 
   return out;
 }
 
-__global__ void div_scalar_float_kernel(Cuda<float>* out, Cuda<float>* tensor, float scalar, size_t n) {
+__global__ void div_scalar_float_kernel(Cuda<float>* out, const Cuda<float>* tensor, float scalar, size_t n) {
   // we load 4 fp32 values at a time = 128 bits
   auto base = (blockIdx.x * blockDim.x) + threadIdx.x;
   auto idx = base * 4;
 
   if (idx + 3 < n) {
     // load 2 doubles = 4 floats = 128 bits
-    double2 a_vec = reinterpret_cast<double2*>(tensor)[base]; // NOLINT
+    double2 a_vec = reinterpret_cast<const double2*>(tensor)[base]; // NOLINT
 
     // reinterpret as a pair of floats
     float* a2 = reinterpret_cast<float*>(&a_vec); // NOLINT
@@ -92,7 +92,7 @@ Tensor<float, CUDA> div_float(const TensorView<float, CUDA>& tensor, float scala
   int grid_size = cuda::get_grid_size(n_elements / 4, block_size);
 
   auto* out_d = reinterpret_cast<Cuda<float>*>(out.data()); // NOLINT
-  auto* a_d = reinterpret_cast<Cuda<float>*>(tensor.data); // NOLINT
+  auto* a_d = reinterpret_cast<const Cuda<float>*>(tensor.data); // NOLINT
   Cuda<float> device_scalar = to_device_type(scalar, CUDA{});
 
   div_scalar_float_kernel<<<grid_size, block_size>>>(out_d, a_d, device_scalar, n_elements);

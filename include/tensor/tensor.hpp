@@ -388,8 +388,6 @@ template <DType T, Device D> struct TensorView {
 
     auto out = Tensor<std::remove_const_t<T>, D>{new_shape};
 
-    // TODO: check that this is correct
-
     replace_from_(out, *this);
 
     return out;

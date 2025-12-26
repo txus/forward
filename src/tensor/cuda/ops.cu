@@ -46,6 +46,11 @@ template Tensor<float, CUDA> arange(float start, float end, float step);
 template Tensor<bfloat16, CUDA> arange(bfloat16 start, bfloat16 end, bfloat16 step);
 
 template <>
+void replace_from_(Tensor<bfloat16, CUDA>& out, const TensorView<bfloat16, CUDA>& in) {
+  CUDA_CHECK(cudaMemcpy(out.data(), in.data, in.data_size * sizeof(bfloat16), cudaMemcpyDeviceToDevice)); // NOLINT
+}
+
+template <>
 Tensor<bfloat16, CUDA> add(const TensorView<bfloat16, CUDA>& tensor_a, const TensorView<bfloat16, CUDA>& tensor_b) {
   return add_bfloat16(tensor_a, tensor_b);
 }
