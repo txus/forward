@@ -74,13 +74,6 @@ Tensor<std::remove_const_t<T>, D> add(const TensorView<T, D>& tensor_a,
                                   [](T val_a, T val_b) { return val_a + val_b; });
 }
 
-// template Tensor<bfloat16, CPU> add(const TensorView<const bfloat16, CPU>&,
-//                                    const TensorView<const bfloat16, CPU>&);
-//  template Tensor<float, CPU> add(const TensorView<const float, CPU>&,
-//                                  const TensorView<const float, CPU>&);
-//  template Tensor<int, CPU> add(const TensorView<const int, CPU>&, const TensorView<const int,
-//  CPU>&);
-
 template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> sub(const TensorView<T, D>& tensor_a,
                                       const TensorView<T, D>& tensor_b) {
@@ -564,25 +557,21 @@ template void replace_from_(Tensor<bfloat16, CPU>& destination,
 template void replace_from_(Tensor<int, CPU>& destination, const TensorView<int, CPU>& source);
 template void replace_from_(Tensor<float, CPU>& destination, const TensorView<float, CPU>& source);
 
-// Explicit instantiations for non-const T
+// add
 template Tensor<bfloat16, CPU> add(const TensorView<bfloat16, CPU>&,
                                    const TensorView<bfloat16, CPU>&);
-// template Tensor<bfloat16, CPU> sub(const TensorView<bfloat16, CPU>&,
-//                                    const TensorView<bfloat16, CPU>&);
+// sub
 template Tensor<float, CPU> sub(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
-// template Tensor<bfloat16, CPU> div(const TensorView<bfloat16, CPU>&,
-//                                    const TensorView<bfloat16, CPU>&);
+// div
 template Tensor<float, CPU> div(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
-// template Tensor<bfloat16, CPU> div(const TensorView<bfloat16, CPU>&, bfloat16);
 template Tensor<float, CPU> div(const TensorView<float, CPU>&, float);
+// mul
 template Tensor<bfloat16, CPU> mul(const TensorView<bfloat16, CPU>&, bfloat16);
 template Tensor<bfloat16, CPU> mul(const TensorView<bfloat16, CPU>&,
                                    const TensorView<bfloat16, CPU>&);
-// template Tensor<float, CPU> mul(const TensorView<float, CPU>&, float);
-// template Tensor<float, CPU> mul(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
-// template Tensor<bfloat16, CPU> sum(const TensorView<bfloat16, CPU>&, int, bool);
+
+
 template Tensor<float, CPU> sum(const TensorView<float, CPU>&, int, bool);
-// template Tensor<bfloat16, CPU> max(const TensorView<bfloat16, CPU>&, int, bool);
 template Tensor<float, CPU> max(const TensorView<float, CPU>&, int, bool);
 template Tensor<bfloat16, CPU> masked_fill(const TensorView<bfloat16, CPU>&,
                                            const TensorView<int, CPU>&, bfloat16);

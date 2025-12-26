@@ -38,9 +38,9 @@ Tensor<bfloat16, CUDA> add_bfloat16(const TensorView<bfloat16, CUDA>& tensor_a, 
   assert(tensor_a.shape == tensor_b.shape && "the two tensors should be the same shape");
 
   size_t n_elements = tensor_a.data_size;
-  TensorStorage<std::remove_const_t<bfloat16>, CUDA> storage(n_elements);
+  TensorStorage<bfloat16, CUDA> storage(n_elements);
 
-  Tensor<std::remove_const_t<bfloat16>, CUDA> out{tensor_a.shape, std::move(storage)};
+  Tensor<bfloat16, CUDA> out{tensor_a.shape, std::move(storage)};
 
   int block_size = 512;
   // each thread handles 8 elements

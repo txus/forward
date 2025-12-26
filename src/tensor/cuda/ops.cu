@@ -8,6 +8,8 @@
 #include "kernels/arange.cuh"
 #include "kernels/add.cuh"
 #include "kernels/sub.cuh"
+#include "kernels/div.cuh"
+#include "kernels/mul.cuh"
 #include "kernels/utils.cuh"
 
 namespace tensor {
@@ -51,6 +53,26 @@ Tensor<bfloat16, CUDA> add(const TensorView<bfloat16, CUDA>& tensor_a, const Ten
 template <>
 Tensor<float, CUDA> sub(const TensorView<float, CUDA>& tensor_a, const TensorView<float, CUDA>& tensor_b) {
   return sub_float(tensor_a, tensor_b);
+}
+
+template <>
+Tensor<float, CUDA> div(const TensorView<float, CUDA>& tensor_a, const TensorView<float, CUDA>& tensor_b) {
+  return div_float(tensor_a, tensor_b);
+}
+
+template <>
+Tensor<float, CUDA> div(const TensorView<float, CUDA>& tensor_a, float scalar) {
+  return div_float(tensor_a, scalar);
+}
+
+template <>
+Tensor<bfloat16, CUDA> mul(const TensorView<bfloat16, CUDA>& tensor_a, const TensorView<bfloat16, CUDA>& tensor_b) {
+  return mul_bfloat16(tensor_a, tensor_b);
+}
+
+template <>
+Tensor<bfloat16, CUDA> mul(const TensorView<bfloat16, CUDA>& tensor_a, bfloat16 scalar) {
+  return mul_bfloat16(tensor_a, scalar);
 }
 
 } // namespace tensor

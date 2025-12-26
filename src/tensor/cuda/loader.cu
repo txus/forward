@@ -43,7 +43,7 @@ template <typename T, typename D>
   TensorStorage<const T, D> storage(static_cast<int>(nitems));
 
   // Copy from host (mmap) to device
-  CUDA_CHECK(cudaMemcpy(storage.mutable_data(), host_data, nitems * sizeof(T), cudaMemcpyHostToDevice));
+  CUDA_CHECK(cudaMemcpy(storage.mutable_data(), host_data, nitems * sizeof(T), cudaMemcpyHostToDevice)); // NOLINT
 
   return Tensor<const T, D>{shape, std::move(storage)};
 }
