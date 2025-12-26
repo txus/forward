@@ -18,8 +18,8 @@ template <typename T, typename D> class TensorStorage;
 // Mutable CPU storage - owns or borrows mutable data
 template <typename T> class TensorStorage<T, CPU> {
 private:
-  std::shared_ptr<T[]> data_;
-  size_t size_ = 0;
+  std::shared_ptr<T[]> data_; // NOLINT
+  unsigned int size_ = 0;
 
 public:
   using pointer = T*;
@@ -38,7 +38,7 @@ public:
   // Non-owning storage - borrows external mutable memory
   static TensorStorage borrow(T* ptr, size_t size) {
     TensorStorage storage;
-    storage.data_ = std::shared_ptr<T[]>(ptr, [](T*) {}); // no-op deleter
+    storage.data_ = std::shared_ptr<T[]>(ptr, [](T*) {}); // no-op deleter // NOLINT
     storage.size_ = size;
     return storage;
   }
@@ -54,7 +54,7 @@ public:
   }
 
   void resize(size_t size) {
-    data_ = std::shared_ptr<T[]>(new T[size]);
+    data_ = std::shared_ptr<T[]>(new T[size]); // NOLINT
     size_ = size;
   }
   void fill(T value) {
@@ -72,7 +72,7 @@ public:
 // Const CPU storage - borrows read-only data (e.g., mmap)
 template <typename T> class TensorStorage<const T, CPU> {
 private:
-  std::shared_ptr<const T[]> data_;
+  std::shared_ptr<const T[]> data_; // NOLINT
   size_t size_ = 0;
 
 public:
@@ -84,7 +84,7 @@ public:
   // Non-owning storage - borrows external read-only memory (e.g., mmap)
   static TensorStorage borrow(const T* ptr, size_t size) {
     TensorStorage storage;
-    storage.data_ = std::shared_ptr<const T[]>(ptr, [](const T*) {}); // no-op deleter
+    storage.data_ = std::shared_ptr<const T[]>(ptr, [](const T*) {}); // no-op deleter // NOLINT
     storage.size_ = size;
     return storage;
   }
@@ -106,14 +106,14 @@ public:
 template <typename T> class TensorStorage<T, CUDA> {
 private:
   T* data_ = nullptr;
-  unsigned int size_ = 0;
+  size_t size_ = 0;
 
 public:
   using pointer = T*;
   using const_pointer = const T*;
 
   TensorStorage() = default;
-  explicit TensorStorage(int size);
+  explicit TensorStorage(size_t size);
   ~TensorStorage();
 
   // no copy, move only
@@ -122,7 +122,7 @@ public:
   TensorStorage(TensorStorage&& other) noexcept;
   TensorStorage& operator=(TensorStorage&& other) noexcept;
 
-  [[nodiscard]] int size() const {
+  [[nodiscard]] size_t size() const {
     return size_;
   }
   pointer data() {
@@ -132,7 +132,7 @@ public:
     return data_;
   }
 
-  void resize(int size);
+  void resize(size_t size);
   void fill(T value);
 };
 
@@ -141,14 +141,14 @@ public:
 template <typename T> class TensorStorage<const T, CUDA> {
 private:
   T* data_ = nullptr;
-  int size_ = 0;
+  size_t size_ = 0;
 
 public:
   using pointer = const T*;
   using const_pointer = const T*;
 
   TensorStorage() = default;
-  explicit TensorStorage(int size);
+  explicit TensorStorage(size_t size);
   ~TensorStorage();
 
   // no copy, move only
@@ -157,7 +157,7 @@ public:
   TensorStorage(TensorStorage&& other) noexcept;
   TensorStorage& operator=(TensorStorage&& other) noexcept;
 
-  [[nodiscard]] int size() const {
+  [[nodiscard]] size_t size() const {
     return size_;
   }
   const_pointer data() const {
@@ -169,7 +169,7 @@ public:
     return data_;
   }
 
-  void resize(int size);
+  void resize(size_t size);
 };
 #endif
 

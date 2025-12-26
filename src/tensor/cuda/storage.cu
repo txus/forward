@@ -2,7 +2,7 @@
 #include <tensor/storage.hpp>
 #include <tensor/device_type.hpp>
 #include "kernels/fill.cuh"
-#include "utils.cuh"
+#include "kernels/utils.cuh"
 
 namespace tensor {
 
@@ -11,7 +11,7 @@ using namespace device;
 using namespace kernels;
 
 template <typename T>
-TensorStorage<T, CUDA>::TensorStorage(int size) : size_(size) {
+TensorStorage<T, CUDA>::TensorStorage(size_t size) : size_(size) {
   if (size > 0) {
     size_t padded_size = (size + 7) & ~7; // Round up to multiple of 8 for vectorized kernels
     cudaMalloc(&data_, padded_size * sizeof(T));
@@ -33,7 +33,7 @@ TensorStorage<T, CUDA>::TensorStorage(TensorStorage&& other) noexcept
 }
 
 template <typename T>
-void TensorStorage<T, CUDA>::resize(int size) {
+void TensorStorage<T, CUDA>::resize(size_t size) {
   if (data_) { cudaFree(data_); }
   size_ = size;
   if (size > 0) {
@@ -59,7 +59,7 @@ void TensorStorage<T, CUDA>::fill(T value) {
 
 // Const CUDA storage implementations
 template <typename T>
-TensorStorage<const T, CUDA>::TensorStorage(int size) : size_(size) {
+TensorStorage<const T, CUDA>::TensorStorage(size_t size) : size_(size) {
   if (size > 0) {
     size_t padded_size = (size + 7) & ~7; // Round up to multiple of 8 for vectorized kernels
     cudaMalloc(&data_, padded_size * sizeof(T));
@@ -93,7 +93,7 @@ TensorStorage<const T, CUDA>& TensorStorage<const T, CUDA>::operator=(TensorStor
 }
 
 template <typename T>
-void TensorStorage<const T, CUDA>::resize(int size) {
+void TensorStorage<const T, CUDA>::resize(size_t size) {
   if (data_) { cudaFree(data_); }
   size_ = size;
   if (size > 0) {

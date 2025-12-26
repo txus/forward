@@ -2,7 +2,7 @@
 #include <tensor/tensor.hpp>
 
 #include "../common/utils.h"
-#include "utils.cuh"
+#include "kernels/utils.cuh"
 
 namespace tensor {
 

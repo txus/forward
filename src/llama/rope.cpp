@@ -35,7 +35,7 @@ precompute_rope_values(size_t head_dim, float theta_base, size_t context_length)
   // For each frequency, compute wavelength and apply scaling
   for (size_t i = 0; i < inv_freq_.size(); ++i) {
     float inv_f = inv_freq_.span()[i];
-    float wavelen = 2.0 * M_PI / inv_f;
+    float wavelen = M_PI * 2.0 / inv_f;
 
     if (wavelen < high_freq_wavelen) {
       // High frequency: no scaling
@@ -47,7 +47,7 @@ precompute_rope_values(size_t head_dim, float theta_base, size_t context_length)
       // Medium frequency: smooth interpolation
       float smooth =
           (old_context_len / wavelen - low_freq_factor) / (high_freq_factor - low_freq_factor);
-      float scaled_inv_freq = (1.0 - smooth) * (inv_f / factor) + smooth * inv_f;
+      float scaled_inv_freq = ((1.0 - smooth) * (inv_f / factor)) + (smooth * inv_f);
       inv_freq_.span()[i] = scaled_inv_freq;
     }
   }

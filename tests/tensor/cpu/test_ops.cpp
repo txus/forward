@@ -14,23 +14,6 @@ TEST(TensorCPUTest, Arange) {
   tensor_is_close<int>(result.span(), std::span(exp));
 }
 
-TEST(TensorCPUTest, AddInt) {
-  Tensor<int, CPU> tensor_a({2, 4});
-  Tensor<int, CPU> tensor_b({2, 4});
-  Tensor<int, CPU> exp({2, 4});
-
-  tensor_a.fill_(4);
-  tensor_b.fill_(3);
-  exp.fill_(7);
-
-  auto a_v = tensor_a.view();
-  auto b_v = tensor_b.view();
-
-  Tensor<int, CPU> result = add(a_v, b_v);
-
-  tensor_is_close<int>(result.span(), exp.span());
-}
-
 TEST(TensorCPUTest, AddBF16) {
   Tensor<bfloat16, CPU> tensor_a({2, 4});
   Tensor<bfloat16, CPU> tensor_b({2, 4});

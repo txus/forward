@@ -1,4 +1,5 @@
 #include "add.cuh"
+#include "utils.cuh"
 #include <cstddef>
 #include <cuda_bf16.hpp>
 
@@ -6,16 +7,7 @@ namespace tensor::kernels {
 
 using namespace dtype;
 
-template<typename DeviceT>
-__global__ void add_kernel(DeviceT* out, DeviceT* tensor_a, DeviceT* tensor_b, size_t n) {
-  size_t idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-
-  if (idx < n) {
-    out[idx] = tensor_a[idx] + tensor_b[idx];
-  }
-}
-
-__global__ void add_kernel_bf16(Cuda<bfloat16>* out, Cuda<bfloat16>* tensor_a, Cuda<bfloat16>* tensor_b, size_t n) {
+__global__ void add_bfloat16_kernel(Cuda<bfloat16>* out, Cuda<bfloat16>* tensor_a, Cuda<bfloat16>* tensor_b, size_t n) {
   // we load 8 bf16 values at a time = 128 bits
   auto base = (blockIdx.x * blockDim.x) + threadIdx.x;
   auto idx = base * 8;
@@ -41,7 +33,27 @@ __global__ void add_kernel_bf16(Cuda<bfloat16>* out, Cuda<bfloat16>* tensor_a, C
   }
 }
 
-template __global__ void add_kernel<Cuda<float>>(Cuda<float>*, Cuda<float>*, Cuda<float>*, size_t);
-template __global__ void add_kernel<Cuda<int>>(Cuda<int>*, Cuda<int>*, Cuda<int>*, size_t);
+Tensor<bfloat16, CUDA> add_bfloat16(const TensorView<bfloat16, CUDA>& tensor_a, const TensorView<bfloat16, CUDA>& tensor_b) {
+  assert(tensor_a.is_contiguous() && tensor_b.is_contiguous() && "the two tensors should be contiguous");
+  assert(tensor_a.shape == tensor_b.shape && "the two tensors should be the same shape");
+
+  size_t n_elements = tensor_a.data_size;
+  TensorStorage<std::remove_const_t<bfloat16>, CUDA> storage(n_elements);
+
+  Tensor<std::remove_const_t<bfloat16>, CUDA> out{tensor_a.shape, std::move(storage)};
+
+  int block_size = 512;
+  // each thread handles 8 elements
+  int grid_size = cuda::get_grid_size(n_elements / 8, block_size);
+
+  // Convert to device-native types for kernel call
+  auto* out_d = reinterpret_cast<Cuda<bfloat16>*>(out.data()); // NOLINT
+  auto* a_d = reinterpret_cast<Cuda<bfloat16>*>(tensor_a.data); // NOLINT
+  auto* b_d = reinterpret_cast<Cuda<bfloat16>*>(tensor_b.data); // NOLINT
+
+  add_bfloat16_kernel<<<grid_size, block_size>>>(out_d, a_d, b_d, n_elements);
+
+  return out;
+}
 
 } // namespace tensor::kernels
