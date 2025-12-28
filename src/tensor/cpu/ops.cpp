@@ -567,7 +567,10 @@ template Tensor<bfloat16, CPU> mul(const TensorView<bfloat16, CPU>&, bfloat16);
 template Tensor<bfloat16, CPU> mul(const TensorView<bfloat16, CPU>&,
                                    const TensorView<bfloat16, CPU>&);
 
+// sum
 template Tensor<float, CPU> sum(const TensorView<float, CPU>&, int, bool);
+
+// max
 template Tensor<float, CPU> max(const TensorView<float, CPU>&, int, bool);
 template Tensor<bfloat16, CPU> masked_fill(const TensorView<bfloat16, CPU>&,
                                            const TensorView<int, CPU>&, bfloat16);

@@ -35,3 +35,55 @@ BENCHMARK(BM_CPU_AddBf16)
     ->Args({65536, 2048})
     ->Unit(kMillisecond)
     ->UseRealTime();
+
+static void BM_CPU_SumFp32LastDim(State& state) {
+  Tensor<float, CPU> tensor(
+      {static_cast<size_t>(state.range(0)), static_cast<size_t>(state.range(1))});
+
+  tensor.fill_(float(1.0));
+
+  auto view = tensor.view();
+
+  for (auto _ : state)
+    DoNotOptimize(sum(view, -1, true));
+
+  int64_t flops = 0;
+
+  flops += state.iterations() * state.range(0) * state.range(1);
+  state.counters["FLOPs"] = Counter(flops, Counter::kIsRate);
+  auto bytes_per_element = 4;
+  state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * state.range(0) *
+                          state.range(1) * bytes_per_element);
+}
+
+BENCHMARK(BM_CPU_SumFp32LastDim)
+    ->Args({16384, 2048})
+    ->Args({65536, 2048})
+    ->Unit(kMillisecond)
+    ->UseRealTime();
+
+static void BM_CPU_SumFp32FirstDim(State& state) {
+  Tensor<float, CPU> tensor(
+      {static_cast<size_t>(state.range(0)), static_cast<size_t>(state.range(1))});
+
+  tensor.fill_(float(1.0));
+
+  auto view = tensor.view();
+
+  for (auto _ : state)
+    DoNotOptimize(sum(view, 0, true));
+
+  int64_t flops = 0;
+
+  flops += state.iterations() * state.range(0) * state.range(1);
+  state.counters["FLOPs"] = Counter(flops, Counter::kIsRate);
+  auto bytes_per_element = 4;
+  state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * state.range(0) *
+                          state.range(1) * bytes_per_element);
+}
+
+BENCHMARK(BM_CPU_SumFp32FirstDim)
+    ->Args({16384, 2048})
+    ->Args({65536, 2048})
+    ->Unit(kMillisecond)
+    ->UseRealTime();

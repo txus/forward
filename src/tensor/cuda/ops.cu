@@ -10,6 +10,8 @@
 #include "kernels/sub.cuh"
 #include "kernels/div.cuh"
 #include "kernels/mul.cuh"
+#include "kernels/sum.cuh"
+#include "kernels/max.cuh"
 #include "kernels/utils.cuh"
 
 namespace tensor {
@@ -78,6 +80,16 @@ Tensor<bfloat16, CUDA> mul(const TensorView<bfloat16, CUDA>& tensor_a, const Ten
 template <>
 Tensor<bfloat16, CUDA> mul(const TensorView<bfloat16, CUDA>& tensor_a, bfloat16 scalar) {
   return mul_bfloat16(tensor_a, scalar);
+}
+
+template <>
+Tensor<float, CUDA> sum(const TensorView<float, CUDA>& input, int dim, bool keepdim) {
+  return sum_float(input, dim, keepdim);
+}
+
+template <>
+Tensor<float, CUDA> max(const TensorView<float, CUDA>& input, int dim, bool keepdim) {
+  return max_float(input, dim, keepdim);
 }
 
 } // namespace tensor

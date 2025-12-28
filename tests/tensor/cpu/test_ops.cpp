@@ -31,6 +31,28 @@ TEST(TensorCPUTest, AddBF16) {
   tensor_is_close<bfloat16>(result.span(), exp.span());
 }
 
+TEST(TensorCPUTest, MaxFp32) {
+  Tensor<float, CPU> tensor({16384, 2048});
+  tensor.fill_(float(1.0));
+
+  tensor.set_(4, 8.0);
+  tensor.set_(2049, 9.0);
+  tensor.set_(4099, 10.0);
+
+  Tensor<float, CPU> exp({16384, 1});
+
+  exp.fill_(float(1.0));
+  exp.set_(0, 8.0);
+  exp.set_(1, 9.0);
+  exp.set_(2, 10.0);
+
+  auto view = tensor.view();
+
+  Tensor<float, CPU> result = max(tensor.view(), 1, true);
+
+  tensor_is_close<float>(result.span(), exp.span());
+}
+
 TEST(TensorCPUTest, PowBF16) {
   Tensor<bfloat16, CPU> tensor({2, 2});
   tensor.fill_(2.0);

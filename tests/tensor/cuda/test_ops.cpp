@@ -155,3 +155,48 @@ TEST(TensorCUDATest, MulScalarBf16) {
 
   tensor_is_close<bfloat16>(cpu.span(), exp.span());
 }
+
+TEST(TensorCUDATest, SumFp32) {
+  SKIP_IF_NO_GPU();
+  Tensor<float, CUDA> tensor({16384, 2048});
+
+  Tensor<float, CPU> exp({16384, 1});
+
+  tensor.fill_(float(1.0));
+  exp.fill_(float(2048.0));
+
+  auto view = tensor.view();
+
+  Tensor<float, CUDA> result = sum(view, 1, true);
+
+  auto cpu = result.cpu();
+
+  tensor_is_close<float>(cpu.span(), exp.span());
+}
+
+TEST(TensorCUDATest, MaxFp32) {
+  SKIP_IF_NO_GPU();
+  Tensor<float, CPU> tensor({16384, 2048});
+  tensor.fill_(float(1.0));
+
+  tensor.set_(4, 8.0);
+  tensor.set_(2049, 9.0);
+  tensor.set_(4099, 10.0);
+
+  auto cuda_tensor = tensor.cuda();
+
+  Tensor<float, CPU> exp({16384, 1});
+
+  exp.fill_(float(1.0));
+  exp.set_(0, 8.0);
+  exp.set_(1, 9.0);
+  exp.set_(2, 10.0);
+
+  auto view = tensor.view();
+
+  Tensor<float, CUDA> result = max(cuda_tensor.view(), 1, true);
+
+  auto cpu = result.cpu();
+
+  tensor_is_close<float>(cpu.span(), exp.span());
+}
