@@ -40,9 +40,6 @@ Tensor<std::remove_const_t<OutT>, D> element_wise(const TensorView<In1T, D>& ten
 
 #pragma omp parallel for
   for (size_t out_idx = 0; out_idx < total; ++out_idx) {
-    // Convert flat index to N-dimensional indices
-    // Then compute a_idx and b_idx using broadcast strides
-
     size_t a_idx = 0;
     size_t b_idx = 0;
     size_t remainder = out_idx;
@@ -569,7 +566,6 @@ template Tensor<float, CPU> div(const TensorView<float, CPU>&, float);
 template Tensor<bfloat16, CPU> mul(const TensorView<bfloat16, CPU>&, bfloat16);
 template Tensor<bfloat16, CPU> mul(const TensorView<bfloat16, CPU>&,
                                    const TensorView<bfloat16, CPU>&);
-
 
 template Tensor<float, CPU> sum(const TensorView<float, CPU>&, int, bool);
 template Tensor<float, CPU> max(const TensorView<float, CPU>&, int, bool);

@@ -18,7 +18,7 @@ release:
 
 .PHONY: prepare_profile
 prepare_profile:
-	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --target test_tensor_cuda
+	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build --parallel --target test_tensor_cuda
 	@echo 'sudo ncu --kernel-name "add_kernel" ctest --test-dir build -R "^TensorCUDATest.AddBF16"'
 
 .PHONY: profile
@@ -66,6 +66,15 @@ test:
 	@cmake --build build
 	@ctest --test-dir build --output-on-failure
 
+
+.PHONY: prepare_benchmark
+prepare_benchmark:
+	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release
+
+.PHONY: benchmark
+benchmark: prepare_benchmark
+	@cmake --build build --target bm_tensor
+	./build/benchmarks/tensor/bm_tensor
 
 .PHONY: lint
 lint:
