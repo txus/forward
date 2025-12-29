@@ -25,8 +25,8 @@ inline size_t get_block_size(size_t problem_size, size_t max_block_size = 512) {
 }
 
 // Calculate grid size for 1D kernels
-inline int get_grid_size(size_t n, int block_size) {
-  return (n + block_size - 1) / block_size; // NOLINT
+inline size_t get_grid_size(size_t n, size_t block_size) {
+  return (n + block_size - 1) / block_size;
 }
 
 

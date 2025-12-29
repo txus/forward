@@ -7,7 +7,7 @@ namespace tensor::kernels {
 
 using namespace dtype;
 
-__global__ void masked_fill_bfloat16_kernel(Cuda<bfloat16>* out, Cuda<bfloat16>* input, Cuda<int>* mask, Cuda<bfloat16> masked_value, size_t inner_size) {
+__global__ void masked_fill_bfloat16_kernel(Cuda<bfloat16>* out, Cuda<bfloat16>* input, const Cuda<int>* mask, Cuda<bfloat16> masked_value, size_t inner_size) {
   // there are as many blocks as operations to do, which one are we doing?
   size_t operation_idx = blockIdx.x;
 
@@ -55,7 +55,7 @@ Tensor<bfloat16, CUDA> masked_fill_bfloat16(const TensorView<bfloat16, CUDA>& in
   // Convert to device-native types for kernel call
   auto* out_d = reinterpret_cast<Cuda<bfloat16>*>(out.data()); // NOLINT
   auto* in_d = reinterpret_cast<Cuda<bfloat16>*>(input.data); // NOLINT
-  auto* mask_d = reinterpret_cast<int*>(mask.data); // NOLINT
+  auto* mask_d = reinterpret_cast<const int*>(mask.data); // NOLINT
   Cuda<bfloat16> mask_value_d = to_device_type(masked_value, CUDA{});
 
   masked_fill_bfloat16_kernel<<<outer_size, block_size>>>(out_d, in_d, mask_d, mask_value_d, inner_size);

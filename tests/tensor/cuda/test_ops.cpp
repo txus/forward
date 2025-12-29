@@ -241,3 +241,49 @@ TEST(TensorCUDATest, MaskedFillBf16) {
 
   tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
 }
+
+TEST(TensorCUDATest, CatBf16LastDim) {
+  Tensor<bfloat16, CUDA> tensor_a({2, 4});
+  Tensor<bfloat16, CUDA> tensor_b({2, 2});
+
+  tensor_a.fill_(bfloat16(2.0));
+  tensor_b.fill_(bfloat16(3.0));
+
+  auto a_v = tensor_a.view();
+  auto b_v = tensor_b.view();
+
+  std::vector<bfloat16> exp = {2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0};
+
+  Tensor<bfloat16, CUDA> result = cat(a_v, b_v, 1);
+
+  auto result_cpu = result.cpu();
+
+  Shape expected_shape = {2, 6};
+
+  EXPECT_EQ(result_cpu.shape(), expected_shape);
+
+  tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}
+
+TEST(TensorCUDATest, CatBf16FirstDim) {
+  Tensor<bfloat16, CUDA> tensor_a({3, 2});
+  Tensor<bfloat16, CUDA> tensor_b({2, 2});
+
+  tensor_a.fill_(bfloat16(2.0));
+  tensor_b.fill_(bfloat16(3.0));
+
+  auto a_v = tensor_a.view();
+  auto b_v = tensor_b.view();
+
+  std::vector<bfloat16> exp = {2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0};
+
+  Tensor<bfloat16, CUDA> result = cat(a_v, b_v, 0);
+
+  auto result_cpu = result.cpu();
+
+  Shape expected_shape = {5, 2};
+
+  EXPECT_EQ(result_cpu.shape(), expected_shape);
+
+  tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}

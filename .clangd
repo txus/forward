@@ -58,6 +58,7 @@ Diagnostics:
   Suppress:
     - variadic_device_fn
     - attributes_not_allowed
+    - undeclared_var_use_suggest
 
 # CUDA host files (kernel launchers, memory management) - analyze with host-only mode
 # These contain code that runs on CPU and calls kernels
