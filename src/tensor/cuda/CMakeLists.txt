@@ -1,6 +1,6 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/tensor/*.hpp")
 
-add_library(tensor_cuda STATIC storage.cu loader.cu ops.cu kernels/fill.cu kernels/arange.cu kernels/add.cu kernels/sub.cu kernels/div.cu kernels/mul.cu kernels/sum.cu kernels/max.cu)
+add_library(tensor_cuda STATIC storage.cu loader.cu ops.cu kernels/fill.cu kernels/argmax.cu kernels/arange.cu kernels/add.cu kernels/sub.cu kernels/div.cu kernels/mul.cu kernels/sum.cu kernels/max.cu)
 
 set_target_properties(tensor_cuda PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON

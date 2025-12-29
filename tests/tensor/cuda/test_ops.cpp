@@ -6,6 +6,23 @@
 
 using namespace tensor;
 
+TEST(TensorCUDATest, ArgmaxBf16) {
+  SKIP_IF_NO_GPU();
+  Tensor<bfloat16, CPU> tensor({4, 4});
+  tensor.fill_(1.0);
+  tensor.set_(2., 4.0); // idx 2 of first batch element
+  tensor.set_(7, 8.0);  // idx 3 of second batch element
+
+  Tensor<bfloat16, CUDA> input = tensor.cuda();
+
+  auto maxes = argmax(input.view(), -1, true);
+
+  auto cpu = maxes.cpu();
+
+  std::vector<int> exp{2, 3, 0, 0};
+  tensor_is_close<int>(cpu.span(), std::span(exp));
+}
+
 TEST(TensorCUDATest, Arange) {
   SKIP_IF_NO_GPU();
   Tensor<int, CUDA> result = arange<int, CUDA>(0, 10, 2);

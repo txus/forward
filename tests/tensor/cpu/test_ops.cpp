@@ -14,7 +14,7 @@ TEST(TensorCPUTest, Arange) {
   tensor_is_close<int>(result.span(), std::span(exp));
 }
 
-TEST(TensorCPUTest, AddBF16) {
+TEST(TensorCPUTest, AddBf16) {
   Tensor<bfloat16, CPU> tensor_a({2, 4});
   Tensor<bfloat16, CPU> tensor_b({2, 4});
   Tensor<bfloat16, CPU> exp({2, 4});
@@ -53,7 +53,7 @@ TEST(TensorCPUTest, MaxFp32) {
   tensor_is_close<float>(result.span(), exp.span());
 }
 
-TEST(TensorCPUTest, PowBF16) {
+TEST(TensorCPUTest, PowBf16) {
   Tensor<bfloat16, CPU> tensor({2, 2});
   tensor.fill_(2.0);
 
@@ -64,7 +64,7 @@ TEST(TensorCPUTest, PowBF16) {
   tensor_is_close<bfloat16>(result.span(), std::span(exp));
 }
 
-TEST(TensorCPUTest, MatmulBF16) {
+TEST(TensorCPUTest, MatmulBf16) {
   Tensor<bfloat16, CPU> tensor_a({2, 4});
   Tensor<bfloat16, CPU> tensor_b({4, 2});
   Tensor<bfloat16, CPU> exp({2, 2});
@@ -81,7 +81,7 @@ TEST(TensorCPUTest, MatmulBF16) {
   tensor_is_close<bfloat16>(result.span(), exp.span());
 }
 
-TEST(TensorCPUTest, CatF16) {
+TEST(TensorCPUTest, CatFp16) {
   Tensor<bfloat16, CPU> tensor_a({2, 4});
   Tensor<bfloat16, CPU> tensor_b({2, 2});
 
@@ -102,7 +102,7 @@ TEST(TensorCPUTest, CatF16) {
   tensor_is_close<bfloat16>(result.span(), std::span(exp));
 }
 
-TEST(TensorCPUTest, SliceF16) {
+TEST(TensorCPUTest, SliceFp16) {
   Tensor<bfloat16, CPU> tensor({1, 4});
   Tensor<bfloat16, CPU> exp({1, 2});
 
@@ -122,7 +122,7 @@ TEST(TensorCPUTest, SliceF16) {
   tensor_is_close<bfloat16>(result.span(), exp.span());
 }
 
-TEST(TensorCPUTest, TrilBF16) {
+TEST(TensorCPUTest, TrilBf16) {
   Tensor<bfloat16, CPU> tensor({4, 4});
   tensor.fill_(1.0);
 
@@ -137,15 +137,13 @@ TEST(TensorCPUTest, TrilBF16) {
   tensor_is_close<bfloat16>(diag.span(), std::span(exp));
 }
 
-TEST(TensorCPUTest, ArgmaxInt) {
-  Tensor<int, CPU> tensor({4, 4});
-  tensor.fill_(1);
-  tensor.set_(2, 4); // idx 2 of first batch element
-  tensor.set_(7, 8); // idx 3 of second batch element
+TEST(TensorCPUTest, ArgmaxBf16) {
+  Tensor<bfloat16, CPU> tensor({4, 4});
+  tensor.fill_(1.0);
+  tensor.set_(2., 4.0); // idx 2 of first batch element
+  tensor.set_(7, 8.0);  // idx 3 of second batch element
 
   auto maxes = argmax(tensor.view(), -1, true);
-
-  fmt::println("MAXES {}", maxes.view());
 
   std::vector<int> exp{2, 3, 0, 0};
   tensor_is_close<int>(maxes.span(), std::span(exp));

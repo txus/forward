@@ -68,6 +68,6 @@ Tensor<int, D> argmax(const TensorView<T, D>& input, int dim, bool keepdim);
 // mutations
 
 template <typename T, typename D>
-void replace_from_(Tensor<T, D>& destination, const TensorView<T, D>& source);
+void replace_from_(Tensor<T, D>& out, const TensorView<T, D>& input);
 
 } // namespace tensor

@@ -12,6 +12,7 @@
 #include "kernels/mul.cuh"
 #include "kernels/sum.cuh"
 #include "kernels/max.cuh"
+#include "kernels/argmax.cuh"
 #include "kernels/utils.cuh"
 
 namespace tensor {
@@ -47,10 +48,14 @@ template Tensor<int, CUDA> arange(int start, int end, int step);
 template Tensor<float, CUDA> arange(float start, float end, float step);
 template Tensor<bfloat16, CUDA> arange(bfloat16 start, bfloat16 end, bfloat16 step);
 
-template <>
-void replace_from_(Tensor<bfloat16, CUDA>& out, const TensorView<bfloat16, CUDA>& in) {
-  CUDA_CHECK(cudaMemcpy(out.data(), in.data, in.data_size * sizeof(bfloat16), cudaMemcpyDeviceToDevice)); // NOLINT
+template <typename T, typename D>
+void replace_from_(Tensor<T, D>& out, const TensorView<T, D>& input) {
+  CUDA_CHECK(cudaMemcpy(out.data(), input.data, input.data_size * sizeof(T), cudaMemcpyDeviceToDevice)); // NOLINT
 }
+
+template void replace_from_(Tensor<bfloat16, CUDA>& out, const TensorView<bfloat16, CUDA>& input);
+template void replace_from_(Tensor<float, CUDA>& out, const TensorView<float, CUDA>& input);
+template void replace_from_(Tensor<int, CUDA>& out, const TensorView<int, CUDA>& input);
 
 template <>
 Tensor<bfloat16, CUDA> add(const TensorView<bfloat16, CUDA>& tensor_a, const TensorView<bfloat16, CUDA>& tensor_b) {
@@ -90,6 +95,11 @@ Tensor<float, CUDA> sum(const TensorView<float, CUDA>& input, int dim, bool keep
 template <>
 Tensor<float, CUDA> max(const TensorView<float, CUDA>& input, int dim, bool keepdim) {
   return max_float(input, dim, keepdim);
+}
+
+template <>
+Tensor<int, CUDA> argmax(const TensorView<bfloat16, CUDA>& input, int dim, bool keepdim) {
+  return argmax_bfloat16(input, dim, keepdim);
 }
 
 } // namespace tensor

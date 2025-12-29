@@ -545,14 +545,15 @@ void replace_from_(Tensor<T, D>& destination, const TensorView<T, D>& source) {
   });
 }
 
+// argmax
 template Tensor<int, CPU> argmax(const TensorView<bfloat16, CPU>& input, int dim, bool keepdim);
-template Tensor<int, CPU> argmax(const TensorView<float, CPU>& input, int dim, bool keepdim);
-template Tensor<int, CPU> argmax(const TensorView<int, CPU>& input, int dim, bool keepdim);
+// template Tensor<int, CPU> argmax(const TensorView<float, CPU>& input, int dim, bool keepdim);
+// template Tensor<int, CPU> argmax(const TensorView<int, CPU>& input, int dim, bool keepdim);
 
-template void replace_from_(Tensor<bfloat16, CPU>& destination,
-                            const TensorView<bfloat16, CPU>& source);
-template void replace_from_(Tensor<int, CPU>& destination, const TensorView<int, CPU>& source);
-template void replace_from_(Tensor<float, CPU>& destination, const TensorView<float, CPU>& source);
+// replace_from_
+template void replace_from_(Tensor<bfloat16, CPU>& out, const TensorView<bfloat16, CPU>& input);
+template void replace_from_(Tensor<int, CPU>& out, const TensorView<int, CPU>& input);
+template void replace_from_(Tensor<float, CPU>& out, const TensorView<float, CPU>& input);
 
 // add
 template Tensor<bfloat16, CPU> add(const TensorView<bfloat16, CPU>&,
