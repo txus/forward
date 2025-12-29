@@ -13,6 +13,7 @@
 #include "kernels/sum.cuh"
 #include "kernels/max.cuh"
 #include "kernels/argmax.cuh"
+#include "kernels/masked_fill.cuh"
 #include "kernels/utils.cuh"
 
 namespace tensor {
@@ -30,7 +31,7 @@ template <typename T, typename D> Tensor<T, D> arange(T start, T end, T step) {
 
   Tensor<T, D> out{shape, std::move(storage)};
 
-  int block_size = cuda::get_block_size();
+  int block_size = cuda::get_block_size(n_elements);
   int grid_size = cuda::get_grid_size(n_elements, block_size);
 
   // Convert to device-native types for kernel call
@@ -100,6 +101,11 @@ Tensor<float, CUDA> max(const TensorView<float, CUDA>& input, int dim, bool keep
 template <>
 Tensor<int, CUDA> argmax(const TensorView<bfloat16, CUDA>& input, int dim, bool keepdim) {
   return argmax_bfloat16(input, dim, keepdim);
+}
+
+template <>
+Tensor<bfloat16, CUDA> masked_fill(const TensorView<bfloat16, CUDA>& input, const TensorView<int, CUDA>& mask, bfloat16 masked_value) {
+  return masked_fill_bfloat16(input, mask, masked_value);
 }
 
 } // namespace tensor

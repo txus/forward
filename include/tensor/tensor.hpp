@@ -50,20 +50,33 @@ inline Shape get_all_strides(const Shape& shape) {
 }
 
 inline Shape broadcast_shape(const Shape& shape_a, const Shape& shape_b) {
-  assert(shape_a.size() == shape_b.size());
+  // Left-pad the shorter shape with 1s to match dimensions
+  size_t max_dims = std::max(shape_a.size(), shape_b.size());
 
   Shape out;
-  for (size_t i = 0; i < shape_a.size(); ++i) {
-    assert(shape_a[i] == shape_b[i] || shape_a[i] == 1 || shape_b[i] == 1);
-    out.push_back(std::max(shape_a[i], shape_b[i]));
+  for (size_t i = 0; i < max_dims; ++i) {
+    // Treat missing leading dims as 1
+    size_t dim_a = (i < max_dims - shape_a.size()) ? 1 : shape_a[i - (max_dims - shape_a.size())];
+    size_t dim_b = (i < max_dims - shape_b.size()) ? 1 : shape_b[i - (max_dims - shape_b.size())];
+    assert(dim_a == dim_b || dim_a == 1 || dim_b == 1);
+    out.push_back(std::max(dim_a, dim_b));
   }
   return out;
 }
 
 inline Shape broadcast_strides(const Shape& shape, const Shape& strides, const Shape& out_shape) {
   Shape result;
+  // How many dims to prepend (left-pad)
+  size_t pad = out_shape.size() - shape.size();
+
+  // Prepend zeros for the missing leading dimensions (broadcast)
+  for (size_t i = 0; i < pad; ++i) {
+    result.push_back(0);
+  }
+
+  // Now handle the actual dimensions
   for (size_t i = 0; i < shape.size(); ++i) {
-    if (shape[i] == 1 && out_shape[i] > 1) {
+    if (shape[i] == 1 && out_shape[pad + i] > 1) {
       result.push_back(0); // broadcast: don't advance
     } else {
       result.push_back(strides[i]);

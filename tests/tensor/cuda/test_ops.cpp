@@ -217,3 +217,27 @@ TEST(TensorCUDATest, MaxFp32) {
 
   tensor_is_close<float>(cpu.span(), exp.span());
 }
+
+TEST(TensorCUDATest, MaskedFillBf16) {
+  Tensor<bfloat16, CPU> tensor({3, 4});
+  tensor.fill_(bfloat16(4.0));
+
+  Tensor<int, CPU> mask({4});
+  mask.set_(0, 0);
+  mask.set_(1, 1);
+  mask.set_(2, 0);
+  mask.set_(3, 1);
+
+  auto tensor_gpu = tensor.cuda();
+  auto mask_gpu = mask.cuda();
+
+  std::vector<bfloat16> exp = {0, 4.0, 0, 4.0, 0, 4.0, 0, 4.0, 0, 4.0, 0, 4.0};
+
+  Tensor<bfloat16, CUDA> result = masked_fill(tensor_gpu.view(), mask_gpu.view(), 0.0);
+
+  auto result_cpu = result.cpu();
+
+  fmt::println("result {}", result_cpu.view());
+
+  tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}

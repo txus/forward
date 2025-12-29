@@ -46,7 +46,7 @@ template <typename T>
 void TensorStorage<T, CUDA>::fill(T value) {
   if (size_ == 0) { return; }
 
-  int block_size = cuda::get_block_size();
+  int block_size = cuda::get_block_size(size_);
   int grid_size = cuda::get_grid_size(size_, block_size);
 
   // Convert to device-native type for kernel call

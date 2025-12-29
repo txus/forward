@@ -41,7 +41,7 @@ Tensor<std::remove_const_t<T>, D> pow(const TensorView<T, D>& tensor,
                                       std::remove_const_t<T> scalar);
 
 template <typename T, typename D>
-Tensor<std::remove_const_t<T>, D> masked_fill(const TensorView<T, D>& tensor_a,
+Tensor<std::remove_const_t<T>, D> masked_fill(const TensorView<T, D>& input,
                                               const TensorView<int, D>& mask,
                                               std::remove_const_t<T> masked_value);
 

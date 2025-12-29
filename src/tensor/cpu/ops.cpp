@@ -111,10 +111,10 @@ Tensor<std::remove_const_t<T>, D> div(const TensorView<T, D>& tensor,
 }
 
 template <typename T, typename D>
-Tensor<std::remove_const_t<T>, D> masked_fill(const TensorView<T, D>& tensor_a,
+Tensor<std::remove_const_t<T>, D> masked_fill(const TensorView<T, D>& input,
                                               const TensorView<int, D>& mask,
                                               std::remove_const_t<T> masked_value) {
-  return element_wise<T, int, T, D>(tensor_a, mask, [masked_value](T val_a, int mask_val) {
+  return element_wise<T, int, T, D>(input, mask, [masked_value](T val_a, int mask_val) {
     if (mask_val == 1) {
       return val_a;
     }
@@ -573,8 +573,11 @@ template Tensor<float, CPU> sum(const TensorView<float, CPU>&, int, bool);
 
 // max
 template Tensor<float, CPU> max(const TensorView<float, CPU>&, int, bool);
+
+// masked_fill
 template Tensor<bfloat16, CPU> masked_fill(const TensorView<bfloat16, CPU>&,
                                            const TensorView<int, CPU>&, bfloat16);
+
 template Tensor<bfloat16, CPU> cat(const TensorView<bfloat16, CPU>&,
                                    const TensorView<bfloat16, CPU>&, int);
 template Tensor<float, CPU> cat(const TensorView<float, CPU>&, const TensorView<float, CPU>&, int);

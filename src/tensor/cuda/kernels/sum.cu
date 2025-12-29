@@ -95,8 +95,6 @@ Tensor<float, CUDA> sum_float(const TensorView<float, CUDA>& input, int dim, boo
 
   auto n_elements = outer_size * inner_size;
 
-  auto input_strides = get_all_strides(shape);
-
   TensorStorage<float, CUDA> storage(n_elements);
   Tensor<float, CUDA> out{out_shape, std::move(storage)};
 

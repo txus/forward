@@ -20,13 +20,14 @@ namespace tensor::cuda {
     } while (0);                                                               \
   }
 // Get optimal block size for 1D kernels
-inline int get_block_size() {
-  return 256; // Common choice, can tune later
+inline size_t get_block_size(size_t problem_size, size_t max_block_size = 512) {
+  return std::min(max_block_size, std::bit_ceil(problem_size));
 }
 
 // Calculate grid size for 1D kernels
 inline int get_grid_size(size_t n, int block_size) {
   return (n + block_size - 1) / block_size; // NOLINT
 }
+
 
 } // namespace tensor

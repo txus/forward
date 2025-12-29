@@ -148,3 +148,26 @@ TEST(TensorCPUTest, ArgmaxBf16) {
   std::vector<int> exp{2, 3, 0, 0};
   tensor_is_close<int>(maxes.span(), std::span(exp));
 }
+
+
+TEST(TensorCPUTest, MaskedFillBf16) {
+  Tensor<bfloat16, CPU> tensor({3, 4});
+  tensor.fill_(bfloat16(4.0));
+
+  Tensor<int, CPU> mask({4});
+  mask.set_(0, 0);
+  mask.set_(1, 1);
+  mask.set_(2, 0);
+  mask.set_(3, 1);
+
+  std::vector<bfloat16> exp = {0, 4.0, 0, 4.0, 0, 4.0, 0, 4.0, 0, 4.0, 0, 4.0};
+
+  auto view = tensor.view();
+  auto mask_view = mask.view();
+
+  Tensor<bfloat16, CPU> result = masked_fill(view, mask_view, 0.0);
+
+  fmt::println("result {}", result.view());
+
+  tensor_is_close<bfloat16>(result.span(), std::span(exp));
+}

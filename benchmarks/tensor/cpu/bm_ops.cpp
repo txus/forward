@@ -87,3 +87,33 @@ BENCHMARK(BM_CPU_SumFp32FirstDim)
     ->Args({65536, 2048})
     ->Unit(kMillisecond)
     ->UseRealTime();
+
+static void BM_CPU_MaskedFillBf16(State& state) {
+  Tensor<bfloat16, CPU> tensor(
+      {static_cast<size_t>(state.range(0)), static_cast<size_t>(state.range(1))});
+
+  tensor.fill_(bfloat16(1.0));
+
+  Tensor<int, CPU> mask({static_cast<size_t>(state.range(1))});
+
+  mask.fill_(1);
+
+  auto view = tensor.view();
+
+  for (auto _ : state)
+    DoNotOptimize(masked_fill(view, mask.view(), 0.0));
+
+  int64_t flops = 0;
+
+  flops += state.iterations() * state.range(0) * state.range(1);
+  state.counters["FLOPs"] = Counter(flops, Counter::kIsRate);
+  auto bytes_per_element = 2;
+  state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * state.range(0) *
+                          state.range(1) * bytes_per_element);
+}
+
+BENCHMARK(BM_CPU_MaskedFillBf16)
+    ->Args({16384, 2048})
+    ->Args({65536, 2048})
+    ->Unit(kMillisecond)
+    ->UseRealTime();
