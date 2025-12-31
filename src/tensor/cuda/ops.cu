@@ -13,6 +13,7 @@
 #include "kernels/cat.cuh"
 #include "kernels/map.cuh"
 #include "kernels/zip.cuh"
+#include "kernels/tril.cuh"
 #include "kernels/utils.cuh"
 
 namespace tensor {
@@ -122,6 +123,16 @@ Tensor<float, CUDA> sin(const TensorView<float, CUDA>& tensor) {
 template <>
 Tensor<float, CUDA> exp(const TensorView<float, CUDA>& tensor) {
   return kernels::exp(tensor);
+}
+
+template <>
+Tensor<bfloat16, CUDA> tril(const TensorView<bfloat16, CUDA>& tensor, bool diagonal) {
+  return kernels::tril(tensor, diagonal);
+}
+
+template <>
+Tensor<int, CUDA> tril(const TensorView<int, CUDA>& tensor, bool diagonal) {
+  return kernels::tril(tensor, diagonal);
 }
 
 } // namespace tensor

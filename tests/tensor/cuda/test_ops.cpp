@@ -287,3 +287,25 @@ TEST(TensorCUDATest, CatBf16FirstDim) {
 
   tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
 }
+
+TEST(TensorCUDATest, TrilBf16) {
+  Tensor<bfloat16, CUDA> tensor({4, 4});
+  tensor.fill_(1.0);
+
+  Tensor<bfloat16, CUDA> no_diag_ = tril<bfloat16>(tensor.view(), false);
+
+  auto no_diag = no_diag_.cpu();
+
+  fmt::println("no diag: {}", no_diag.view());
+
+  std::vector<bfloat16> exp = {1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1};
+
+  tensor_is_close<bfloat16>(no_diag.span(), std::span(exp));
+  Tensor<bfloat16, CUDA> diag_ = tril<bfloat16>(tensor.view(), true);
+
+  auto diag = diag_.cpu();
+  fmt::println("diag: {}", diag.view());
+
+  exp = {1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1};
+  tensor_is_close<bfloat16>(diag.span(), std::span(exp));
+}
