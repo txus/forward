@@ -61,10 +61,10 @@ precompute_rope_values(size_t head_dim, float theta_base, size_t context_length)
 
   angles = cat(angles.view(), angles.view(), 1); // context length, head_Dim
 
-  auto sin = angles.view().sin();
-  auto cos = angles.view().cos();
+  auto sin_ = sin(angles.view());
+  auto cos_ = cos(angles.view());
 
-  return std::make_tuple(std::move(cos), std::move(sin));
+  return std::make_tuple(std::move(cos_), std::move(sin_));
 }
 
 template <typename T, typename D>

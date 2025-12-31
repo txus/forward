@@ -153,6 +153,21 @@ Tensor<std::remove_const_t<T>, D> tril(const TensorView<T, D>& tensor, const boo
 }
 
 template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> cos(const TensorView<T, D>& tensor) {
+  return tensor.template map<std::remove_const_t<T>>([](T val) { return std::cos(val); });
+}
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> sin(const TensorView<T, D>& tensor) {
+  return tensor.template map<std::remove_const_t<T>>([](T val) { return std::sin(val); });
+}
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> exp(const TensorView<T, D>& tensor) {
+  return tensor.template map<std::remove_const_t<T>>([](T val) { return std::exp(val); });
+}
+
+template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> pow(std::remove_const_t<T> scalar,
                                       const TensorView<T, D>& tensor) {
   return tensor.template map<std::remove_const_t<T>>(
@@ -578,9 +593,15 @@ template Tensor<float, CPU> max(const TensorView<float, CPU>&, int, bool);
 template Tensor<bfloat16, CPU> masked_fill(const TensorView<bfloat16, CPU>&,
                                            const TensorView<int, CPU>&, bfloat16);
 
+// cat
 template Tensor<bfloat16, CPU> cat(const TensorView<bfloat16, CPU>&,
                                    const TensorView<bfloat16, CPU>&, int);
 template Tensor<float, CPU> cat(const TensorView<float, CPU>&, const TensorView<float, CPU>&, int);
+
+template Tensor<float, CPU> cos(const TensorView<float, CPU>& tensor);
+template Tensor<float, CPU> sin(const TensorView<float, CPU>& tensor);
+template Tensor<float, CPU> exp(const TensorView<float, CPU>& tensor);
+
 template Tensor<bfloat16, CPU> pow(bfloat16, const TensorView<bfloat16, CPU>&);
 template Tensor<float, CPU> pow(const TensorView<float, CPU>&, float);
 template Tensor<float, CPU> pow(float, const TensorView<float, CPU>&);

@@ -6,15 +6,13 @@
 #include <tensor/device_type.hpp>
 
 #include "kernels/arange.cuh"
-#include "kernels/add.cuh"
-#include "kernels/sub.cuh"
-#include "kernels/div.cuh"
-#include "kernels/mul.cuh"
 #include "kernels/sum.cuh"
 #include "kernels/max.cuh"
 #include "kernels/argmax.cuh"
 #include "kernels/masked_fill.cuh"
 #include "kernels/cat.cuh"
+#include "kernels/map.cuh"
+#include "kernels/zip.cuh"
 #include "kernels/utils.cuh"
 
 namespace tensor {
@@ -60,32 +58,32 @@ template void replace_from_(Tensor<int, CUDA>& out, const TensorView<int, CUDA>&
 
 template <>
 Tensor<bfloat16, CUDA> add(const TensorView<bfloat16, CUDA>& tensor_a, const TensorView<bfloat16, CUDA>& tensor_b) {
-  return kernels::add_bfloat16(tensor_a, tensor_b);
+  return kernels::add(tensor_a, tensor_b);
 }
 
 template <>
 Tensor<float, CUDA> sub(const TensorView<float, CUDA>& tensor_a, const TensorView<float, CUDA>& tensor_b) {
-  return kernels::sub_float(tensor_a, tensor_b);
+  return kernels::sub(tensor_a, tensor_b);
 }
 
 template <>
 Tensor<float, CUDA> div(const TensorView<float, CUDA>& tensor_a, const TensorView<float, CUDA>& tensor_b) {
-  return kernels::div_float(tensor_a, tensor_b);
+  return kernels::div(tensor_a, tensor_b);
 }
 
 template <>
 Tensor<float, CUDA> div(const TensorView<float, CUDA>& tensor_a, float scalar) {
-  return kernels::div_float(tensor_a, scalar);
+  return kernels::div(tensor_a, scalar);
 }
 
 template <>
 Tensor<bfloat16, CUDA> mul(const TensorView<bfloat16, CUDA>& tensor_a, const TensorView<bfloat16, CUDA>& tensor_b) {
-  return kernels::mul_bfloat16(tensor_a, tensor_b);
+  return kernels::mul(tensor_a, tensor_b);
 }
 
 template <>
 Tensor<bfloat16, CUDA> mul(const TensorView<bfloat16, CUDA>& tensor_a, bfloat16 scalar) {
-  return kernels::mul_bfloat16(tensor_a, scalar);
+  return kernels::mul(tensor_a, scalar);
 }
 
 template <>
@@ -116,6 +114,31 @@ Tensor<bfloat16, CUDA> cat(const TensorView<bfloat16, CUDA>& tensor_a, const Ten
 template <>
 Tensor<float, CUDA> cat(const TensorView<float, CUDA>& tensor_a, const TensorView<float, CUDA>& tensor_b, int dim) {
   return kernels::cat(tensor_a, tensor_b, dim);
+}
+
+template <>
+Tensor<float, CUDA> pow(const TensorView<float, CUDA>& tensor, float scalar) {
+  return kernels::pow_tensor_scalar(tensor, scalar);
+}
+
+template <>
+Tensor<float, CUDA> pow(float scalar, const TensorView<float, CUDA>& tensor) {
+  return kernels::pow_scalar_tensor(scalar, tensor);
+}
+
+template <>
+Tensor<float, CUDA> cos(const TensorView<float, CUDA>& tensor) {
+  return kernels::cos(tensor);
+}
+
+template <>
+Tensor<float, CUDA> sin(const TensorView<float, CUDA>& tensor) {
+  return kernels::sin(tensor);
+}
+
+template <>
+Tensor<float, CUDA> exp(const TensorView<float, CUDA>& tensor) {
+  return kernels::exp(tensor);
 }
 
 } // namespace tensor
