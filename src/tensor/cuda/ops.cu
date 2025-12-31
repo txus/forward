@@ -20,32 +20,15 @@ namespace tensor {
 using namespace dtype;
 using namespace device;
 
-template <typename T, typename D> Tensor<T, D> arange(T start, T end, T step) {
-  auto n_elements = static_cast<size_t>((end - start) / step);
-
-  TensorStorage<T, D> storage(n_elements);
-
-  Shape shape{n_elements};
-
-  Tensor<T, D> out{shape, std::move(storage)};
-
-  size_t block_size = cuda::get_block_size(n_elements);
-  size_t grid_size = cuda::get_grid_size(n_elements, block_size);
-
-  // Convert to device-native types for kernel call
-  auto* device_data = reinterpret_cast<Cuda<T>*>(out.data()); // NOLINT
-  Cuda<T> device_start = to_device_type(start, D{});
-  Cuda<T> device_end = to_device_type(end, D{});
-  Cuda<T> device_step = to_device_type(step, D{});
-
-  kernels::arange_kernel<<<grid_size, block_size>>>(device_data, device_start, device_end, device_step, n_elements);
-
-  return out;
+template <> Tensor<bfloat16, CUDA> arange(bfloat16 start, bfloat16 end, bfloat16 step) {
+  return kernels::arange(start, end, step);
 }
-
-template Tensor<int, CUDA> arange(int start, int end, int step);
-template Tensor<float, CUDA> arange(float start, float end, float step);
-template Tensor<bfloat16, CUDA> arange(bfloat16 start, bfloat16 end, bfloat16 step);
+template <> Tensor<float, CUDA> arange(float start, float end, float step) {
+  return kernels::arange(start, end, step);
+}
+template <> Tensor<int, CUDA> arange(int start, int end, int step) {
+  return kernels::arange(start, end, step);
+}
 
 template <typename T, typename D>
 void replace_from_(Tensor<T, D>& out, const TensorView<T, D>& input) {

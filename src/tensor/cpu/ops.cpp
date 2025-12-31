@@ -598,6 +598,7 @@ template Tensor<bfloat16, CPU> cat(const TensorView<bfloat16, CPU>&,
                                    const TensorView<bfloat16, CPU>&, int);
 template Tensor<float, CPU> cat(const TensorView<float, CPU>&, const TensorView<float, CPU>&, int);
 
+// elementwise maps
 template Tensor<float, CPU> cos(const TensorView<float, CPU>& tensor);
 template Tensor<float, CPU> sin(const TensorView<float, CPU>& tensor);
 template Tensor<float, CPU> exp(const TensorView<float, CPU>& tensor);
@@ -605,6 +606,7 @@ template Tensor<float, CPU> exp(const TensorView<float, CPU>& tensor);
 template Tensor<bfloat16, CPU> pow(bfloat16, const TensorView<bfloat16, CPU>&);
 template Tensor<float, CPU> pow(const TensorView<float, CPU>&, float);
 template Tensor<float, CPU> pow(float, const TensorView<float, CPU>&);
+
 template Tensor<bfloat16, CPU> tril(const TensorView<bfloat16, CPU>&, bool);
 template Tensor<int, CPU> tril(const TensorView<int, CPU>&, bool);
 template Tensor<bfloat16, CPU> slice(const TensorView<bfloat16, CPU>&, int, size_t, size_t);
