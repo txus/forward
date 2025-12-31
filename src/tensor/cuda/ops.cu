@@ -14,6 +14,7 @@
 #include "kernels/map.cuh"
 #include "kernels/zip.cuh"
 #include "kernels/tril.cuh"
+#include "kernels/slice.cuh"
 #include "kernels/utils.cuh"
 
 namespace tensor {
@@ -133,6 +134,16 @@ Tensor<bfloat16, CUDA> tril(const TensorView<bfloat16, CUDA>& tensor, bool diago
 template <>
 Tensor<int, CUDA> tril(const TensorView<int, CUDA>& tensor, bool diagonal) {
   return kernels::tril(tensor, diagonal);
+}
+
+template <>
+Tensor<bfloat16, CUDA> slice(const TensorView<bfloat16, CUDA>& view, int dim, size_t start, size_t end) {
+  return kernels::slice(view, dim, start, end);
+}
+
+template <>
+Tensor<float, CUDA> slice(const TensorView<float, CUDA>& view, int dim, size_t start, size_t end) {
+  return kernels::slice(view, dim, start, end);
 }
 
 } // namespace tensor

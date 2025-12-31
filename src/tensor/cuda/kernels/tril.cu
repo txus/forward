@@ -51,8 +51,6 @@ template <typename T> Tensor<T, CUDA> tril(const TensorView<T, CUDA>& tensor, bo
   auto* in_d = reinterpret_cast<Cuda<T>*>(tensor.data); // NOLINT
   Cuda<T> diagonal_d = to_device_type(diagonal, CUDA{});
 
-  fmt::println("Grid: {} by {}", grid_size, block_size);
-
   tril_kernel<Cuda<T>><<<grid_size, block_size>>>(device_data, in_d, diagonal_d, cols, rows);
 
   return out;

@@ -309,3 +309,75 @@ TEST(TensorCUDATest, TrilBf16) {
   exp = {1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1};
   tensor_is_close<bfloat16>(diag.span(), std::span(exp));
 }
+
+TEST(TensorCUDATest, SliceBf16FirstDim) {
+  SKIP_IF_NO_GPU();
+  // Tensor shape {4, 3}: 4 rows, 3 cols
+  // Data: row0=[1,2,3], row1=[4,5,6], row2=[7,8,9], row3=[10,11,12]
+  Tensor<bfloat16, CPU> tensor({4, 3});
+  for (int i = 0; i < 12; ++i) {
+    tensor.set_(i, bfloat16(i + 1));
+  }
+
+  auto gpu_tensor = tensor.cuda();
+
+  // Slice rows 1 to 3 (exclusive), so rows 1 and 2
+  Tensor<bfloat16, CUDA> result = slice(gpu_tensor.view(), 0, 1, 3);
+
+  auto result_cpu = result.cpu();
+
+  Shape expected_shape = {2, 3};
+  EXPECT_EQ(result_cpu.shape(), expected_shape);
+
+  // Expected: row1=[4,5,6], row2=[7,8,9]
+  std::vector<bfloat16> exp = {4, 5, 6, 7, 8, 9};
+  tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}
+
+TEST(TensorCUDATest, SliceBf16LastDim) {
+  SKIP_IF_NO_GPU();
+  // Tensor shape {2, 6}
+  // Data: row0=[1,2,3,4,5,6], row1=[7,8,9,10,11,12]
+  Tensor<bfloat16, CPU> tensor({2, 6});
+  for (int i = 0; i < 12; ++i) {
+    tensor.set_(i, bfloat16(i + 1));
+  }
+
+  auto gpu_tensor = tensor.cuda();
+
+  // Slice cols 2 to 5 (exclusive), so cols 2, 3, 4
+  Tensor<bfloat16, CUDA> result = slice(gpu_tensor.view(), 1, 2, 5);
+
+  auto result_cpu = result.cpu();
+
+  Shape expected_shape = {2, 3};
+  EXPECT_EQ(result_cpu.shape(), expected_shape);
+
+  // Expected: row0=[3,4,5], row1=[9,10,11]
+  std::vector<bfloat16> exp = {3, 4, 5, 9, 10, 11};
+  tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}
+
+TEST(TensorCUDATest, SliceBf16MiddleDim) {
+  SKIP_IF_NO_GPU();
+  // Tensor shape {2, 4, 3}: 2 batches, 4 rows, 3 cols
+  Tensor<bfloat16, CPU> tensor({2, 4, 3});
+  for (int i = 0; i < 24; ++i) {
+    tensor.set_(i, bfloat16(i + 1));
+  }
+
+  auto gpu_tensor = tensor.cuda();
+
+  // Slice dim 1 (rows) from 1 to 3, keeping 2 rows
+  Tensor<bfloat16, CUDA> result = slice(gpu_tensor.view(), 1, 1, 3);
+
+  auto result_cpu = result.cpu();
+
+  Shape expected_shape = {2, 2, 3};
+  EXPECT_EQ(result_cpu.shape(), expected_shape);
+
+  // Batch 0: rows 1-2 = [4,5,6, 7,8,9]
+  // Batch 1: rows 1-2 = [16,17,18, 19,20,21]
+  std::vector<bfloat16> exp = {4, 5, 6, 7, 8, 9, 16, 17, 18, 19, 20, 21};
+  tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}

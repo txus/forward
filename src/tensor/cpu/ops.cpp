@@ -607,12 +607,16 @@ template Tensor<bfloat16, CPU> pow(bfloat16, const TensorView<bfloat16, CPU>&);
 template Tensor<float, CPU> pow(const TensorView<float, CPU>&, float);
 template Tensor<float, CPU> pow(float, const TensorView<float, CPU>&);
 
+// tril
 template Tensor<bfloat16, CPU> tril(const TensorView<bfloat16, CPU>&, bool);
 template Tensor<int, CPU> tril(const TensorView<int, CPU>&, bool);
+
+// slice
 template Tensor<bfloat16, CPU> slice(const TensorView<bfloat16, CPU>&, int, size_t, size_t);
 template Tensor<float, CPU> slice(const TensorView<float, CPU>&, int, size_t, size_t);
 template Tensor<float, CPU> slice(const TensorView<const float, CPU>&, int, size_t, size_t);
-template Tensor<int, CPU> slice(const TensorView<int, CPU>&, int, size_t, size_t);
+
+// matmul
 template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,
                                       const TensorView<bfloat16, CPU>&);
 template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,
