@@ -33,6 +33,18 @@ TensorStorage<T, CUDA>::TensorStorage(TensorStorage&& other) noexcept
 }
 
 template <typename T>
+TensorStorage<T, CUDA>& TensorStorage<T, CUDA>::operator=(TensorStorage&& other) noexcept {
+  if (this != &other) {
+    if (data_) { cudaFree(data_); }
+    data_ = other.data_;
+    size_ = other.size_;
+    other.data_ = nullptr;
+    other.size_ = 0;
+  }
+  return *this;
+}
+
+template <typename T>
 void TensorStorage<T, CUDA>::resize(size_t size) {
   if (data_) { cudaFree(data_); }
   size_ = size;

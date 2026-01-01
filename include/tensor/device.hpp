@@ -14,7 +14,7 @@ template <> struct device_name<CPU> {
   static constexpr const char* value = "CPU";
 };
 
-#ifdef TENSOR_HAS_CUDA
+#ifdef BACKEND_CUDA
 struct CUDA {};
 template <> struct is_device<CUDA> : std::true_type {};
 template <> struct device_name<CUDA> {

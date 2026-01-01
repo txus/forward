@@ -4,12 +4,14 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 
-#define SAFETENSORS_CPP_IMPLEMENTATION
+// Note: safetensors implementation is in safetensors_impl.cpp to avoid ODR violations
+// when linking tensor_cpu and tensor_cuda together
 #include <safetensors.hh>
 
 // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
-std::string to_string(safetensors::dtype dtype, const uint8_t* data) {
+inline std::string to_string(safetensors::dtype dtype, const uint8_t* data) {
   switch (dtype) {
   case safetensors::dtype::kBOOL: {
     return std::to_string((data[0] != 0U) ? 1 : 0);
@@ -56,7 +58,7 @@ std::string to_string(safetensors::dtype dtype, const uint8_t* data) {
 }
 // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 
-std::string to_string_snipped(const safetensors::tensor_t& tensor, const uint8_t* databuffer,
+inline std::string to_string_snipped(const safetensors::tensor_t& tensor, const uint8_t* databuffer,
                               size_t count = 8) {
   std::stringstream string_stream;
   size_t nitems = safetensors::get_shape_size(tensor);
@@ -101,7 +103,7 @@ std::string to_string_snipped(const safetensors::tensor_t& tensor, const uint8_t
   return string_stream.str();
 }
 
-std::unique_ptr<safetensors::safetensors_t> load_safetensors(std::string_view file_path) {
+inline std::unique_ptr<safetensors::safetensors_t> load_safetensors(std::string_view file_path) {
   auto safetensors = std::make_unique<safetensors::safetensors_t>();
 
   std::string warn;
@@ -125,7 +127,7 @@ std::unique_ptr<safetensors::safetensors_t> load_safetensors(std::string_view fi
   return safetensors;
 }
 
-void inspect_safetensors(const std::unique_ptr<safetensors::safetensors_t>& safetensors_) {
+inline void inspect_safetensors(const std::unique_ptr<safetensors::safetensors_t>& safetensors_) {
   const uint8_t* databuffer{safetensors_->databuffer_addr};
 
   safetensors::tensor_t tensor;

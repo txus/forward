@@ -1,9 +1,21 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/llama/*.hpp")
 
-add_library(llama STATIC config.cpp model.cpp layer.cpp mlp.cpp rope.cpp grouped_query_attention.cpp kv_cache.cpp)
+set(LLAMA_SOURCES config.cpp model.cpp layer.cpp mlp.cpp rope.cpp grouped_query_attention.cpp kv_cache.cpp)
+
+if(BACKEND_CUDA)
+  include(CUDAConfig)
+  enable_language(CUDA)
+  list(APPEND LLAMA_SOURCES rope.cu)
+endif()
+
+add_library(llama STATIC ${LLAMA_SOURCES})
+
+if(BACKEND_CUDA)
+  configure_cuda_target(llama)
+endif()
 
 target_link_libraries(llama
-  PUBLIC tensor_core tensor_cpu nn_core nn_cpu
+  PUBLIC tensor nn
   PRIVATE nlohmann_json::nlohmann_json
 )
 
@@ -17,4 +29,3 @@ source_group(
   PREFIX "Header Files"
   FILES ${HEADER_LIST}
 )
-

@@ -39,9 +39,7 @@ template <typename T> Tensor<T, CUDA> tril(const TensorView<T, CUDA>& tensor, bo
 
   TensorStorage<T, CUDA> storage(n_elements);
 
-  Shape shape{n_elements};
-
-  Tensor<T, CUDA> out{shape, std::move(storage)};
+  Tensor<T, CUDA> out{{rows, cols}, std::move(storage)};
 
   size_t block_size = cuda::get_block_size(cols);
   size_t grid_size = rows;

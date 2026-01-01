@@ -20,6 +20,10 @@ template <typename T, typename D> Tensor<T, D> llama::causal_attention_mask(size
 }
 template Tensor<int, CPU> llama::causal_attention_mask(size_t seq_len);
 
+#ifdef BACKEND_CUDA
+template Tensor<int, CUDA> llama::causal_attention_mask(size_t seq_len);
+#endif
+
 template <typename T, typename D>
 Model<T, D>::Model(ModelConfig config, size_t max_tokens, size_t kv_cache_size)
     : max_tokens(max_tokens), kv_cache_size(kv_cache_size), config(config),
@@ -55,7 +59,7 @@ Tensor<std::remove_const_t<T>, D> Model<T, D>::forward(const TensorView<int, D>&
 
   // fmt::println("Embedding tokens {}", token_ids);
 
-  auto attn_mask = causal_attention_mask<int, CPU>(max_tokens);
+  auto attn_mask = causal_attention_mask<int, D>(max_tokens);
 
   auto residual_stream = embed.forward(token_ids);
 
@@ -74,3 +78,7 @@ Tensor<std::remove_const_t<T>, D> Model<T, D>::forward(const TensorView<int, D>&
 }
 
 template class llama::Model<bfloat16, CPU>;
+
+#ifdef BACKEND_CUDA
+template class llama::Model<bfloat16, CUDA>;
+#endif

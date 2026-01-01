@@ -1,6 +1,6 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/tensor/*.hpp")
 
-add_library(tensor_cpu STATIC ops.cpp loader.cpp)
+add_library(tensor_cpu STATIC ops.cpp loader.cpp ../common/safetensors_impl.cpp)
 
 # Find and enable OpenMP (required)
 # On macOS with Homebrew, help CMake find libomp

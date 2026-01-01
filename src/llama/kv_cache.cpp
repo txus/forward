@@ -43,3 +43,7 @@ KVCache<T, D>::forward(tensor::TensorView<T, D> new_keys, tensor::TensorView<T, 
 }
 
 template class llama::KVCache<bfloat16, CPU>;
+
+#ifdef BACKEND_CUDA
+template class llama::KVCache<bfloat16, CUDA>;
+#endif

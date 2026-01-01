@@ -5,9 +5,15 @@
 
 namespace llama {
 
+using namespace tensor;
+
+template <typename D>
+void apply_rope_scaling_(Tensor<float, D>& inv_freq, float factor, float low_freq_factor,
+                         float high_freq_factor, float old_context_len);
+
 template <typename T, typename D> class RoPE {
 private:
-  std::tuple<tensor::Tensor<float, D>, tensor::Tensor<float, D>> cos_sin; // float32
+  std::tuple<Tensor<float, D>, Tensor<float, D>> cos_sin; // float32
 
 public:
   explicit RoPE(const llama::ModelConfig& config);
@@ -17,10 +23,10 @@ public:
   RoPE(const RoPE&) = delete;
   RoPE& operator=(const RoPE&) = delete;
 
-  tensor::TensorView<const float, D> cos() const;
-  tensor::TensorView<const float, D> sin() const;
+  TensorView<const float, D> cos() const;
+  TensorView<const float, D> sin() const;
 
-  tensor::Tensor<std::remove_const_t<T>, D> forward(tensor::TensorView<T, D> inputs,
-                                                    size_t position_offset = 0) const;
+  Tensor<std::remove_const_t<T>, D> forward(TensorView<T, D> inputs,
+                                            size_t position_offset = 0) const;
 };
 } // namespace llama

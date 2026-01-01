@@ -39,11 +39,11 @@ template <typename T>
 Tensor<T, CUDA> cat(const TensorView<T, CUDA>& tensor_a, const TensorView<T, CUDA>& tensor_b, int dim) {
   assert(tensor_a.is_contiguous() && tensor_b.is_contiguous() && "the two tensors should be contiguous");
 
-  bool is_first_dim = dim == 0;
-
-  if (dim == -1) {
-    dim = static_cast<int>(tensor_a.shape[tensor_a.shape.size()-1]);
+  if (dim < 0) {
+    dim = static_cast<int>(tensor_a.shape.size()) + dim;
   }
+
+  bool is_first_dim = dim == 0;
 
   Shape new_shape{};
   for (size_t idx = 0; idx < tensor_a.shape.size(); ++idx) {

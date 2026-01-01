@@ -34,7 +34,9 @@ template <> Tensor<int, CUDA> arange(int start, int end, int step) {
 
 template <typename T, typename D>
 void replace_from_(Tensor<T, D>& out, const TensorView<T, D>& input) {
-  CUDA_CHECK(cudaMemcpy(out.data(), input.data, input.data_size * sizeof(T), cudaMemcpyDeviceToDevice)); // NOLINT
+  // Use the copy kernel which handles non-contiguous views correctly
+  auto copied = kernels::copy(input);
+  CUDA_CHECK(cudaMemcpy(out.data(), copied.data(), copied.size() * sizeof(T), cudaMemcpyDeviceToDevice)); // NOLINT
 }
 
 template void replace_from_(Tensor<bfloat16, CUDA>& out, const TensorView<bfloat16, CUDA>& input);
@@ -47,7 +49,9 @@ Tensor<std::remove_const_t<T>, D> copy(const TensorView<T, D>& view) {
 }
 
 template Tensor<bfloat16, CUDA> copy(const TensorView<bfloat16, CUDA>& view);
+template Tensor<bfloat16, CUDA> copy(const TensorView<const bfloat16, CUDA>& view);
 template Tensor<float, CUDA> copy(const TensorView<float, CUDA>& view);
+template Tensor<float, CUDA> copy(const TensorView<const float, CUDA>&);
 template Tensor<int, CUDA> copy(const TensorView<int, CUDA>& view);
 
 template <typename TIn, typename TOut, typename D>
@@ -57,6 +61,7 @@ Tensor<TOut, D> to(const TensorView<TIn, D>& view) {
 
 template Tensor<float, CUDA> to(const TensorView<bfloat16, CUDA>& view);
 template Tensor<bfloat16, CUDA> to(const TensorView<float, CUDA>& view);
+template Tensor<float, CUDA> to(const TensorView<int, CUDA>& view);
 
 template <>
 Tensor<bfloat16, CUDA> add(const TensorView<bfloat16, CUDA>& tensor_a, const TensorView<bfloat16, CUDA>& tensor_b) {
@@ -159,7 +164,22 @@ Tensor<bfloat16, CUDA> slice(const TensorView<bfloat16, CUDA>& view, int dim, si
 }
 
 template <>
+Tensor<bfloat16, CUDA> slice(const TensorView<const bfloat16, CUDA>& view, int dim, size_t start, size_t end) {
+  return kernels::slice(view, dim, start, end);
+}
+
+template <>
 Tensor<float, CUDA> slice(const TensorView<float, CUDA>& view, int dim, size_t start, size_t end) {
+  return kernels::slice(view, dim, start, end);
+}
+
+template <>
+Tensor<float, CUDA> slice(const TensorView<const float, CUDA>& view, int dim, size_t start, size_t end) {
+  return kernels::slice(view, dim, start, end);
+}
+
+template <>
+Tensor<int, CUDA> slice(const TensorView<int, CUDA>& view, int dim, size_t start, size_t end) {
   return kernels::slice(view, dim, start, end);
 }
 
@@ -187,5 +207,49 @@ Tensor<float, CUDA> matmul(const TensorView<float, CUDA>& tensor_a,
                             const TensorView<float, CUDA>& tensor_b) {
   return kernels::matmul(tensor_a, tensor_b);
 }
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> repeat_interleave(const TensorView<T, D>& view, int dim,
+                                                    size_t repeats) {
+  assert(dim < view.shape.size());
+
+  Shape temp_shape;
+  Shape temp_stride;
+
+  for (size_t dim_ = 0; dim_ <= static_cast<size_t>(dim); ++dim_) {
+    temp_shape.push_back(view.shape[dim_]);
+    temp_stride.push_back(view.stride[dim_]);
+  }
+
+  temp_shape.push_back(repeats);
+  temp_stride.push_back(0);
+
+  for (size_t dim_ = dim + 1; dim_ < view.shape.size(); ++dim_) {
+    temp_shape.push_back(view.shape[dim_]);
+    temp_stride.push_back(view.stride[dim_]);
+  }
+
+  size_t temp_size = 1;
+  for (auto dim_ : temp_shape) {
+    temp_size *= dim_;
+  }
+
+  TensorView<T, D> temp_view{view.data, temp_size, temp_shape, temp_stride};
+
+  auto materialized = copy(temp_view);
+
+  Shape final_shape;
+  for (size_t dim_ = 0; dim_ < view.shape.size(); ++dim_) {
+    if (dim_ == static_cast<size_t>(dim)) {
+      final_shape.push_back(view.shape[dim_] * repeats);
+    } else {
+      final_shape.push_back(view.shape[dim_]);
+    }
+  }
+
+  return materialized.view().reshape(final_shape);
+}
+
+template Tensor<bfloat16, CUDA> repeat_interleave(const TensorView<bfloat16, CUDA>& view, int dim, size_t repeats);
 
 } // namespace tensor

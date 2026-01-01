@@ -10,13 +10,13 @@ using namespace tensor::dtype;
 const int blockThreads = 512;
 
 template <typename T>
-inline __device__ void calculate_rms(const T* inputs, size_t seq_start, T eps, size_t hidden_dim, T shmem[]) {
+inline __device__ void calculate_rms(const T* inputs, size_t seq_start, T eps, size_t hidden_dim, float shmem[], T* rms_out) {
   auto tid = threadIdx.x;
   // reduce with a grid stride loop to handle reduce_size > blockThreads
-  float thread_sum = 0.0;
+  float thread_sum = 0.0f;
   for (size_t channel_idx = tid; channel_idx < hidden_dim; channel_idx += blockDim.x) {
-    T val = inputs[seq_start + channel_idx];
-    thread_sum += powf(val, 2);
+    float val = float(inputs[seq_start + channel_idx]);
+    thread_sum += val * val;
   }
 
   // load partial sums onto shmem
@@ -37,7 +37,7 @@ inline __device__ void calculate_rms(const T* inputs, size_t seq_start, T eps, s
     }
 
     if (tid == 0) {
-      shmem[0] = T(1.0f / sqrtf(val / hidden_dim + float(eps)));
+      *rms_out = T(1.0f / sqrtf(val / float(hidden_dim) + float(eps)));
     }
   }
   __syncthreads();
@@ -47,23 +47,21 @@ inline __device__ void calculate_rms(const T* inputs, size_t seq_start, T eps, s
 
 template <typename T>
 __global__ void rms_norm_kernel(T* out, const T* inputs, const T* weights, T eps, size_t hidden_dim) {
-  __shared__ T shmem[blockThreads];
+  __shared__ float shmem[blockThreads];
+  __shared__ T rms;
 
   auto seq_len = gridDim.y;
 
   auto batch_idx = blockIdx.x;
   auto pos_idx = blockIdx.y;
 
-  auto batch_start = batch_idx * seq_len;
+  auto batch_start = batch_idx * seq_len * hidden_dim;
   auto seq_start = batch_start + (pos_idx * hidden_dim);
 
-  calculate_rms(inputs, seq_start, eps, hidden_dim, shmem);
-  auto rms = shmem[0];
+  calculate_rms(inputs, seq_start, eps, hidden_dim, shmem, &rms);
 
   for (size_t channel_idx = threadIdx.x; channel_idx < hidden_dim; channel_idx += blockDim.x) {
-    if (channel_idx < hidden_dim) {
-      out[seq_start + channel_idx] = inputs[seq_start + channel_idx] * rms * weights[channel_idx];
-    }
+    out[seq_start + channel_idx] = inputs[seq_start + channel_idx] * rms * weights[channel_idx];
   }
 }
 

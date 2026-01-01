@@ -24,17 +24,18 @@ target_sources(tensor_core
 
 add_subdirectory(cpu)
 
-if(APPLE)
-  option(TENSOR_BUILD_CUDA "Build tensor_cuda library" OFF)
-else()
-  option(TENSOR_BUILD_CUDA "Build tensor_cuda library" ON)
-endif()
-
-if(TENSOR_BUILD_CUDA)
+if(BACKEND_CUDA)
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
   add_subdirectory(cuda)
-  target_compile_definitions(tensor_core INTERFACE TENSOR_HAS_CUDA)
+endif()
+
+# Unified tensor library - aggregates CPU and backend-specific libraries
+add_library(tensor INTERFACE)
+target_link_libraries(tensor INTERFACE tensor_core tensor_cpu)
+
+if(BACKEND_CUDA)
+  target_link_libraries(tensor INTERFACE tensor_cuda)
 endif()
 
 source_group(

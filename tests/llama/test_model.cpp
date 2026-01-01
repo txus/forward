@@ -27,3 +27,25 @@ TEST(LlamaModelTest, Forward) {
 
   auto output = mod.forward(view);
 }
+
+TEST(LlamaCUDAModelTest, Forward) {
+  SKIP_IF_NO_GPU();
+  const size_t batch_size = 1;
+  const size_t seq_len = 4;
+
+  Loader<bfloat16, CUDA> weights_loader(TEST_WEIGHTS_PATH);
+  llama::ModelConfig conf = load_config(TEST_CONFIG_PATH);
+
+  Model<bfloat16, CUDA> mod{
+      conf,
+      128,
+  };
+
+  mod.load_weights(weights_loader);
+
+  auto input_ = Tensor<int, CUDA>{{batch_size, seq_len}};
+
+  auto view = input_.view();
+
+  auto output = mod.forward(view);
+}

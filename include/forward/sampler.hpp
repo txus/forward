@@ -6,6 +6,12 @@
 
 namespace sampler {
 
+struct GenerationStats {
+  float tokens_per_sec;   // Overall throughput
+  float ttft_ms;          // Time to first token (ms)
+  float avg_itl_ms;       // Average inter-token latency (ms)
+};
+
 struct GreedyConfig {};
 
 template <typename T> struct is_config : std::false_type {};
@@ -25,8 +31,8 @@ public:
   explicit Sampler(C config, tokenizer::Tokenizer& tokenizer);
   virtual ~Sampler() = default;
 
-  std::tuple<std::string, float> generate(llama::Model<T, D>& model, std::string_view prompt,
-                                          size_t max_num_tokens);
+  std::tuple<std::string, GenerationStats> generate(llama::Model<T, D>& model, std::string_view prompt,
+                                                    size_t max_num_tokens);
 };
 
 template <tensor::DType T, tensor::Device D> struct GreedySampler : Sampler<T, D, GreedyConfig> {

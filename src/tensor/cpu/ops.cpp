@@ -567,7 +567,8 @@ Tensor<TOut, D> to(const TensorView<TIn, D>& tensor) {
 
 template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> copy(const TensorView<T, D>& tensor) {
-  return to<T, T>(tensor);
+  using OutT = std::remove_const_t<T>;
+  return to<T, OutT>(tensor);
 }
 
 template <typename T, typename D>
@@ -627,6 +628,8 @@ template Tensor<bfloat16, CPU> add(const TensorView<bfloat16, CPU>&,
                                    const TensorView<bfloat16, CPU>&);
 // sub
 template Tensor<float, CPU> sub(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
+template Tensor<bfloat16, CPU> sub(const TensorView<bfloat16, CPU>&, const TensorView<bfloat16, CPU>&);
+template Tensor<bfloat16, CPU> sub(const TensorView<bfloat16, CPU>&, bfloat16);
 // div
 template Tensor<float, CPU> div(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
 template Tensor<float, CPU> div(const TensorView<float, CPU>&, float);
@@ -665,8 +668,10 @@ template Tensor<int, CPU> tril(const TensorView<int, CPU>&, bool);
 
 // slice
 template Tensor<bfloat16, CPU> slice(const TensorView<bfloat16, CPU>&, int, size_t, size_t);
+template Tensor<bfloat16, CPU> slice(const TensorView<const bfloat16, CPU>&, int, size_t, size_t);
 template Tensor<float, CPU> slice(const TensorView<float, CPU>&, int, size_t, size_t);
 template Tensor<float, CPU> slice(const TensorView<const float, CPU>&, int, size_t, size_t);
+template Tensor<int, CPU> slice(const TensorView<int, CPU>&, int, size_t, size_t);
 
 // matmul
 template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,
@@ -681,5 +686,14 @@ template Tensor<bfloat16, CPU> repeat_interleave(const TensorView<bfloat16, CPU>
 // to (type conversion)
 template Tensor<float, CPU> to(const TensorView<bfloat16, CPU>&);
 template Tensor<bfloat16, CPU> to(const TensorView<float, CPU>&);
+template Tensor<float, CPU> to(const TensorView<int, CPU>&);
+
+// copy
+template Tensor<bfloat16, CPU> copy(const TensorView<bfloat16, CPU>&);
+template Tensor<bfloat16, CPU> copy(const TensorView<const bfloat16, CPU>&);
+template Tensor<float, CPU> copy(const TensorView<float, CPU>&);
+template Tensor<float, CPU> copy(const TensorView<const float, CPU>&);
+template Tensor<int, CPU> copy(const TensorView<int, CPU>&);
+template Tensor<int, CPU> copy(const TensorView<const int, CPU>&);
 
 } // namespace tensor

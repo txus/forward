@@ -1,4 +1,5 @@
 #include "masked_fill.cuh"
+#include "broadcast.cuh"
 #include "utils.cuh"
 #include <cstddef>
 #include <cuda_bf16.hpp>
@@ -7,58 +8,55 @@ namespace tensor::kernels {
 
 using namespace dtype;
 
-__global__ void masked_fill_bfloat16_kernel(Cuda<bfloat16>* out, Cuda<bfloat16>* input, const Cuda<int>* mask, Cuda<bfloat16> masked_value, size_t inner_size) {
-  // there are as many blocks as operations to do, which one are we doing?
-  size_t operation_idx = blockIdx.x;
+// Kernel that handles full broadcasting between input and mask
+__global__ void masked_fill_broadcast_kernel(Cuda<bfloat16>* out, const Cuda<bfloat16>* input,
+                                              const Cuda<int>* mask, Cuda<bfloat16> masked_value,
+                                              const size_t* out_shape, const size_t* mask_strides,
+                                              size_t ndim, size_t total_elements) {
+  size_t out_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-  size_t tid = threadIdx.x;
+  if (out_idx < total_elements) {
+    size_t mask_idx = broadcast_index(out_idx, out_shape, mask_strides, ndim);
 
-  auto base = operation_idx * inner_size;
+    Cuda<bfloat16> value = input[out_idx];
+    Cuda<int> gate = mask[mask_idx];
 
-  for (size_t element = tid; element < inner_size; element += blockDim.x) {
-    if (element < inner_size) {
-      Cuda<bfloat16> value = input[base + element];
-      Cuda<int> gate = mask[element];
-
-      if (gate == 1) {
-        out[base + element] = value;
-      } else {
-        out[base + element] = masked_value;
-      }
+    if (gate == 1) {
+      out[out_idx] = value;
+    } else {
+      out[out_idx] = masked_value;
     }
   }
 }
 
 Tensor<bfloat16, CUDA> masked_fill_bfloat16(const TensorView<bfloat16, CUDA>& input, const TensorView<int, CUDA>& mask, bfloat16 masked_value) {
-  auto mask_dims = mask.shape.size();
-  auto dims_to_skip = input.shape.size() - mask_dims;
-
   assert(input.is_contiguous() && mask.is_contiguous() && "input and mask should both be contiguous");
 
-  size_t inner_size = 1;
-  for (size_t idx = dims_to_skip; idx < input.shape.size(); ++idx) {
-    assert(input.shape[idx] == mask.shape[idx - dims_to_skip] && "the last dimensions of input and mask need to match for broadcasting to work");
-    inner_size *= input.shape[idx];
-  }
+  // Compute broadcast configuration (input is "a", mask is "b")
+  auto config = compute_broadcast_config(input.shape, mask.shape);
 
-  size_t outer_size = 1;
-  for (size_t idx = 0; idx < dims_to_skip; ++idx) {
-    outer_size *= input.shape[idx];
-  }
+  // For masked_fill, output shape should match input shape
+  assert(config.out_shape == input.shape && "masked_fill requires mask to broadcast to input shape");
 
-  size_t n_elements = input.data_size;
-  TensorStorage<bfloat16, CUDA> storage(n_elements);
+  size_t total_elements = input.data_size;
+  TensorStorage<bfloat16, CUDA> storage(total_elements);
   Tensor<bfloat16, CUDA> out{input.shape, std::move(storage)};
 
-  size_t block_size = cuda::get_block_size(inner_size);
+  // Allocate and copy broadcast params to device (only need out_shape and b_strides for mask)
+  DeviceBroadcastParams params(config);
+
+  size_t block_size = cuda::get_block_size(total_elements);
+  size_t grid_size = (total_elements + block_size - 1) / block_size;
 
   // Convert to device-native types for kernel call
   auto* out_d = reinterpret_cast<Cuda<bfloat16>*>(out.data()); // NOLINT
-  auto* in_d = reinterpret_cast<Cuda<bfloat16>*>(input.data); // NOLINT
-  auto* mask_d = reinterpret_cast<const int*>(mask.data); // NOLINT
+  auto* in_d = reinterpret_cast<const Cuda<bfloat16>*>(input.data); // NOLINT
+  auto* mask_d = reinterpret_cast<const Cuda<int>*>(mask.data); // NOLINT
   Cuda<bfloat16> mask_value_d = to_device_type(masked_value, CUDA{});
 
-  masked_fill_bfloat16_kernel<<<outer_size, block_size>>>(out_d, in_d, mask_d, mask_value_d, inner_size);
+  masked_fill_broadcast_kernel<<<grid_size, block_size>>>(out_d, in_d, mask_d, mask_value_d,
+                                                           params.d_out_shape, params.d_b_strides,
+                                                           config.ndim, total_elements);
 
   return out;
 }

@@ -44,3 +44,7 @@ Tensor<std::remove_const_t<T>, D> MLP<T, D>::forward(TensorView<T, D> inputs) {
 }
 
 template class llama::MLP<bfloat16, CPU>;
+
+#ifdef BACKEND_CUDA
+template class llama::MLP<bfloat16, CUDA>;
+#endif

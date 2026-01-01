@@ -3,7 +3,7 @@
 #include <tensor/device.hpp>
 #include <tensor/dtype.hpp>
 
-#ifdef TENSOR_HAS_CUDA
+#ifdef BACKEND_CUDA
 #include <cuda_bf16.h>
 #endif
 
@@ -24,13 +24,13 @@ struct device_type {
 template <typename T, typename D>
 using device_type_t = typename device_type<T, D>::type;
 
-#ifdef TENSOR_HAS_CUDA
+#ifdef BACKEND_CUDA
 // Short alias for CUDA device types: Cuda<float> -> float, Cuda<bfloat16> -> __nv_bfloat16
 template <typename T>
 using Cuda = device_type_t<T, CUDA>;
 #endif
 
-#ifdef TENSOR_HAS_CUDA
+#ifdef BACKEND_CUDA
 // CUDA specialization: bfloat16 -> __nv_bfloat16
 template <>
 struct device_type<bfloat16, CUDA> {

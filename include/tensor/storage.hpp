@@ -101,7 +101,7 @@ public:
   }
 };
 
-#ifdef TENSOR_HAS_CUDA
+#ifdef BACKEND_CUDA
 // Mutable CUDA storage - owns device memory
 template <typename T> class TensorStorage<T, CUDA> {
 private:

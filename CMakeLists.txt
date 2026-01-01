@@ -7,6 +7,26 @@ project(
   LANGUAGES CXX
 )
 
+# Add cmake module path for our custom modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+# Backend detection
+if(APPLE)
+  set(BACKEND_METAL ON)
+  set(BACKEND_CUDA OFF)
+else()
+  set(BACKEND_CUDA ON)
+  set(BACKEND_METAL OFF)
+endif()
+
+# Propagate backend flags as compile definitions
+if(BACKEND_CUDA)
+  add_compile_definitions(BACKEND_CUDA)
+endif()
+if(BACKEND_METAL)
+  add_compile_definitions(BACKEND_METAL)
+endif()
+
 set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/.cmake/fetchcontent")
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 

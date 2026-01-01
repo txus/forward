@@ -110,12 +110,15 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
   keys = repeat_interleave(keys_v, 1, group_size);
   values = repeat_interleave(values_v, 1, group_size);
 
-  auto transposed_keys_ = keys.view();
-  transposed_keys_.transpose(2, 3); // (batch, [num_kv_groups*group_size], head_dim, kvs_len)
+  auto transposed_keys_view = keys.view();
+  transposed_keys_view.transpose(2, 3); // (batch, [num_kv_groups*group_size], head_dim, kvs_len)
+
+  // Materialize the transposed keys - cuBLAS requires contiguous tensors
+  auto transposed_keys_ = copy(transposed_keys_view);
 
   // scores are (batch, num_heads, queries_len, kvs_len)
   // -- for each query (row), how much does it attend to the key (col)?
-  auto attn_scores = matmul(queries_v, transposed_keys_);
+  auto attn_scores = matmul(queries_v, transposed_keys_.view());
 
   attn_scores = mul(attn_scores.view(), scale);
 
@@ -139,3 +142,7 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
 }
 
 template class llama::GroupedQueryAttention<bfloat16, CPU>;
+
+#ifdef BACKEND_CUDA
+template class llama::GroupedQueryAttention<bfloat16, CUDA>;
+#endif

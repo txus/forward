@@ -36,6 +36,12 @@ inspect:
 	@cmake --build build --target inspect
 	@./build/apps/inspect
 
+.PHONY: tensor
+tensor:
+	@cmake --build build --target tensor
+	@ctest --test-dir build -R "^TensorCPU" --output-on-failure
+	@ctest --test-dir build -R "^TensorCUDA" --output-on-failure
+
 .PHONY: tensor_cpu
 tensor_cpu:
 	@cmake --build build --target test_tensor_cpu
@@ -45,6 +51,12 @@ tensor_cpu:
 tensor_cuda:
 	@cmake --build build --target test_tensor_cuda
 	@ctest --test-dir build -R "^TensorCUDA" --output-on-failure
+
+.PHONY: nn
+nn:
+	@cmake --build build --target nn
+	@ctest --test-dir build -R "^NNCPU" --output-on-failure
+	@ctest --test-dir build -R "^NNCUDA" --output-on-failure
 
 .PHONY: nn_cpu
 nn_cpu:
@@ -60,6 +72,11 @@ nn_cuda:
 llama:
 	@cmake --build build --target test_llama
 	@ctest --test-dir build -R "^Llama" --output-on-failure
+
+.PHONY: llama_cuda
+llama_cuda:
+	@cmake --build build --target test_llama
+	@ctest --test-dir build -R "^LlamaCUDA" --output-on-failure
 
 .PHONY: forward
 forward:

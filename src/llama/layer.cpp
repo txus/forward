@@ -52,3 +52,7 @@ Tensor<std::remove_const_t<T>, D> Layer<T, D>::forward(const TensorView<T, D>& i
 }
 
 template class llama::Layer<bfloat16, CPU>;
+
+#ifdef BACKEND_CUDA
+template class llama::Layer<bfloat16, CUDA>;
+#endif

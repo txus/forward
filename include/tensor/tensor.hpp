@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef TENSOR_HAS_CUDA
+#ifdef BACKEND_CUDA
 #include <cuda_runtime.h>
 #endif
 
@@ -134,7 +134,7 @@ template <DType T, Device D> struct TensorView {
     return std::span<const T>(data, data_size);
   }
 
-#ifdef TENSOR_HAS_CUDA
+#ifdef BACKEND_CUDA
   T operator[](int idx) const
     requires std::same_as<D, device::CUDA>
   {
@@ -465,7 +465,7 @@ public:
     storage_.fill(value);
   }
 
-#ifdef TENSOR_HAS_CUDA
+#ifdef BACKEND_CUDA
   // Device transfer methods
 
   Tensor<std::remove_const_t<T>, CUDA> cuda() const
