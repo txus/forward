@@ -15,14 +15,8 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/common/test_config.h
 )
 
-# compiled library code
-if(APPLE)
-  option(BUILD_CUDA "Build CUDA tests" OFF)
-else()
-  option(BUILD_CUDA "Build CUDA tests" ON)
-endif()
-
-if(BUILD_CUDA)
+# Build CUDA tests if BACKEND_CUDA is enabled
+if(BACKEND_CUDA)
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
   add_subdirectory(tensor/cuda)

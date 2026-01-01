@@ -20,6 +20,12 @@ target_link_libraries(tensor_cpu
   PRIVATE safetensors_cpp
 )
 
+# When CUDA backend is enabled, we need CUDA includes for shared headers
+# (tensor.hpp uses cudaMemcpy in inline methods guarded by #ifdef BACKEND_CUDA)
+if(BACKEND_CUDA)
+  target_include_directories(tensor_cpu PUBLIC ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+endif()
+
 target_include_directories(tensor_cpu
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include

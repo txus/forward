@@ -9,10 +9,4 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(googlebenchmark)
 
-if(APPLE)
-  option(TENSOR_CUDA "Benchmark tensor_cuda library" OFF)
-else()
-  option(TENSOR_CUDA "Benchmark tensor_cuda library" ON)
-endif()
-
 add_subdirectory(tensor)

@@ -340,6 +340,7 @@ TEST(TensorCUDATest, MaskedFillBf16Broadcasting) {
 }
 
 TEST(TensorCUDATest, CatBf16LastDim) {
+  SKIP_IF_NO_GPU();
   Tensor<bfloat16, CUDA> tensor_a({2, 4});
   Tensor<bfloat16, CUDA> tensor_b({2, 2});
 
@@ -363,6 +364,7 @@ TEST(TensorCUDATest, CatBf16LastDim) {
 }
 
 TEST(TensorCUDATest, CatBf16FirstDim) {
+  SKIP_IF_NO_GPU();
   Tensor<bfloat16, CUDA> tensor_a({3, 2});
   Tensor<bfloat16, CUDA> tensor_b({2, 2});
 
@@ -386,6 +388,7 @@ TEST(TensorCUDATest, CatBf16FirstDim) {
 }
 
 TEST(TensorCUDATest, TrilBf16) {
+  SKIP_IF_NO_GPU();
   Tensor<bfloat16, CUDA> tensor({4, 4});
   tensor.fill_(1.0);
 
@@ -601,6 +604,7 @@ TEST(TensorCUDATest, MatmulFp32) {
 }
 
 TEST(TensorCUDATest, Copy) {
+  SKIP_IF_NO_GPU();
   tensor::Tensor<int, tensor::CUDA> tensor({2, 4});
   tensor.fill_(6);
 
@@ -613,6 +617,7 @@ TEST(TensorCUDATest, Copy) {
 }
 
 TEST(TensorCUDATest, CopySlice) {
+  SKIP_IF_NO_GPU();
   tensor::Tensor<int, tensor::CUDA> tensor({2, 4});
   tensor.fill_(6);
 
@@ -625,6 +630,7 @@ TEST(TensorCUDATest, CopySlice) {
 }
 
 TEST(TensorCUDATest, CopyTransposed) {
+  SKIP_IF_NO_GPU();
   // Create a 2x3 matrix on CPU, copy to GPU, transpose, and copy to materialize
   // Original: [[1,2,3], [4,5,6]]
   Tensor<int, CPU> cpu_tensor({2, 3});
@@ -659,6 +665,7 @@ TEST(TensorCUDATest, CopyTransposed) {
 }
 
 TEST(TensorCUDATest, CopyTransposed4D) {
+  SKIP_IF_NO_GPU();
   // Create a 4D tensor like in GQA: {batch=1, num_heads=2, seq_len=3, head_dim=2}
   // After transpose(1,2): {1, 3, 2, 2}
   Tensor<int, CPU> cpu_tensor({1, 2, 3, 2});

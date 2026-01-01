@@ -39,6 +39,7 @@ TEST(LlamaLayerTest, Parity) {
   tensor_is_close<bfloat16>(output.view().span(), output_activations.span(), 1e-02);
 }
 
+#ifdef BACKEND_CUDA
 TEST(LlamaCUDALayerTest, Parity) {
   SKIP_IF_NO_GPU();
   Loader<bfloat16, CUDA> act_loader(TEST_ACTIVATIONS_PATH);
@@ -72,3 +73,4 @@ TEST(LlamaCUDALayerTest, Parity) {
 
   tensor_is_close<bfloat16>(output_cpu.view().span(), output_activations.span(), 1e-02);
 }
+#endif

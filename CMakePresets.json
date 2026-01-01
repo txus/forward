@@ -27,7 +27,7 @@
         "CMAKE_CUDA_ARCHITECTURES": "120",
         "CMAKE_CUDA_COMPILER_TOOLKIT_ROOT": "$env{CUDA_PATH}",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "TENSOR_BUILD_CUDA": "ON",
+        "BACKEND_CUDA": "ON",
         "CUDAToolkit_ROOT": "$env{CUDA_PATH}",
         "OpenMP_ROOT": "$env{OPENMP_ROOT}",
         "CLANG_RESOURCE_DIR": "$env{CLANG_RESOURCE_DIR}",
@@ -44,7 +44,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "$env{CLANGXX_PATH}",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "TENSOR_BUILD_CUDA": "OFF",
+        "BACKEND_CUDA": "OFF",
         "OpenMP_ROOT": "$env{OPENMP_ROOT}"
       }
     }

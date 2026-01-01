@@ -9,6 +9,7 @@ using namespace nn;
 using namespace tensor;
 
 TEST(NNCUDAActTest, SiLU) {
+  SKIP_IF_NO_GPU();
   size_t length = 2;
 
   Tensor<bfloat16, CUDA> inputs_ =

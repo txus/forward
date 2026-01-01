@@ -37,9 +37,12 @@ std::tuple<std::string, GenerationStats> Sampler<T, D, C>::generate(llama::Model
     Tensor<int, device::CPU> inputs_cpu({1, token_ids.size()}, std::vector<int>(token_ids));
 
     Tensor<int, D> inputs = [&]() {
+#ifdef BACKEND_CUDA
       if constexpr (std::same_as<D, device::CUDA>) {
         return inputs_cpu.cuda();
-      } else {
+      } else
+#endif
+      {
         return std::move(inputs_cpu);
       }
     }();
@@ -56,9 +59,12 @@ std::tuple<std::string, GenerationStats> Sampler<T, D, C>::generate(llama::Model
 
     // Transfer sampled ids to CPU to read values
     Tensor<int, device::CPU> sampled_ids_cpu = [&]() {
+#ifdef BACKEND_CUDA
       if constexpr (std::same_as<D, device::CUDA>) {
         return sampled_ids.cpu();
-      } else {
+      } else
+#endif
+      {
         return std::move(sampled_ids);
       }
     }();

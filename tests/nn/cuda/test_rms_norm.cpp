@@ -8,6 +8,7 @@ using namespace nn;
 using namespace tensor;
 
 TEST(NNCUDARMSNormTest, Forward) {
+  SKIP_IF_NO_GPU();
   size_t hidden_dim = 2;
   size_t batch_size = 1;
   size_t seq_len = 4;

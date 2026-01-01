@@ -8,6 +8,7 @@ using namespace nn;
 using namespace tensor;
 
 TEST(NNCUDAEmbeddingTest, Forward) {
+  SKIP_IF_NO_GPU();
   size_t vocab_size = 4;
   size_t hidden_dim = 2;
   size_t batch_size = 1;

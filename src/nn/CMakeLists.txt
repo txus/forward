@@ -17,11 +17,15 @@ target_sources(nn_core
         ${HEADER_LIST}
 )
 
-add_subdirectory(cpu)
-
+# Find CUDA toolkit before processing subdirectories so includes are available
 if(BACKEND_CUDA)
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
+endif()
+
+add_subdirectory(cpu)
+
+if(BACKEND_CUDA)
   add_subdirectory(cuda)
 endif()
 

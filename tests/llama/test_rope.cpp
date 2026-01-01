@@ -58,6 +58,7 @@ TEST(LlamaRoPETest, Forward) {
   tensor_is_close<bfloat16>(outputs.view().span(), std::span(expected), 1e-2);
 }
 
+#ifdef BACKEND_CUDA
 TEST(LlamaCUDARoPETest, PrecomputeRopeValues) {
   SKIP_IF_NO_GPU();
   llama::ModelConfig conf{
@@ -109,3 +110,4 @@ TEST(LlamaCUDARoPETest, Forward) {
 
   tensor_is_close<bfloat16>(outputs_cpu.view().span(), std::span(expected), 1e-2);
 }
+#endif

@@ -34,6 +34,7 @@ TEST(LlamaGQATest, Parity) {
   tensor_is_close<bfloat16>(output.view().span(), output_activations.span());
 }
 
+#ifdef BACKEND_CUDA
 TEST(LlamaCUDAGQATest, Parity) {
   SKIP_IF_NO_GPU();
   Loader<bfloat16, CUDA> act_loader(TEST_ACTIVATIONS_PATH);
@@ -63,6 +64,7 @@ TEST(LlamaCUDAGQATest, Parity) {
   // Use slightly higher tolerance for CUDA due to bf16 precision and kernel ordering differences
   tensor_is_close<bfloat16>(output_cpu.view().span(), output_activations.span(), 2e-3f, 2e-3f);
 }
+#endif
 
 TEST(LlamaGQATest, ParityWithKVCache) {
   Loader<bfloat16, CPU> act_loader(TEST_ACTIVATIONS_PATH);
@@ -104,6 +106,7 @@ TEST(LlamaGQATest, ParityWithKVCache) {
   EXPECT_EQ(gqa.get_cache_size(), 4);
 }
 
+#ifdef BACKEND_CUDA
 TEST(LlamaCUDAGQATest, ParityWithKVCache) {
   SKIP_IF_NO_GPU();
   Loader<bfloat16, CUDA> act_loader(TEST_ACTIVATIONS_PATH);
@@ -148,3 +151,4 @@ TEST(LlamaCUDAGQATest, ParityWithKVCache) {
 
   EXPECT_EQ(gqa.get_cache_size(), 4);
 }
+#endif

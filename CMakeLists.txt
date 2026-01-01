@@ -10,21 +10,25 @@ project(
 # Add cmake module path for our custom modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-# Backend detection
+# Backend detection - can be overridden via -DBACKEND_CUDA=ON/OFF
 if(APPLE)
-  set(BACKEND_METAL ON)
-  set(BACKEND_CUDA OFF)
+  option(BACKEND_METAL "Enable Metal backend" ON)
+  option(BACKEND_CUDA "Enable CUDA backend" OFF)
 else()
-  set(BACKEND_CUDA ON)
-  set(BACKEND_METAL OFF)
+  option(BACKEND_CUDA "Enable CUDA backend" ON)
+  option(BACKEND_METAL "Enable Metal backend" OFF)
 endif()
 
 # Propagate backend flags as compile definitions
 if(BACKEND_CUDA)
   add_compile_definitions(BACKEND_CUDA)
+  message(STATUS "Backend: CUDA enabled")
+else()
+  message(STATUS "Backend: CUDA disabled")
 endif()
 if(BACKEND_METAL)
   add_compile_definitions(BACKEND_METAL)
+  message(STATUS "Backend: Metal enabled")
 endif()
 
 set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/.cmake/fetchcontent")
@@ -33,8 +37,13 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 # msgpack in tokenizers_cpp is doing weird stuff
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
-set(CMAKE_C_COMPILER_LAUNCHER ccache)
-set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+# Use ccache if available
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+  set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+  message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

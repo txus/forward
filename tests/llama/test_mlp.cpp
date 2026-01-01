@@ -30,6 +30,7 @@ TEST(LlamaMLPTest, Parity) {
   tensor_is_close<bfloat16>(output.view().span(), output_activations.span());
 }
 
+#ifdef BACKEND_CUDA
 TEST(LlamaCUDAMLPTest, Parity) {
   SKIP_IF_NO_GPU();
   Loader<bfloat16, CUDA> act_loader(TEST_ACTIVATIONS_PATH);
@@ -53,3 +54,4 @@ TEST(LlamaCUDAMLPTest, Parity) {
   // Use slightly relaxed tolerance for CUDA (3x default) due to cuBLAS precision differences
   tensor_is_close<bfloat16>(output_cpu.view().span(), output_activations.span(), 3e-3f, 3e-3f);
 }
+#endif

@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-and-test:
-    name: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}
+    name: ${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.backend }}-${{ matrix.build_type }}
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -22,9 +22,25 @@ jobs:
         os: [ubuntu-latest]
         compiler: [clang-20, gcc-14]
         build_type: [Release, Debug]
+        backend: [cuda, cpu]
+        exclude:
+          # Only test CPU backend with one compiler in Debug to save CI time
+          - backend: cpu
+            compiler: clang-20
+            build_type: Debug
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install CUDA Toolkit
+      if: matrix.backend == 'cuda'
+      uses: Jimver/cuda-toolkit@v0.2.21
+      id: cuda-toolkit
+      with:
+        cuda: '12.8.0'
+        method: 'network'
+        sub-packages: '["nvcc", "cudart", "thrust"]'
+        non-cuda-sub-packages: '["libcublas", "libcublas-dev"]'
 
     - name: Set up compiler (Clang)
       if: matrix.compiler == 'clang-20'
@@ -102,12 +118,19 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .cmake/fetchcontent
-        key: ${{ runner.os }}-${{ matrix.compiler }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+        key: ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.backend }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.compiler }}-cmake-
+          ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.backend }}-cmake-
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      run: |
+        CMAKE_ARGS="-DCMAKE_BUILD_TYPE=${{ matrix.build_type }}"
+        if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+          CMAKE_ARGS="$CMAKE_ARGS -DBACKEND_CUDA=ON -DSKIP_CUDA_TESTS=ON -DCMAKE_CUDA_ARCHITECTURES=120"
+        else
+          CMAKE_ARGS="$CMAKE_ARGS -DBACKEND_CUDA=OFF"
+        fi
+        cmake -S . -B build $CMAKE_ARGS
 
     - name: Build
       run: cmake --build build --config ${{ matrix.build_type }} --parallel
@@ -120,48 +143,4 @@ jobs:
       if: always()
       with:
         files: build/test-results.xml
-        check_name: Test Results (${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.build_type }})
-
-  # CUDA compilation check (no GPU required, just verifies code compiles)
-  cuda-build:
-    name: CUDA Build Check
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install CUDA Toolkit
-      uses: Jimver/cuda-toolkit@v0.2.21
-      id: cuda-toolkit
-      with:
-        cuda: '12.8.0'
-        method: 'network'
-        sub-packages: '["nvcc", "cudart", "thrust"]'
-        non-cuda-sub-packages: '["libcublas", "libcublas-dev"]'
-
-    - name: Install OpenMP
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgomp1
-
-    - name: Cache CMake dependencies
-      uses: actions/cache@v4
-      with:
-        path: .cmake/fetchcontent
-        key: ${{ runner.os }}-cuda-cmake-${{ hashFiles('**/CMakeLists.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-cuda-cmake-
-
-    - name: Configure CMake with CUDA
-      run: |
-        cmake -S . -B build \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DTENSOR_BUILD_CUDA=ON \
-          -DSKIP_CUDA_TESTS=ON \
-          -DCMAKE_CUDA_ARCHITECTURES=89
-
-    - name: Build (including CUDA)
-      run: cmake --build build --config Release --parallel
-
-    - name: Run tests (CUDA tests will be skipped)
-      run: ctest --test-dir build --output-on-failure
+        check_name: Test Results (${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.backend }}-${{ matrix.build_type }})

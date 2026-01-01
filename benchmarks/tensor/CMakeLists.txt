@@ -1,4 +1,4 @@
-if(TENSOR_CUDA)
+if(BACKEND_CUDA)
 add_executable(bm_tensor cpu/bm_ops.cpp cuda/bm_ops.cpp)
 target_link_libraries(bm_tensor PRIVATE tensor_core tensor_cpu tensor_cuda benchmark::benchmark_main)
 else()

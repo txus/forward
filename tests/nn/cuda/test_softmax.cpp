@@ -9,6 +9,7 @@ using namespace nn;
 using namespace tensor;
 
 TEST(NNCUDASoftmaxTest, Softmax) {
+  SKIP_IF_NO_GPU();
   size_t batch_size = 2;
   size_t vocab_size = 4;
 
