@@ -15,7 +15,7 @@ precompute_rope_values(size_t head_dim, float theta_base, size_t context_length)
 
   // compute the inverse frequencies
   Tensor<int, D> range = arange<int, D>(0, head_dim, 2);
-  auto range_float = range.view().template to<float>();
+  auto range_float = to<int, float>(range.view());
 
   auto scaled = div(range_float.view(), float(head_dim));
 
@@ -47,7 +47,7 @@ precompute_rope_values(size_t head_dim, float theta_base, size_t context_length)
       // Medium frequency: smooth interpolation
       float smooth =
           (old_context_len / wavelen - low_freq_factor) / (high_freq_factor - low_freq_factor);
-      float scaled_inv_freq = ((1.0 - smooth) * (inv_f / factor)) + (smooth * inv_f);
+      float scaled_inv_freq = ((1.0 - smooth) * (inv_f / factor)) + (smooth * inv_f); // NOLINT
       inv_freq_.span()[i] = scaled_inv_freq;
     }
   }
@@ -86,21 +86,18 @@ Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
 
   assert(head_dim % 2 == 0);
 
-  // Copy inputs to a tensor (stay in bfloat16)
-  Tensor<T, D> inputs_t = inputs.copy();
-
   // Slice and convert cos/sin to bfloat16
   auto adj_cos_ = slice(cos.view(), 0, position_offset, position_offset + seq_len);
-  auto adj_cos_bf16 = adj_cos_.view().template to<T>();
+  auto adj_cos_bf16 = to<float, T>(adj_cos_.view());
   auto adj_cos = adj_cos_bf16.view().reshape({1, 1, seq_len, head_dim});
 
   auto adj_sin_ = slice(sin.view(), 0, position_offset, position_offset + seq_len);
-  auto adj_sin_bf16 = adj_sin_.view().template to<T>();
+  auto adj_sin_bf16 = to<float, T>(adj_sin_.view());
   auto adj_sin = adj_sin_bf16.view().reshape({1, 1, seq_len, head_dim});
 
   // Split input into halves
-  auto first_half = slice(inputs_t.view(), -1, 0, head_dim / 2);
-  auto second_half = slice(inputs_t.view(), -1, head_dim / 2, head_dim);
+  auto first_half = slice(inputs, -1, 0, head_dim / 2);
+  auto second_half = slice(inputs, -1, head_dim / 2, head_dim);
 
   // Negate second half
   auto second_half_neg = mul(second_half.view(), T(-1.0));
@@ -109,7 +106,7 @@ Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
   auto rotated = cat(second_half_neg.view(), first_half.view(), -1);
 
   // Apply rotation: inputs * cos + rotated * sin
-  auto input_cos = mul(inputs_t.view(), adj_cos.view());
+  auto input_cos = mul(inputs, adj_cos.view());
   auto rotated_sin = mul(rotated.view(), adj_sin.view());
 
   auto out = add(input_cos.view(), rotated_sin.view());

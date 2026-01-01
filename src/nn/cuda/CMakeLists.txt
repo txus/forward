@@ -1,8 +1,8 @@
-file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/tensor/*.hpp")
+file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/nn/*.hpp")
 
-add_library(tensor_cuda STATIC storage.cu loader.cu ops.cu kernels/fill.cu kernels/argmax.cu kernels/arange.cu kernels/sum.cu kernels/max.cu kernels/masked_fill.cu kernels/cat.cu kernels/map.cu kernels/zip.cu kernels/tril.cu kernels/slice.cu kernels/matmul.cu kernels/copy.cu)
+add_library(nn_cuda STATIC act.cu embedding.cu linear.cu rms_norm.cu softmax.cu kernels/act.cu kernels/embedding.cu kernels/rms_norm.cu)
 
-set_target_properties(tensor_cuda PROPERTIES
+set_target_properties(nn_cuda PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON
   CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
@@ -19,30 +19,26 @@ set_target_properties(tensor_cuda PROPERTIES
 # Note: CUDA_ARCHITECTURES doesn't support generator expressions
 # Use CMAKE_BUILD_TYPE to control this at configure time
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set_property(TARGET tensor_cuda PROPERTY CUDA_ARCHITECTURES 120)
+  set_property(TARGET nn_cuda PROPERTY CUDA_ARCHITECTURES 120)
 else()
   # RelWithDebInfo and Release: include PTX for future architectures
-  set_property(TARGET tensor_cuda PROPERTY CUDA_ARCHITECTURES 120-real 120-virtual)
+  set_property(TARGET nn_cuda PROPERTY CUDA_ARCHITECTURES 120-real 120-virtual)
 endif()
 
 # Link against tensor_core and CUDA libraries
-target_link_libraries(tensor_cuda
+target_link_libraries(nn_cuda
   PUBLIC
-    tensor_core
-    CUDA::cudart
-    CUDA::cublas
-  PRIVATE
-    safetensors_cpp
+    tensor_core tensor_cuda nn_core
 )
 
-target_include_directories(tensor_cuda
+target_include_directories(nn_cuda
   PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
 
 if (CMAKE_CUDA_COMPILER_ID STREQUAL "NVIDIA")
 # CUDA compile options
-target_compile_options(tensor_cuda PRIVATE
+target_compile_options(nn_cuda PRIVATE
   $<$<COMPILE_LANGUAGE:CUDA>:
     # Debug builds: Full debug info
     $<$<CONFIG:Debug>:
@@ -88,7 +84,7 @@ elseif (CMAKE_CUDA_COMPILER_ID STREQUAL "Clang") # just for clangd
   if(DEFINED LIBCXX_INCLUDE AND NOT LIBCXX_INCLUDE STREQUAL "")
     list(APPEND CLANG_CUDA_FLAGS -nostdinc++ -cxx-isystem${LIBCXX_INCLUDE} -D_ALLOW_UNSUPPORTED_LIBCPP)
   endif()
-  target_compile_options(tensor_cuda PRIVATE ${CLANG_CUDA_FLAGS})
+  target_compile_options(nn_cuda PRIVATE ${CLANG_CUDA_FLAGS})
 endif()
 
 source_group(

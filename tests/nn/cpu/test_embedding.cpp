@@ -7,7 +7,7 @@
 using namespace nn;
 using namespace tensor;
 
-TEST(NNEmbeddingTest, Forward) {
+TEST(NNCPUEmbeddingTest, Forward) {
   size_t vocab_size = 4;
   size_t hidden_dim = 2;
   size_t batch_size = 1;

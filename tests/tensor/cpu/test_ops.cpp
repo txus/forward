@@ -149,7 +149,6 @@ TEST(TensorCPUTest, ArgmaxBf16) {
   tensor_is_close<int>(maxes.span(), std::span(exp));
 }
 
-
 TEST(TensorCPUTest, MaskedFillBf16) {
   Tensor<bfloat16, CPU> tensor({3, 4});
   tensor.fill_(bfloat16(4.0));
@@ -170,4 +169,30 @@ TEST(TensorCPUTest, MaskedFillBf16) {
   fmt::println("result {}", result.view());
 
   tensor_is_close<bfloat16>(result.span(), std::span(exp));
+}
+
+TEST(TensorCPUTest, Copy) {
+  tensor::Tensor<int, tensor::CPU> tensor({2, 4});
+
+  auto view = tensor.view();
+
+  auto new_t = copy(view);
+  new_t.set_(0, 6);
+  tensor.set_(0, 7);
+
+  EXPECT_EQ(tensor.at(0), 7);
+  EXPECT_EQ(new_t.at(0), 6);
+}
+
+TEST(TensorCPUTest, CopySlice) {
+  tensor::Tensor<int, tensor::CPU> tensor({2, 4});
+
+  auto view = tensor.view().get(0);
+
+  auto new_t = copy(view);
+  new_t.set_(0, 6);
+  tensor.set_(0, 7);
+
+  EXPECT_EQ(tensor.at(0), 7);
+  EXPECT_EQ(new_t.at(0), 6);
 }

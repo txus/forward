@@ -53,32 +53,6 @@ TEST(TensorCPUTest, ConstructWithData) {
   tensor_is_close<int>(tensor.span(), std::span(expected));
 }
 
-TEST(TensorCPUTest, Copy) {
-  tensor::Tensor<int, tensor::CPU> tensor({2, 4});
-
-  auto view = tensor.view();
-
-  auto new_t = view.copy();
-  new_t.set_(0, 6);
-  tensor.set_(0, 7);
-
-  EXPECT_EQ(tensor.at(0), 7);
-  EXPECT_EQ(new_t.at(0), 6);
-}
-
-TEST(TensorCPUTest, CopySlice) {
-  tensor::Tensor<int, tensor::CPU> tensor({2, 4});
-
-  auto view = tensor.view().get(0);
-
-  auto new_t = view.copy();
-  new_t.set_(0, 6);
-  tensor.set_(0, 7);
-
-  EXPECT_EQ(tensor.at(0), 7);
-  EXPECT_EQ(new_t.at(0), 6);
-}
-
 TEST(TensorCPUTest, Transpose_Contiguous) {
   // Create a 2x3x4 tensor with sequential values
   tensor::Tensor<int, tensor::CPU> tensor({2, 3, 4});

@@ -101,6 +101,34 @@ void TensorStorage<const T, CUDA>::resize(size_t size) {
   }
 }
 
+template <typename T>
+T TensorStorage<T, CUDA>::operator[](size_t idx) {
+  T value;
+  cudaMemcpy(&value, data_ + idx, sizeof(T), cudaMemcpyDeviceToHost);
+  return value;
+}
+
+template <typename T>
+const T TensorStorage<T, CUDA>::operator[](size_t idx) const {
+  T value;
+  cudaMemcpy(&value, data_ + idx, sizeof(T), cudaMemcpyDeviceToHost);
+  return value;
+}
+
+template <typename T>
+T TensorStorage<const T, CUDA>::operator[](size_t idx) {
+  T value;
+  cudaMemcpy(&value, data_ + idx, sizeof(T), cudaMemcpyDeviceToHost);
+  return value;
+}
+
+template <typename T>
+const T TensorStorage<const T, CUDA>::operator[](size_t idx) const {
+  T value;
+  cudaMemcpy(&value, data_ + idx, sizeof(T), cudaMemcpyDeviceToHost);
+  return value;
+}
+
 // Explicit instantiations
 template class TensorStorage<float, CUDA>;
 template class TensorStorage<bfloat16, CUDA>;

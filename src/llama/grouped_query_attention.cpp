@@ -107,8 +107,8 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
   keys_v = keys.view();
 
   // repeat-expand to (batch, [num_kv_groups * group_size], seq_len, head_dim)
-  keys = keys_v.repeat_interleave(1, group_size);
-  values = values_v.repeat_interleave(1, group_size);
+  keys = repeat_interleave(keys_v, 1, group_size);
+  values = repeat_interleave(values_v, 1, group_size);
 
   auto transposed_keys_ = keys.view();
   transposed_keys_.transpose(2, 3); // (batch, [num_kv_groups*group_size], head_dim, kvs_len)

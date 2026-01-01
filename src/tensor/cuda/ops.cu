@@ -1,6 +1,4 @@
 #include <cuda_runtime.h>
-#include <cublas_v2.h>
-#include <fmt/core.h>
 
 #include <tensor/ops.hpp>
 #include <tensor/device_type.hpp>
@@ -15,6 +13,8 @@
 #include "kernels/zip.cuh"
 #include "kernels/tril.cuh"
 #include "kernels/slice.cuh"
+#include "kernels/matmul.cuh"
+#include "kernels/copy.cuh"
 #include "kernels/utils.cuh"
 
 namespace tensor {
@@ -40,6 +40,23 @@ void replace_from_(Tensor<T, D>& out, const TensorView<T, D>& input) {
 template void replace_from_(Tensor<bfloat16, CUDA>& out, const TensorView<bfloat16, CUDA>& input);
 template void replace_from_(Tensor<float, CUDA>& out, const TensorView<float, CUDA>& input);
 template void replace_from_(Tensor<int, CUDA>& out, const TensorView<int, CUDA>& input);
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> copy(const TensorView<T, D>& view) {
+  return kernels::copy(view);
+}
+
+template Tensor<bfloat16, CUDA> copy(const TensorView<bfloat16, CUDA>& view);
+template Tensor<float, CUDA> copy(const TensorView<float, CUDA>& view);
+template Tensor<int, CUDA> copy(const TensorView<int, CUDA>& view);
+
+template <typename TIn, typename TOut, typename D>
+Tensor<TOut, D> to(const TensorView<TIn, D>& view) {
+  return kernels::to<TIn, TOut>(view);
+}
+
+template Tensor<float, CUDA> to(const TensorView<bfloat16, CUDA>& view);
+template Tensor<bfloat16, CUDA> to(const TensorView<float, CUDA>& view);
 
 template <>
 Tensor<bfloat16, CUDA> add(const TensorView<bfloat16, CUDA>& tensor_a, const TensorView<bfloat16, CUDA>& tensor_b) {
@@ -144,6 +161,31 @@ Tensor<bfloat16, CUDA> slice(const TensorView<bfloat16, CUDA>& view, int dim, si
 template <>
 Tensor<float, CUDA> slice(const TensorView<float, CUDA>& view, int dim, size_t start, size_t end) {
   return kernels::slice(view, dim, start, end);
+}
+
+template <>
+Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
+                               const TensorView<bfloat16, CUDA>& tensor_b) {
+  return kernels::matmul(tensor_a, tensor_b);
+}
+
+template <>
+Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
+                               const TensorView<const bfloat16, CUDA>& tensor_b) {
+  // Handle const version by casting - the data isn't modified
+  TensorView<bfloat16, CUDA> b_nonconst{
+      const_cast<bfloat16*>(tensor_b.data), // NOLINT
+      tensor_b.data_size,
+      tensor_b.shape,
+      tensor_b.stride
+  };
+  return kernels::matmul(tensor_a, b_nonconst);
+}
+
+template <>
+Tensor<float, CUDA> matmul(const TensorView<float, CUDA>& tensor_a,
+                            const TensorView<float, CUDA>& tensor_b) {
+  return kernels::matmul(tensor_a, tensor_b);
 }
 
 } // namespace tensor

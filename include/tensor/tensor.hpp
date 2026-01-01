@@ -134,6 +134,28 @@ template <DType T, Device D> struct TensorView {
     return std::span<const T>(data, data_size);
   }
 
+#ifdef TENSOR_HAS_CUDA
+  T operator[](int idx) const
+    requires std::same_as<D, device::CUDA>
+  {
+    if (idx > data_size) {
+      throw std::out_of_range("cannot index past the tensor size");
+    }
+    T value;
+    cudaMemcpy(&value, data + idx, sizeof(T), cudaMemcpyDeviceToHost);
+    return value;
+  }
+#endif
+
+  T operator[](int idx) const
+    requires std::same_as<D, device::CPU>
+  {
+    if (idx > data_size) {
+      throw std::out_of_range("cannot index past the tensor size");
+    }
+    return *(data + idx);
+  }
+
   [[nodiscard]] size_t total_elements() const {
     size_t out = 1;
     for (auto dim : shape) {
@@ -241,46 +263,6 @@ template <DType T, Device D> struct TensorView {
     transpose(0, 1);
   }
 
-  Tensor<std::remove_const_t<T>, D> repeat_interleave(size_t dim, size_t repeats) const {
-    assert(dim < shape.size());
-
-    Shape temp_shape;
-    Shape temp_stride;
-
-    for (size_t dim_ = 0; dim_ <= dim; ++dim_) {
-      temp_shape.push_back(shape[dim_]);
-      temp_stride.push_back(stride[dim_]);
-    }
-
-    temp_shape.push_back(repeats);
-    temp_stride.push_back(0);
-
-    for (size_t dim_ = dim + 1; dim_ < shape.size(); ++dim_) {
-      temp_shape.push_back(shape[dim_]);
-      temp_stride.push_back(stride[dim_]);
-    }
-
-    size_t temp_size = 1;
-    for (auto dim_ : temp_shape) {
-      temp_size *= dim_;
-    }
-
-    TensorView temp_view{data, temp_size, temp_shape, temp_stride};
-
-    Tensor<T, D> materialized = temp_view.copy();
-
-    Shape final_shape;
-    for (size_t dim_ = 0; dim_ < shape.size(); ++dim_) {
-      if (dim_ == dim) {
-        final_shape.push_back(shape[dim_] * repeats); // Expanded dimension
-      } else {
-        final_shape.push_back(shape[dim_]);
-      }
-    }
-
-    return materialized.view().reshape(final_shape);
-  }
-
   [[nodiscard]] bool is_contiguous() const {
     if (shape.empty()) {
       return true;
@@ -296,7 +278,10 @@ template <DType T, Device D> struct TensorView {
     return true;
   }
 
-  template <DType OutT, typename Func> Tensor<OutT, D> map(Func func) const {
+  template <DType OutT, typename Func>
+  Tensor<OutT, D> map(Func func) const
+    requires std::same_as<D, device::CPU>
+  {
     Tensor<OutT, D> result{shape};
 
     auto result_span = result.span();
@@ -317,7 +302,10 @@ template <DType T, Device D> struct TensorView {
     return result;
   }
 
-  template <typename Func> void each(Func func) const {
+  template <typename Func>
+  void each(Func func) const
+    requires std::same_as<D, device::CPU>
+  {
     size_t total_elems = total_elements();
 
     for (size_t linear_idx = 0; linear_idx < total_elems; ++linear_idx) {
@@ -332,10 +320,6 @@ template <DType T, Device D> struct TensorView {
     }
   }
 
-  template <DType OutT> Tensor<OutT, D> to() const {
-    return map<OutT>([](T val) { return static_cast<OutT>(val); });
-  }
-
   void check_for_nans() const {
     for (size_t i = 0; i < span().size(); ++i) {
       if (std::isnan(span()[i])) {
@@ -347,10 +331,6 @@ template <DType T, Device D> struct TensorView {
         break;
       }
     }
-  }
-
-  Tensor<std::remove_const_t<T>, D> copy() const {
-    return map<std::remove_const_t<T>>([](T val) { return val; });
   }
 
   Tensor<std::remove_const_t<T>, D> contiguous() const {
@@ -404,18 +384,6 @@ template <DType T, Device D> struct TensorView {
     replace_from_(out, *this);
 
     return out;
-  }
-
-  Tensor<std::remove_const_t<T>, D> cos() const {
-    return map<std::remove_const_t<T>>([](T val) { return std::cos(val); });
-  }
-
-  Tensor<std::remove_const_t<T>, D> sin() const {
-    return map<std::remove_const_t<T>>([](T val) { return std::sin(val); });
-  }
-
-  Tensor<std::remove_const_t<T>, D> exp() const {
-    return map<std::remove_const_t<T>>([](T val) { return std::exp(val); });
   }
 
   T item() const {
@@ -491,11 +459,6 @@ public:
     return TensorView<const T, D>{data(), size(), shape(), get_all_strides(shape())};
   }
 
-  // Copy to a new mutable tensor
-  Tensor<std::remove_const_t<T>, D> copy() const {
-    return view().copy();
-  }
-
   void fill_(T value)
     requires(!std::is_const_v<T>)
   {
@@ -547,16 +510,16 @@ public:
     span()[idx] = value;
   }
 
-  T item() const {
-    assert(shape().size() == 0);
-    return storage_.data()[0];
-  }
-
   T at(int idx) const {
     if (idx > size()) {
       throw std::out_of_range("cannot index past the tensor size");
     }
     return storage_[idx];
+  }
+
+  T item() const {
+    assert(shape().size() == 0);
+    return at(0);
   }
 };
 
@@ -619,7 +582,7 @@ private:
     const auto& strides = tensor_view.stride;
     if (dim == shape.size()) {
       // Base case: actually print one scalar
-      return fmt::format_to(out, "{}", tensor_view.span()[offset]);
+      return fmt::format_to(out, "{}", tensor_view[offset]);
     }
 
     auto dim_size = shape[dim];

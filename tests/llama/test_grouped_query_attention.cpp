@@ -11,7 +11,8 @@ using namespace tensor;
 
 TEST(LlamaGQATest, Parity) {
   Loader<bfloat16, CPU> act_loader(TEST_ACTIVATIONS_PATH);
-  auto input_activations = act_loader.load("layers.0.input_layernorm").copy();
+  auto input_activations_ = act_loader.load("layers.0.input_layernorm");
+  auto input_activations = copy(input_activations_.view());
   auto output_activations = act_loader.load("layers.0.self_attn.o_proj");
 
   Loader<bfloat16, CPU> weights_loader(TEST_WEIGHTS_PATH);
@@ -35,8 +36,9 @@ TEST(LlamaGQATest, Parity) {
 
 TEST(LlamaGQATest, ParityWithKVCache) {
   Loader<bfloat16, CPU> act_loader(TEST_ACTIVATIONS_PATH);
-  auto input_activations = act_loader.load("layers.0.input_layernorm").copy();
-  auto output_activations = act_loader.load("layers.0.self_attn.o_proj").copy();
+  auto input_activations_ = act_loader.load("layers.0.input_layernorm");
+  auto input_activations = copy(input_activations_.view());
+  auto output_activations = act_loader.load("layers.0.self_attn.o_proj");
 
   Loader<bfloat16, CPU> weights_loader(TEST_WEIGHTS_PATH);
 

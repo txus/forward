@@ -132,6 +132,9 @@ public:
     return data_;
   }
 
+  T operator[](size_t idx);
+  const T operator[](size_t idx) const;
+
   void resize(size_t size);
   void fill(T value);
 };
@@ -168,6 +171,9 @@ public:
   T* mutable_data() {
     return data_;
   }
+
+  T operator[](size_t idx);
+  const T operator[](size_t idx) const;
 
   void resize(size_t size);
 };

@@ -17,18 +17,19 @@ configure_file(
 
 # compiled library code
 if(APPLE)
-  option(TENSOR_BUILD_CUDA "Build tensor_cuda library" OFF)
+  option(BUILD_CUDA "Build CUDA tests" OFF)
 else()
-  option(TENSOR_BUILD_CUDA "Build tensor_cuda library" ON)
+  option(BUILD_CUDA "Build CUDA tests" ON)
 endif()
 
-if(TENSOR_BUILD_CUDA)
+if(BUILD_CUDA)
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
   add_subdirectory(tensor/cuda)
+  add_subdirectory(nn/cuda)
 endif()
 
 add_subdirectory(tensor/cpu)
-add_subdirectory(nn)
+add_subdirectory(nn/cpu)
 add_subdirectory(llama)
 add_subdirectory(forward)

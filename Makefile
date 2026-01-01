@@ -46,10 +46,15 @@ tensor_cuda:
 	@cmake --build build --target test_tensor_cuda
 	@ctest --test-dir build -R "^TensorCUDA" --output-on-failure
 
-.PHONY: nn
-nn:
-	@cmake --build build --target test_nn
-	@ctest --test-dir build -R "^NN" --output-on-failure
+.PHONY: nn_cpu
+nn_cpu:
+	@cmake --build build --target test_nn_cpu
+	@ctest --test-dir build -R "^NNCPU" --output-on-failure
+
+.PHONY: nn_cuda
+nn_cuda:
+	@cmake --build build --target test_nn_cuda
+	@ctest --test-dir build -R "^NNCUDA" --output-on-failure
 
 .PHONY: llama
 llama:

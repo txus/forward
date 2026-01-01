@@ -11,7 +11,8 @@ using namespace tensor;
 
 TEST(LlamaMLPTest, Parity) {
   Loader<bfloat16, CPU> act_loader(TEST_ACTIVATIONS_PATH);
-  auto input_activations = act_loader.load("layers.0.post_attention_layernorm").copy();
+  auto input_activations_ = act_loader.load("layers.0.post_attention_layernorm");
+  auto input_activations = copy(input_activations_.view());
   auto output_activations = act_loader.load("layers.0.mlp.down_proj");
 
   fmt::println("TEST INPUT (after layernorm) {}", input_activations.view());

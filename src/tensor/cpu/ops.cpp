@@ -560,15 +560,67 @@ void replace_from_(Tensor<T, D>& destination, const TensorView<T, D>& source) {
   });
 }
 
+template <typename TIn, typename TOut, typename D>
+Tensor<TOut, D> to(const TensorView<TIn, D>& tensor) {
+  return tensor.template map<TOut>([](TIn val) { return static_cast<TOut>(val); });
+}
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> copy(const TensorView<T, D>& tensor) {
+  return to<T, T>(tensor);
+}
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> repeat_interleave(const TensorView<T, D>& view, int dim,
+                                                    size_t repeats) {
+  assert(dim < view.shape.size());
+
+  Shape temp_shape;
+  Shape temp_stride;
+
+  for (size_t dim_ = 0; dim_ <= dim; ++dim_) {
+    temp_shape.push_back(view.shape[dim_]);
+    temp_stride.push_back(view.stride[dim_]);
+  }
+
+  temp_shape.push_back(repeats);
+  temp_stride.push_back(0);
+
+  for (size_t dim_ = dim + 1; dim_ < view.shape.size(); ++dim_) {
+    temp_shape.push_back(view.shape[dim_]);
+    temp_stride.push_back(view.stride[dim_]);
+  }
+
+  size_t temp_size = 1;
+  for (auto dim_ : temp_shape) {
+    temp_size *= dim_;
+  }
+
+  TensorView<T, D> temp_view{view.data, temp_size, temp_shape, temp_stride};
+
+  Tensor<T, D> materialized = copy(temp_view);
+
+  Shape final_shape;
+  for (size_t dim_ = 0; dim_ < view.shape.size(); ++dim_) {
+    if (dim_ == dim) {
+      final_shape.push_back(view.shape[dim_] * repeats); // Expanded dimension
+    } else {
+      final_shape.push_back(view.shape[dim_]);
+    }
+  }
+
+  return materialized.view().reshape(final_shape);
+}
+
 // argmax
 template Tensor<int, CPU> argmax(const TensorView<bfloat16, CPU>& input, int dim, bool keepdim);
 // template Tensor<int, CPU> argmax(const TensorView<float, CPU>& input, int dim, bool keepdim);
 // template Tensor<int, CPU> argmax(const TensorView<int, CPU>& input, int dim, bool keepdim);
 
 // replace_from_
-template void replace_from_(Tensor<bfloat16, CPU>& out, const TensorView<bfloat16, CPU>& input);
-template void replace_from_(Tensor<int, CPU>& out, const TensorView<int, CPU>& input);
-template void replace_from_(Tensor<float, CPU>& out, const TensorView<float, CPU>& input);
+template void replace_from_(Tensor<bfloat16, CPU>& destination, const TensorView<bfloat16, CPU>& source);
+template void replace_from_(Tensor<int, CPU>& destination, const TensorView<int, CPU>& source);
+template void replace_from_(Tensor<float, CPU>& destination, const TensorView<float, CPU>& source);
 
 // add
 template Tensor<bfloat16, CPU> add(const TensorView<bfloat16, CPU>&,
@@ -622,5 +674,12 @@ template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,
 template Tensor<bfloat16, CPU> matmul(const TensorView<bfloat16, CPU>&,
                                       const TensorView<const bfloat16, CPU>&);
 template Tensor<float, CPU> matmul(const TensorView<float, CPU>&, const TensorView<float, CPU>&);
+
+template Tensor<bfloat16, CPU> repeat_interleave(const TensorView<bfloat16, CPU>& view, int dim,
+                                                 size_t repeats);
+
+// to (type conversion)
+template Tensor<float, CPU> to(const TensorView<bfloat16, CPU>&);
+template Tensor<bfloat16, CPU> to(const TensorView<float, CPU>&);
 
 } // namespace tensor

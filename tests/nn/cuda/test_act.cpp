@@ -8,18 +8,17 @@
 using namespace nn;
 using namespace tensor;
 
-TEST(NNCPUActTest, SiLU) {
+TEST(NNCUDAActTest, SiLU) {
   size_t length = 2;
 
-  Tensor<bfloat16, CPU> inputs_ =
-      arange<bfloat16, CPU>(bfloat16(0.0), bfloat16(length), bfloat16(1.0)); // NOLINT
+  Tensor<bfloat16, CUDA> inputs_ =
+      arange<bfloat16, CUDA>(bfloat16(0.0), bfloat16(length), bfloat16(1.0)); // NOLINT
   auto inputs = inputs_.view();
 
   SiLU silu;
 
-  auto output = silu(inputs);
-
-  fmt::println("Inputs {}", inputs);
+  auto output_ = silu(inputs);
+  auto output = output_.cpu();
 
   std::vector<bfloat16> expected_vec{0.0000, 0.7305};
 

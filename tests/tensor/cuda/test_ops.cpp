@@ -74,6 +74,27 @@ TEST(TensorCUDATest, AddBf16) {
   tensor_is_close<bfloat16>(cpu.span(), exp.span());
 }
 
+TEST(TensorCUDATest, AddBf16Broadcasting) {
+  SKIP_IF_NO_GPU();
+  Tensor<bfloat16, CUDA> tensor_a({16384, 2048});
+  Tensor<bfloat16, CUDA> tensor_b({16384, 1});
+
+  Tensor<bfloat16, CPU> exp({16384, 2048});
+
+  tensor_a.fill_(bfloat16(4.0));
+  tensor_b.fill_(bfloat16(3.0));
+  exp.fill_(bfloat16(7.0));
+
+  auto a_v = tensor_a.view();
+  auto b_v = tensor_b.view();
+
+  Tensor<bfloat16, CUDA> result = add(a_v, b_v);
+
+  auto cpu = result.cpu();
+
+  tensor_is_close<bfloat16>(cpu.span(), exp.span());
+}
+
 TEST(TensorCUDATest, SubFp32) {
   SKIP_IF_NO_GPU();
   Tensor<float, CUDA> tensor_a({16384, 2048});
@@ -380,4 +401,149 @@ TEST(TensorCUDATest, SliceBf16MiddleDim) {
   // Batch 1: rows 1-2 = [16,17,18, 19,20,21]
   std::vector<bfloat16> exp = {4, 5, 6, 7, 8, 9, 16, 17, 18, 19, 20, 21};
   tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}
+
+TEST(TensorCUDATest, MatmulBf16) {
+  SKIP_IF_NO_GPU();
+  // A: 2x3 matrix
+  // [[1, 2, 3],
+  //  [4, 5, 6]]
+  Tensor<bfloat16, CPU> a({2, 3});
+  a.set_(0, 1);
+  a.set_(1, 2);
+  a.set_(2, 3);
+  a.set_(3, 4);
+  a.set_(4, 5);
+  a.set_(5, 6);
+
+  // B: 3x2 matrix
+  // [[7, 8],
+  //  [9, 10],
+  //  [11, 12]]
+  Tensor<bfloat16, CPU> b({3, 2});
+  b.set_(0, 7);
+  b.set_(1, 8);
+  b.set_(2, 9);
+  b.set_(3, 10);
+  b.set_(4, 11);
+  b.set_(5, 12);
+
+  auto a_gpu = a.cuda();
+  auto b_gpu = b.cuda();
+
+  // C = A @ B should be 2x2
+  // C[0,0] = 1*7 + 2*9 + 3*11 = 7 + 18 + 33 = 58
+  // C[0,1] = 1*8 + 2*10 + 3*12 = 8 + 20 + 36 = 64
+  // C[1,0] = 4*7 + 5*9 + 6*11 = 28 + 45 + 66 = 139
+  // C[1,1] = 4*8 + 5*10 + 6*12 = 32 + 50 + 72 = 154
+  Tensor<bfloat16, CUDA> result = matmul(a_gpu.view(), b_gpu.view());
+
+  auto result_cpu = result.cpu();
+
+  Shape expected_shape = {2, 2};
+  EXPECT_EQ(result_cpu.shape(), expected_shape);
+
+  std::vector<bfloat16> exp = {58, 64, 139, 154};
+  tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}
+
+TEST(TensorCUDATest, MatmulBf16Batched) {
+  SKIP_IF_NO_GPU();
+  // Batched matmul: 2 batches of 2x3 @ 3x2
+  Tensor<bfloat16, CPU> a({2, 2, 3});
+  // Batch 0: same as above test
+  a.set_(0, 1);
+  a.set_(1, 2);
+  a.set_(2, 3);
+  a.set_(3, 4);
+  a.set_(4, 5);
+  a.set_(5, 6);
+  // Batch 1: all ones
+  for (int i = 6; i < 12; ++i) {
+    a.set_(i, 1);
+  }
+
+  Tensor<bfloat16, CPU> b({2, 3, 2});
+  // Batch 0: same as above test
+  b.set_(0, 7);
+  b.set_(1, 8);
+  b.set_(2, 9);
+  b.set_(3, 10);
+  b.set_(4, 11);
+  b.set_(5, 12);
+  // Batch 1: all twos
+  for (int i = 6; i < 12; ++i) {
+    b.set_(i, 2);
+  }
+
+  auto a_gpu = a.cuda();
+  auto b_gpu = b.cuda();
+
+  Tensor<bfloat16, CUDA> result = matmul(a_gpu.view(), b_gpu.view());
+
+  auto result_cpu = result.cpu();
+
+  Shape expected_shape = {2, 2, 2};
+  EXPECT_EQ(result_cpu.shape(), expected_shape);
+
+  // Batch 0: same as single matmul test
+  // Batch 1: all ones @ all twos = each element is 3*2 = 6
+  std::vector<bfloat16> exp = {58, 64, 139, 154, 6, 6, 6, 6};
+  tensor_is_close<bfloat16>(result_cpu.span(), std::span(exp));
+}
+
+TEST(TensorCUDATest, MatmulFp32) {
+  SKIP_IF_NO_GPU();
+  Tensor<float, CPU> a({2, 3});
+  a.set_(0, 1);
+  a.set_(1, 2);
+  a.set_(2, 3);
+  a.set_(3, 4);
+  a.set_(4, 5);
+  a.set_(5, 6);
+
+  Tensor<float, CPU> b({3, 2});
+  b.set_(0, 7);
+  b.set_(1, 8);
+  b.set_(2, 9);
+  b.set_(3, 10);
+  b.set_(4, 11);
+  b.set_(5, 12);
+
+  auto a_gpu = a.cuda();
+  auto b_gpu = b.cuda();
+
+  Tensor<float, CUDA> result = matmul(a_gpu.view(), b_gpu.view());
+
+  auto result_cpu = result.cpu();
+
+  Shape expected_shape = {2, 2};
+  EXPECT_EQ(result_cpu.shape(), expected_shape);
+
+  std::vector<float> exp = {58, 64, 139, 154};
+  tensor_is_close<float>(result_cpu.span(), std::span(exp));
+}
+
+TEST(TensorCUDATest, Copy) {
+  tensor::Tensor<int, tensor::CUDA> tensor({2, 4});
+  tensor.fill_(6);
+
+  auto view = tensor.view();
+
+  auto new_t = copy(view);
+
+  EXPECT_EQ(tensor.at(0), 6);
+  EXPECT_EQ(new_t.at(0), 6);
+}
+
+TEST(TensorCUDATest, CopySlice) {
+  tensor::Tensor<int, tensor::CUDA> tensor({2, 4});
+  tensor.fill_(6);
+
+  auto view = tensor.view().get(0);
+
+  auto new_t = copy(view);
+
+  EXPECT_EQ(tensor.at(0), 6);
+  EXPECT_EQ(new_t.at(0), 6);
 }

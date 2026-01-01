@@ -9,6 +9,8 @@ Tensor<std::remove_const_t<T>, D> Softmax::operator()(const TensorView<T, D>& in
                                                       int dim) const {
   Tensor<float, D> f32 = to<T, float>(input);
 
+  fmt::println("input: {}", f32.view());
+
   auto maxes = tensor::max(f32.view(), dim, true);
 
   fmt::println("MAXES: {}", maxes.view());
@@ -32,5 +34,5 @@ Tensor<std::remove_const_t<T>, D> Softmax::operator()(const TensorView<T, D>& in
   return to<float, T>(out.view());
 }
 
-template Tensor<bfloat16, CPU> Softmax::operator()(const TensorView<bfloat16, CPU>& input,
+template Tensor<bfloat16, CUDA> Softmax::operator()(const TensorView<bfloat16, CUDA>& input,
                                                    int dim) const;

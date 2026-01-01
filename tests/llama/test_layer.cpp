@@ -4,13 +4,15 @@
 #include <common/test_utils.hpp>
 #include <llama/layer.hpp>
 #include <llama/model.hpp>
+#include <tensor/ops.hpp>
 
 using namespace llama;
 using namespace tensor;
 
 TEST(LlamaLayerTest, Parity) {
   Loader<bfloat16, CPU> act_loader(TEST_ACTIVATIONS_PATH);
-  auto input_activations = act_loader.load("embed_tokens").copy();
+  auto input_activations_ = act_loader.load("embed_tokens");
+  auto input_activations = copy(input_activations_.view());
   auto output_activations = act_loader.load("layers.0");
 
   Loader<bfloat16, CPU> weights_loader(TEST_WEIGHTS_PATH);

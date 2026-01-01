@@ -19,6 +19,19 @@ target_sources(nn_core
 
 add_subdirectory(cpu)
 
+if(APPLE)
+  option(NN_BUILD_CUDA "Build nn_cuda library" OFF)
+else()
+  option(NN_BUILD_CUDA "Build nn_cuda library" ON)
+endif()
+
+if(NN_BUILD_CUDA)
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  add_subdirectory(cuda)
+  target_compile_definitions(nn_core INTERFACE NN_HAS_CUDA)
+endif()
+
 source_group(
   TREE "${PROJECT_SOURCE_DIR}/include"
   PREFIX "Header Files"

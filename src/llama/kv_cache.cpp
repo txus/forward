@@ -30,8 +30,8 @@ KVCache<T, D>::forward(tensor::TensorView<T, D> new_keys, tensor::TensorView<T, 
     all_keys = cat(already_cached_keys.view(), new_keys, 1);
     all_values = cat(already_cached_values.view(), new_values, 1);
   } else { // prefill
-    all_keys = new_keys.copy();
-    all_values = new_values.copy();
+    all_keys = copy(new_keys);
+    all_values = copy(new_values);
   }
 
   replace_from_(k_cache, all_keys.view());
