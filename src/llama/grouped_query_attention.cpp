@@ -2,6 +2,7 @@
 #include <llama/grouped_query_attention.hpp>
 #include <tensor/ops.hpp>
 #include <tensor/tensor.hpp>
+#include <util/nvtx.hpp>
 
 using namespace llama;
 using namespace tensor;
@@ -39,6 +40,7 @@ template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D>
 GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
                                      const TensorView<int, D>& attn_mask, const RoPE<T, D>& rope) {
+  NVTX_RANGE("attention");
 
   size_t batch_size = inputs.shape[0];
   size_t input_seq_len = inputs.shape[1];
@@ -63,9 +65,21 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
     // used in RoPE
     position_offset += cached_tokens;
 
-    auto last_queries = q_proj.forward(inputs);
-    auto last_keys = k_proj.forward(inputs);
-    auto last_values = v_proj.forward(inputs);
+    tensor::Tensor<T, D> last_queries;
+    tensor::Tensor<T, D> last_keys;
+    tensor::Tensor<T, D> last_values;
+    {
+      NVTX_RANGE("q_proj");
+      last_queries = q_proj.forward(inputs);
+    }
+    {
+      NVTX_RANGE("k_proj");
+      last_keys = k_proj.forward(inputs);
+    }
+    {
+      NVTX_RANGE("v_proj");
+      last_values = v_proj.forward(inputs);
+    }
 
     auto cached_output = kv_cache.forward(last_keys.view(), last_values.view());
 
@@ -77,9 +91,18 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
     mask_to_use = slice(mask_to_use.view(), 1, 0, cached_tokens + input_seq_len);
     attention_mask = mask_to_use.view();
   } else {
-    queries = q_proj.forward(inputs);
-    keys = k_proj.forward(inputs);
-    values = v_proj.forward(inputs);
+    {
+      NVTX_RANGE("q_proj");
+      queries = q_proj.forward(inputs);
+    }
+    {
+      NVTX_RANGE("k_proj");
+      keys = k_proj.forward(inputs);
+    }
+    {
+      NVTX_RANGE("v_proj");
+      values = v_proj.forward(inputs);
+    }
     mask_to_use = slice(attn_mask, 0, 0, input_seq_len);
     mask_to_use = slice(mask_to_use.view(), 1, 0, input_seq_len);
     attention_mask = mask_to_use.view();
@@ -116,9 +139,13 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
   // Materialize the transposed keys - cuBLAS requires contiguous tensors
   auto transposed_keys_ = copy(transposed_keys_view);
 
-  // scores are (batch, num_heads, queries_len, kvs_len)
-  // -- for each query (row), how much does it attend to the key (col)?
-  auto attn_scores = matmul(queries_v, transposed_keys_.view());
+  tensor::Tensor<T, D> attn_scores;
+  {
+    NVTX_RANGE("attn_scores");
+    // scores are (batch, num_heads, queries_len, kvs_len)
+    // -- for each query (row), how much does it attend to the key (col)?
+    attn_scores = matmul(queries_v, transposed_keys_.view());
+  }
 
   attn_scores = mul(attn_scores.view(), scale);
 
@@ -128,7 +155,11 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
 
   auto attn_weights = softmax(attn_scores.view(), -1);
 
-  auto weighted_values_ = matmul(attn_weights.view(), values.view());
+  tensor::Tensor<T, D> weighted_values_;
+  {
+    NVTX_RANGE("weighted_values");
+    weighted_values_ = matmul(attn_weights.view(), values.view());
+  }
 
   auto weighted_values_v = weighted_values_.view();
 
@@ -136,7 +167,11 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
 
   auto materialized_weighted_values = weighted_values_v.reshape({batch_size, queries_len, d_out});
 
-  auto out = out_proj.forward(materialized_weighted_values.view());
+  tensor::Tensor<T, D> out;
+  {
+    NVTX_RANGE("o_proj");
+    out = out_proj.forward(materialized_weighted_values.view());
+  }
 
   return out;
 }

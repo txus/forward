@@ -1,11 +1,15 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/llama/*.hpp")
 
+option(FUSED_ROPE "Use fused RoPE kernel (CUDA only)" ON)
+
 set(LLAMA_SOURCES config.cpp model.cpp layer.cpp mlp.cpp rope.cpp grouped_query_attention.cpp kv_cache.cpp)
 
 if(BACKEND_CUDA)
   include(CUDAConfig)
   enable_language(CUDA)
-  list(APPEND LLAMA_SOURCES rope.cu)
+  list(APPEND LLAMA_SOURCES kernels/rope.cu)
+elseif(FUSED_ROPE)
+  message(WARNING "FUSED_ROPE requested but BACKEND_CUDA=OFF; ignoring")
 endif()
 
 add_library(llama STATIC ${LLAMA_SOURCES})
@@ -23,6 +27,15 @@ target_include_directories(llama
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include
 )
+
+if(BACKEND_CUDA)
+  if(FUSED_ROPE)
+    target_compile_definitions(llama PRIVATE FUSED_ROPE)
+    message(STATUS "Fused RoPE: enabled")
+  else()
+    message(STATUS "Fused RoPE: disabled")
+  endif()
+endif()
 
 source_group(
   TREE "${PROJECT_SOURCE_DIR}/include"

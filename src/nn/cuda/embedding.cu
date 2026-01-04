@@ -1,6 +1,7 @@
 #include <nn/embedding.hpp>
 #include <tensor/loader.hpp>
 #include <tensor/ops.hpp>
+#include <util/nvtx.hpp>
 #include <cuda_runtime.h>
 #include "kernels/embedding.cuh"
 #include "kernels/utils.cuh"
@@ -29,6 +30,7 @@ void Embedding<T, D>::load_weights(const tensor::Tensor<T, D>& weights) {
 
 template <typename T, typename D>
 Tensor<T, D> Embedding<T, D>::forward(const TensorView<int, D>& token_ids) const {
+  NVTX_RANGE("embedding");
   return kernels::embedding(token_ids, weights_.view());
 }
 

@@ -1,5 +1,6 @@
 #include <nn/softmax.hpp>
 #include <tensor/ops.hpp>
+#include <util/nvtx.hpp>
 
 using namespace nn;
 using namespace tensor;
@@ -7,6 +8,7 @@ using namespace tensor;
 template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> Softmax::operator()(const TensorView<T, D>& input,
                                                       int dim) const {
+  NVTX_RANGE("softmax");
   Tensor<float, D> f32 = to<T, float>(input);
   auto maxes = tensor::max(f32.view(), dim, true);
   auto scaled = sub(f32.view(), maxes.view());

@@ -4,7 +4,7 @@ project(
   Forward
   VERSION 0.1
   DESCRIPTION "A simple transformer inference engine"
-  LANGUAGES CXX
+  LANGUAGES CXX CUDA
 )
 
 # Add cmake module path for our custom modules

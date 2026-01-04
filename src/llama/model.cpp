@@ -8,6 +8,7 @@
 #include <tensor/loader.hpp>
 #include <tensor/ops.hpp>
 #include <tensor/tensor.hpp>
+#include <util/nvtx.hpp>
 using json = nlohmann::json;
 
 using namespace llama;
@@ -36,6 +37,7 @@ Model<T, D>::Model(std::string_view model_path, size_t max_tokens, size_t kv_cac
 
 template <typename T, typename D>
 void Model<T, D>::load_weights(const tensor::Loader<T, D>& loader) {
+  NVTX_RANGE("load_weights");
   embed.load_weights(loader);
 
   for (int layer_idx = 0; std::cmp_less(layer_idx, config.num_hidden_layers); ++layer_idx) {
@@ -55,6 +57,7 @@ void Model<T, D>::load_weights(const tensor::Loader<T, D>& loader) {
 
 template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> Model<T, D>::forward(const TensorView<int, D>& token_ids) {
+  NVTX_RANGE("model_forward");
   assert(loaded_);
 
   // fmt::println("Embedding tokens {}", token_ids);

@@ -50,6 +50,37 @@ private:
     if (status != CUBLAS_STATUS_SUCCESS) {
       throw std::runtime_error(fmt::format("cuBLAS initialization failed: {}", static_cast<int>(status)));
     }
+    warmup();
+  }
+
+  // Warmup bf16 GEMM kernels to avoid JIT compilation on first real call
+  void warmup() {
+    constexpr int N = 64;
+    void* a = nullptr;
+    void* b = nullptr;
+    void* c = nullptr;
+    cudaMalloc(&a, N * N * sizeof(__nv_bfloat16));
+    cudaMalloc(&b, N * N * sizeof(__nv_bfloat16));
+    cudaMalloc(&c, N * N * sizeof(__nv_bfloat16));
+
+    float alpha = 1.0f, beta = 0.0f;
+
+    // Warmup single GEMM
+    cublasGemmEx(handle_, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha,
+                 b, CUDA_R_16BF, N, a, CUDA_R_16BF, N, &beta,
+                 c, CUDA_R_16BF, N, CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT);
+
+    // Warmup batched GEMM
+    cublasGemmStridedBatchedEx(handle_, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha,
+                               b, CUDA_R_16BF, N, N * N,
+                               a, CUDA_R_16BF, N, N * N, &beta,
+                               c, CUDA_R_16BF, N, N * N, 2,
+                               CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT);
+
+    cudaDeviceSynchronize();
+    cudaFree(a);
+    cudaFree(b);
+    cudaFree(c);
   }
 
   ~CublasHandle() {

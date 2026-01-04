@@ -11,6 +11,7 @@ target_link_libraries(tensor_cuda
     tensor_core
     CUDA::cudart
     CUDA::cublas
+    CUDA::nvToolsExt
   PRIVATE
     safetensors_cpp
 )

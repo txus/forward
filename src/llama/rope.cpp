@@ -4,6 +4,8 @@
 #include <llama/rope.hpp>
 #include <tensor/ops.hpp>
 #include <tuple>
+#include <type_traits>
+#include <util/nvtx.hpp>
 
 using namespace tensor;
 
@@ -39,6 +41,7 @@ void apply_rope_scaling_<CPU>(Tensor<float, CPU>& inv_freq, float factor, float 
 template <typename D>
 inline std::tuple<Tensor<float, D>, Tensor<float, D>>
 precompute_rope_values(size_t head_dim, float theta_base, size_t context_length) {
+  NVTX_RANGE("precompute_rope");
   assert(head_dim % 2 == 0);
 
   // compute the inverse frequencies
@@ -80,11 +83,10 @@ RoPE<T, D>::RoPE(const ModelConfig& config)
                                         config.max_position_embeddings)){};
 
 template <typename T, typename D>
-Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
-                                                      size_t position_offset) const {
-  const auto& cos = std::get<0>(cos_sin);
-  const auto& sin = std::get<1>(cos_sin);
-
+Tensor<std::remove_const_t<T>, D> rope_forward(const TensorView<T, D> &inputs,
+                                               const TensorView<const float, D> &cos,
+                                               const TensorView<const float, D> &sin,
+                                               size_t position_offset) {
   Shape shape = inputs.shape;
   size_t batch_size = shape[0];
   size_t num_heads = shape[1];
@@ -102,7 +104,7 @@ Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
   }
 
   // Slice and convert cos/sin to bfloat16
-  auto adj_cos_ = slice(cos.view(), 0, position_offset, position_offset + seq_len);
+  auto adj_cos_ = slice(cos, 0, position_offset, position_offset + seq_len);
   auto adj_cos_bf16 = to<float, T>(adj_cos_.view());
   // Reshape to [1, 1, seq_len, head_dim] then expand to [batch, heads, seq_len, head_dim]
   auto adj_cos_reshaped = adj_cos_bf16.view().reshape({1, 1, seq_len, head_dim});
@@ -111,7 +113,7 @@ Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
   // Expand heads dimension
   auto adj_cos = repeat_interleave(adj_cos_batch.view(), 1, num_heads);
 
-  auto adj_sin_ = slice(sin.view(), 0, position_offset, position_offset + seq_len);
+  auto adj_sin_ = slice(sin, 0, position_offset, position_offset + seq_len);
   auto adj_sin_bf16 = to<float, T>(adj_sin_.view());
   auto adj_sin_reshaped = adj_sin_bf16.view().reshape({1, 1, seq_len, head_dim});
   auto adj_sin_batch = repeat_interleave(adj_sin_reshaped.view(), 0, batch_size);
@@ -134,6 +136,21 @@ Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(TensorView<T, D> inputs,
   auto out = add(input_cos.view(), rotated_sin.view());
 
   return out;
+}
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D> RoPE<T, D>::forward(const TensorView<T, D> &inputs,
+                                                      size_t position_offset) const {
+  NVTX_RANGE("rope");
+  const auto& cos = std::get<0>(cos_sin);
+  const auto& sin = std::get<1>(cos_sin);
+
+#if defined(BACKEND_CUDA) && defined(FUSED_ROPE)
+  if constexpr (std::is_same_v<D, CUDA>) {
+    return rope_forward_fused(inputs, cos.view(), sin.view(), position_offset);
+  }
+#endif
+  return rope_forward(inputs, cos.view(), sin.view(), position_offset);
 }
 
 template <typename T, typename D> TensorView<const float, D> RoPE<T, D>::cos() const {

@@ -1,6 +1,7 @@
 #include <cmath>
 #include <nn/rms_norm.hpp>
 #include <tensor/loader.hpp>
+#include <util/nvtx.hpp>
 #include "kernels/rms_norm.cuh"
 #include "kernels/utils.cuh"
 
@@ -29,6 +30,7 @@ void RMSNorm<T, D>::load_weights(const tensor::Tensor<T, D>& weights) {
 
 template <typename T, typename D>
 Tensor<T, D> RMSNorm<T, D>::forward(const TensorView<T, D>& inputs) const {
+  NVTX_RANGE("rms_norm");
   return kernels::rms_norm(inputs, weights_.view(), T(eps));
 }
 

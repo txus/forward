@@ -3,6 +3,7 @@
 #include <forward/tokenizer.hpp>
 #include <tensor/ops.hpp>
 #include <tensor/tensor.hpp>
+#include <util/nvtx.hpp>
 
 using namespace tensor;
 using namespace tokenizer;
@@ -17,6 +18,7 @@ template <DType T, Device D, Config C>
 std::tuple<std::string, GenerationStats> Sampler<T, D, C>::generate(llama::Model<T, D>& model,
                                                                     std::string_view prompt,
                                                                     size_t max_num_tokens) {
+  NVTX_RANGE("generate");
 
   using std::chrono::duration;
   using std::chrono::high_resolution_clock;
@@ -103,6 +105,7 @@ std::tuple<std::string, GenerationStats> Sampler<T, D, C>::generate(llama::Model
 
 template <DType T, Device D>
 Tensor<int, D> GreedySampler<T, D>::sample(tensor::Tensor<T, D> logits) {
+  NVTX_RANGE("sample");
   return argmax(logits.view(), -1, false);
 }
 

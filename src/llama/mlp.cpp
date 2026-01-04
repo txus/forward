@@ -1,6 +1,7 @@
 #include <llama/mlp.hpp>
 #include <nn/act.hpp>
 #include <tensor/ops.hpp>
+#include <util/nvtx.hpp>
 
 using namespace llama;
 using namespace tensor;
@@ -18,6 +19,7 @@ void MLP<T, D>::load_weights(const tensor::Loader<T, D>& loader, size_t layer_id
 
 template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> MLP<T, D>::forward(TensorView<T, D> inputs) {
+  NVTX_RANGE("mlp");
   auto up_proj_t = up_proj.forward(inputs);
   auto up_proj_v = up_proj_t.view();
 

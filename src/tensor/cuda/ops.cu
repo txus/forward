@@ -2,6 +2,7 @@
 
 #include <tensor/ops.hpp>
 #include <tensor/device_type.hpp>
+#include <util/nvtx.hpp>
 
 #include "kernels/arange.cuh"
 #include "kernels/sum.cuh"
@@ -45,6 +46,7 @@ template void replace_from_(Tensor<int, CUDA>& out, const TensorView<int, CUDA>&
 
 template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> copy(const TensorView<T, D>& view) {
+  NVTX_RANGE("copy");
   return kernels::copy(view);
 }
 
@@ -95,6 +97,7 @@ Tensor<bfloat16, CUDA> mul(const TensorView<bfloat16, CUDA>& tensor_a, bfloat16 
 
 template <>
 Tensor<float, CUDA> sum(const TensorView<float, CUDA>& input, int dim, bool keepdim) {
+  NVTX_RANGE("sum");
   return kernels::sum_float(input, dim, keepdim);
 }
 
@@ -105,6 +108,7 @@ Tensor<float, CUDA> max(const TensorView<float, CUDA>& input, int dim, bool keep
 
 template <>
 Tensor<int, CUDA> argmax(const TensorView<bfloat16, CUDA>& input, int dim, bool keepdim) {
+  NVTX_RANGE("argmax");
   return kernels::argmax_bfloat16(input, dim, keepdim);
 }
 
@@ -186,12 +190,14 @@ Tensor<int, CUDA> slice(const TensorView<int, CUDA>& view, int dim, size_t start
 template <>
 Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
                                const TensorView<bfloat16, CUDA>& tensor_b) {
+  NVTX_RANGE("matmul");
   return kernels::matmul(tensor_a, tensor_b);
 }
 
 template <>
 Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
                                const TensorView<const bfloat16, CUDA>& tensor_b) {
+  NVTX_RANGE("matmul");
   // Handle const version by casting - the data isn't modified
   TensorView<bfloat16, CUDA> b_nonconst{
       const_cast<bfloat16*>(tensor_b.data), // NOLINT
@@ -205,6 +211,7 @@ Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
 template <>
 Tensor<float, CUDA> matmul(const TensorView<float, CUDA>& tensor_a,
                             const TensorView<float, CUDA>& tensor_b) {
+  NVTX_RANGE("matmul");
   return kernels::matmul(tensor_a, tensor_b);
 }
 

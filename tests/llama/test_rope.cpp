@@ -108,6 +108,6 @@ TEST(LlamaCUDARoPETest, Forward) {
       1.3828, 1.0078, -1.3281, 0.9805, 0.4922,  1.0234, -1.1328, 0.9688, -0.8477, 1.0312,
       0.1030, 0.9609, -1.4141, 1.0391, 1.2422,  0.9492, -0.6758, 1.0469}; // NOLINT
 
-  tensor_is_close<bfloat16>(outputs_cpu.view().span(), std::span(expected), 1e-2);
+  tensor_is_close<bfloat16>(outputs_cpu.view().span(), std::span(expected), 1e-3);
 }
 #endif

@@ -1,14 +1,54 @@
 { pkgs ? import <nixpkgs> { config.allowUnfree = true; } }:
 
 let
-  # Wrapper for ncu to fix section path issue on NixOS
-  # The ncu binary looks for sections at ../../sections relative to the binary,
-  # but in the Nix store they're at a different path
-  ncuWrapper = pkgs.writeShellScriptBin "ncu" ''
-    exec ${pkgs.cudaPackages_12.nsight_compute}/bin/ncu \
-      --section-folder ${pkgs.cudaPackages_12.nsight_compute}/sections \
-      "$@"
-  '';
+  # Fixed nsight_compute package with correct directory structure
+  # The ncu binary at bin/target/linux-desktop-glibc_2_11_3-x64/ncu uses readlink -f on itself
+  # and looks for ../../sections relative to its real path. In nixpkgs, sections are at pkg root,
+  # not at bin/sections. Since readlink -f resolves symlinks, we must COPY the binary
+  # to a new location where the relative path works.
+  nsight_compute_fixed = pkgs.stdenv.mkDerivation {
+    pname = "nsight-compute-fixed";
+    version = pkgs.cudaPackages_12.nsight_compute.version;
+    src = pkgs.cudaPackages_12.nsight_compute;
+    dontUnpack = true;
+    dontBuild = true;
+    dontStrip = true;
+    dontPatchELF = true;
+    installPhase = ''
+      mkdir -p $out/bin/target/linux-desktop-glibc_2_11_3-x64
+
+      # The key fix: sections at bin/sections so ../../sections from bin/target/*/ncu works
+      ln -s $src/sections $out/bin/sections
+
+      # Copy the actual binary and its libs (readlink -f will now find our copy)
+      cp -a $src/bin/target/linux-desktop-glibc_2_11_3-x64/* $out/bin/target/linux-desktop-glibc_2_11_3-x64/
+
+      # Create wrapper script
+      cat > $out/bin/ncu << 'WRAPPER'
+#!/bin/sh
+APPDIR="$(dirname "$(readlink -f -- "$0")")"
+ARCH="$(uname -m)"
+if [ "$ARCH" = "x86_64" ]; then
+    "$APPDIR/target/linux-desktop-glibc_2_11_3-x64/ncu" "$@"
+elif [ "$ARCH" = "aarch64" ]; then
+    "$APPDIR/target/linux-desktop-t210-a64/ncu" "$@"
+else
+    echo "Unsupported Architecture: $ARCH"
+fi
+WRAPPER
+      chmod +x $out/bin/ncu
+
+      # Link other directories
+      for d in $src/*; do
+        name=$(basename "$d")
+        if [ "$name" != "bin" ] && [ "$name" != "sections" ]; then
+          ln -s "$d" $out/
+        fi
+      done
+      # Also link sections at root for compatibility
+      ln -s $src/sections $out/sections
+    '';
+  };
 in
 (pkgs.mkShell.override { stdenv = pkgs.clangStdenv; }) {
   nativeBuildInputs = with pkgs; [
@@ -38,7 +78,7 @@ in
     cudaPackages_12.cudatoolkit
     cudaPackages_12.cudnn
     cudaPackages_12.nsight_systems
-    ncuWrapper  # Wrapper that fixes section path for ncu (replaces nsight_compute)
+    nsight_compute_fixed  # Fixed package with correct sections symlink (replaces nsight_compute)
     
     # Utilities
     bear

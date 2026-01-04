@@ -10,3 +10,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googlebenchmark)
 
 add_subdirectory(tensor)
+add_subdirectory(llama)
