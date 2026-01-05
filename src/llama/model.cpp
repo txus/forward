@@ -60,16 +60,21 @@ Tensor<std::remove_const_t<T>, D> Model<T, D>::forward(const TensorView<int, D>&
   NVTX_RANGE("model_forward");
   assert(loaded_);
 
-  // fmt::println("Embedding tokens {}", token_ids);
-
+#ifndef FUSED_ATTN
   auto attn_mask = causal_attention_mask<int, D>(max_tokens);
+#endif
 
   auto residual_stream = embed.forward(token_ids);
 
   for (int layer_idx = 0; std::cmp_less(layer_idx, config.num_hidden_layers); ++layer_idx) {
     // fmt::println("[Layer {}]", layer_idx);
     auto input = residual_stream.view();
-    residual_stream = layers[layer_idx].forward(input, attn_mask.view(), rope);
+#ifdef FUSED_ATTN
+    std::optional<TensorView<int, D>> mask_ = std::nullopt;
+#else
+    auto mask_ = attn_mask.view();
+#endif
+    residual_stream = layers[layer_idx].forward(input, mask_, rope);
   }
 
   auto residual_v = residual_stream.view();

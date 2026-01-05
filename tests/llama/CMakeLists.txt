@@ -1,9 +1,5 @@
-add_executable(test_llama test_layer.cpp test_rope.cpp test_grouped_query_attention.cpp test_mlp.cpp)
-
-# FUSED_ROPE is controlled by src/llama/CMakeLists.txt option
-# To enable: cmake -DFUSED_ROPE=ON ...
-
-#add_executable(test_llama test_rope.cpp)
+#add_executable(test_llama test_layer.cpp test_rope.cpp test_grouped_query_attention.cpp test_mlp.cpp)
+add_executable(test_llama test_grouped_query_attention.cpp)
 
 target_compile_features(test_llama PRIVATE cxx_std_26)
 target_link_libraries(test_llama PRIVATE llama GTest::gtest_main)

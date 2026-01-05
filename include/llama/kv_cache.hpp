@@ -3,6 +3,7 @@
 #include <llama/config.hpp>
 #include <tensor/ops.hpp>
 #include <tensor/tensor.hpp>
+#include <optional>
 #include <tuple>
 
 namespace llama {

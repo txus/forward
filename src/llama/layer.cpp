@@ -29,7 +29,7 @@ void Layer<T, D>::load_weights(const tensor::Loader<T, D>& loader, size_t layer_
 
 template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D> Layer<T, D>::forward(const TensorView<T, D>& inputs,
-                                                       const TensorView<int, D>& attn_mask,
+                                                       std::optional<TensorView<int, D>> attn_mask,
                                                        const RoPE<T, D>& rope) {
   NVTX_RANGE("layer_forward");
   auto residual = inputs;

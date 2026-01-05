@@ -25,8 +25,8 @@ public:
 
   void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);
 
-  tensor::Tensor<std::remove_const_t<T>, D> forward(const tensor::TensorView<T, D>& inputs,
-                                                    const tensor::TensorView<int, D>& attn_mask,
-                                                    const RoPE<T, D>& rope);
+  tensor::Tensor<std::remove_const_t<T>, D>
+  forward(const tensor::TensorView<T, D>& inputs,
+          std::optional<tensor::TensorView<int, D>> attn_mask, const RoPE<T, D>& rope);
 };
 } // namespace llama

@@ -9,6 +9,20 @@
 
 namespace llama {
 
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D>
+gqa_forward(const TensorView<T, D>& qs, const TensorView<T, D>& ks, // NOLINT
+            const TensorView<T, D>& vs,                             // NOLINT
+            const TensorView<int, D>& attn_mask, const nn::Softmax& softmax, T scale_factor,
+            size_t group_size, size_t d_out);
+
+template <typename T, typename D>
+Tensor<std::remove_const_t<T>, D>
+gqa_forward_fused(const TensorView<T, D>& qs,                 // NOLINT
+                  const TensorView<T, D>& ks,                 // NOLINT
+                  const TensorView<T, D>& vs, T scale_factor, // NOLINT
+                  size_t group_size, size_t d_out, bool is_causal);
+
 template <typename T, typename D> class GroupedQueryAttention {
 private:
   size_t d_in;
@@ -39,9 +53,9 @@ public:
 
   void load_weights(const tensor::Loader<T, D>& loader, size_t layer_idx);
 
-  tensor::Tensor<std::remove_const_t<T>, D> forward(const tensor::TensorView<T, D>& inputs,
-                                                    const tensor::TensorView<int, D>& attn_mask,
-                                                    const RoPE<T, D>& rope);
+  tensor::Tensor<std::remove_const_t<T>, D>
+  forward(const tensor::TensorView<T, D>& inputs,
+          std::optional<tensor::TensorView<int, D>> attn_mask, const RoPE<T, D>& rope);
 
   size_t get_cache_size();
 };
