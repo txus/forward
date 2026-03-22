@@ -362,8 +362,10 @@ static constexpr int TILE_M = 64;
 static constexpr int TILE_N = 64;
 static constexpr int TILE_K = 32;
 
+static constexpr int NUM_WARPS = 4;
 static constexpr int WARP_THREADS = 32;
-static constexpr int NUM_THREADS = WARP_THREADS;
+static constexpr int NUM_THREADS = NUM_WARPS * WARP_THREADS;
+static constexpr int WARP_M = TILE_M / NUM_WARPS; // each warp handles 16 rows
 
 using a_tile = st_bf<TILE_M, TILE_K>;
 using b_tile = st_bf<TILE_K, TILE_N>;
@@ -374,7 +376,7 @@ using b_gl = gl<bf16, 1, 1, -1, -1, b_tile>;
 using d_gl = gl<bf16, 1, 1, -1, -1, d_tile>;
 
 __global__
-__launch_bounds__(NUM_THREADS, 1)
+__launch_bounds__(NUM_THREADS)
 void kernel(
     const __grid_constant__ a_gl A_layout,
     const __grid_constant__ b_gl B_layout,
@@ -384,6 +386,9 @@ void kernel(
 
   int col = blockIdx.x;
   int row = blockIdx.y;
+
+  int warp_id = threadIdx.x / WARP_THREADS;  // 0, 1, 2, or 3
+  int warp_row_offset = warp_id * WARP_M;    // 0, 16, 32, or 48
 
   extern __shared__ int __shm[];
   tma_swizzle_allocator al((int*)&__shm[0]);
@@ -398,10 +403,10 @@ void kernel(
   }
   __syncthreads();
 
-  rt_bf<TILE_M, TILE_K> A_reg;
+  rt_bf<WARP_M, TILE_K> A_reg;
   rt_bf<TILE_K, TILE_N> B_reg;
   rt_bf<TILE_K, TILE_N, ducks::rt_layout::col> B_reg_col;
-  rt_fl<TILE_M, TILE_N> C_accum;
+  rt_fl<WARP_M, TILE_N> C_accum;
 
   warp::zero(C_accum);
   int num_tiles = K / TILE_K;
@@ -417,7 +422,7 @@ void kernel(
     wait(smem_arrived, phase);
     phase ^= 1;
 
-    warp::load(A_reg, As);
+    warpgroup::load(A_reg, As);
     warp::load(B_reg, Bs);
 
     warp::swap_layout(B_reg_col, B_reg);
@@ -426,7 +431,7 @@ void kernel(
     __syncthreads();
   }
 
-  warp::store(Ds, C_accum);
+  warpgroup::store(Ds, C_accum);
   __syncthreads();
 
   if (threadIdx.x == 0) {
