@@ -6,10 +6,13 @@ add_library(tensor_cuda STATIC storage.cu loader.cu ops.cu kernels/fill.cu kerne
 
 configure_cuda_target(tensor_cuda)
 
+target_compile_definitions(tensor_cuda PRIVATE KITTENS_BLACKWELL)
+
 target_link_libraries(tensor_cuda
   PUBLIC
     tensor_core
     CUDA::cudart
+    CUDA::cuda_driver
     CUDA::cublas
     CUDA::nvToolsExt
   PRIVATE

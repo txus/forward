@@ -4,6 +4,10 @@
 #include <fmt/core.h>
 #include "kittens.cuh"
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_bf16.h>
+
 namespace tensor::kernels {
 
 using namespace dtype;
@@ -352,56 +356,84 @@ Tensor<float, CUDA> matmul(const TensorView<float, CUDA>& tensor_a,
   return out;
 }
 
-static constexpr int BLOCK_SIZE = 32;
-static constexpr int NUM_WORKERS = 1;
-static constexpr int WARP_THREADS = 32;
-static constexpr int NUM_THREADS = NUM_WORKERS * WARP_THREADS;
-
 using namespace kittens;
 
-struct matmul_globals {
-  using sub_tile = st_bf<BLOCK_SIZE, BLOCK_SIZE>;
-  using tile_gl = gl<bf16, 1, 1, -1, -1, sub_tile>;
+static constexpr int TILE_M = 64;
+static constexpr int TILE_N = 64;
+static constexpr int TILE_K = 32;
 
-  tile_gl A;
-  tile_gl B;
-  tile_gl C;
+static constexpr int WARP_THREADS = 32;
+static constexpr int NUM_THREADS = WARP_THREADS;
 
-  size_t M;
-  size_t N;
-  size_t K;
-};
+using a_tile = st_bf<TILE_M, TILE_K>;
+using b_tile = st_bf<TILE_K, TILE_N>;
+using d_tile = st_bf<TILE_M, TILE_N>;
 
-// MxK @ K@N = MxN
-__global__ void kernel(const __grid_constant__ matmul_globals g) {
-  extern __shared__ alignment_dummy __shm[];
-  shared_allocator al((int*)&__shm[0]);
-  st_bf<BLOCK_SIZE, BLOCK_SIZE> &As = al.allocate<st_bf<BLOCK_SIZE, BLOCK_SIZE>>();
-  st_bf<BLOCK_SIZE, BLOCK_SIZE> &Bs = al.allocate<st_bf<BLOCK_SIZE, BLOCK_SIZE>>();
+using a_gl = gl<bf16, 1, 1, -1, -1, a_tile>;
+using b_gl = gl<bf16, 1, 1, -1, -1, b_tile>;
+using d_gl = gl<bf16, 1, 1, -1, -1, d_tile>;
 
-  rt_bf<BLOCK_SIZE, BLOCK_SIZE> A_reg;
-  rt_bf<BLOCK_SIZE, BLOCK_SIZE> B_reg;
-  rt_bf<BLOCK_SIZE, BLOCK_SIZE, ducks::rt_layout::col> B_reg_col;
-  rt_fl<BLOCK_SIZE, BLOCK_SIZE> C_accum;
+__global__
+__launch_bounds__(NUM_THREADS, 1)
+void kernel(
+    const __grid_constant__ a_gl A_layout,
+    const __grid_constant__ b_gl B_layout,
+    const __grid_constant__ d_gl D_layout,
+    int M, int N, int K
+  ) {
 
   int col = blockIdx.x;
   int row = blockIdx.y;
 
-  warp::zero(C_accum);
+  extern __shared__ int __shm[];
+  tma_swizzle_allocator al((int*)&__shm[0]);
 
-  int num_tiles = (g.K + BLOCK_SIZE - 1) / BLOCK_SIZE;
+  a_tile &As = al.allocate<a_tile>();
+  b_tile &Bs = al.allocate<b_tile>();
+  d_tile &Ds = al.allocate<d_tile>();
+
+  __shared__ semaphore smem_arrived;
+  if (threadIdx.x == 0) {
+    init_semaphore(smem_arrived, 0, 1);
+  }
+  __syncthreads();
+
+  rt_bf<TILE_M, TILE_K> A_reg;
+  rt_bf<TILE_K, TILE_N> B_reg;
+  rt_bf<TILE_K, TILE_N, ducks::rt_layout::col> B_reg_col;
+  rt_fl<TILE_M, TILE_N> C_accum;
+
+  warp::zero(C_accum);
+  int num_tiles = K / TILE_K;
+  int phase = 0;
+
   for (int tile = 0; tile < num_tiles; ++tile) {
-    warp::load(As, g.A, {0, 0, row, tile});
-    warp::load(Bs, g.B, {0, 0, tile, col});
-    __syncthreads();
+    if (threadIdx.x == 0) {
+      tma::expect_bytes(smem_arrived, sizeof(a_tile) + sizeof(b_tile));
+      tma::load_async(As, A_layout, {row, tile}, smem_arrived);
+      tma::load_async(Bs, B_layout, {tile, col}, smem_arrived);
+    }
+
+    wait(smem_arrived, phase);
+    phase ^= 1;
+
     warp::load(A_reg, As);
     warp::load(B_reg, Bs);
+
     warp::swap_layout(B_reg_col, B_reg);
-    __syncthreads();
     warp::mma_AB(C_accum, A_reg, B_reg_col, C_accum);
+
     __syncthreads();
   }
-  warp::store(g.C, C_accum, {0, 0, row, col});
+
+  warp::store(Ds, C_accum);
+  __syncthreads();
+
+  if (threadIdx.x == 0) {
+    tma::store_async(D_layout, Ds, {row, col});
+    tma::store_async_read_wait();
+  }
+
 }
 
 template <>
@@ -448,21 +480,29 @@ Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
   auto* b_d = reinterpret_cast<Cuda<bfloat16>*>(tensor_b.data); // NOLINT
   auto* c_d = reinterpret_cast<Cuda<bfloat16>*>(out.data()); // NOLINT
                                                              //
-  dim3 blocks((N + BLOCK_SIZE-1) / BLOCK_SIZE, (M + BLOCK_SIZE-1) / BLOCK_SIZE);
+  a_gl A_layout{reinterpret_cast<bf16*>(a_d), nullptr, nullptr, (unsigned long)M, (unsigned long)K};
+  b_gl B_layout{reinterpret_cast<bf16*>(b_d), nullptr, nullptr, (unsigned long)K, (unsigned long)N};
+  d_gl D_layout{reinterpret_cast<bf16*>(c_d), nullptr, nullptr, (unsigned long)M, (unsigned long)N};
 
-  using a_gl = matmul_globals::tile_gl;
-  using b_gl = matmul_globals::tile_gl;
-  using c_gl = matmul_globals::tile_gl;
-  a_gl a_arg{(bf16*)a_d, nullptr, nullptr, M, K};
-  b_gl b_arg{(bf16*)b_d, nullptr, nullptr, K, N};
-  c_gl c_arg{(bf16*)c_d, nullptr, nullptr, M, N};
-  matmul_globals g{a_arg, b_arg, c_arg, M, N, K};
+  dim3 blocks(N / TILE_N, M / TILE_M);
+  constexpr int smem_size = 48 * 1024;
 
-  unsigned long mem_size = 100000;
+  auto attr_err = cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_size);
+  if (attr_err != cudaSuccess) {
+    fmt::print(stderr, "cudaFuncSetAttribute error: {}\n", cudaGetErrorString(attr_err));
+  }
+
+  kernel<<<blocks, NUM_THREADS, smem_size>>>(A_layout, B_layout, D_layout, M, N, K);
+
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    fmt::print(stderr, "Kernel launch error: {}\n", cudaGetErrorString(err));
+  }
   cudaDeviceSynchronize();
-  cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, mem_size);
-  kernel<<<blocks, NUM_THREADS, mem_size>>>(g);
-  cudaDeviceSynchronize();
+  err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    fmt::print(stderr, "Kernel execution error: {}\n", cudaGetErrorString(err));
+  }
 
   return out;
 }
