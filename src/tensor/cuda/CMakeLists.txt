@@ -21,6 +21,11 @@ target_include_directories(tensor_cuda
     ${PROJECT_SOURCE_DIR}/include
 )
 
+target_include_directories(tensor_cuda
+  SYSTEM PRIVATE
+    "${FETCHCONTENT_BASE_DIR}/thunderkittens-src/include"
+)
+
 source_group(
   TREE "${PROJECT_SOURCE_DIR}/include"
   PREFIX "Header Files"

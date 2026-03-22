@@ -2,6 +2,7 @@
 #include "utils.cuh"
 #include <cublas_v2.h>
 #include <fmt/core.h>
+#include "kittens.cuh"
 
 namespace tensor::kernels {
 
@@ -33,7 +34,28 @@ using namespace dtype;
 // - Automatic cleanup
 // - Simple API (no handle passing required)
 
-namespace {
+// Check if a 2D tensor is a simple transpose (stride pattern: [1, cols] instead of [cols, 1])
+template <typename T, typename D>
+bool is_2d_transpose(const TensorView<T, D>& view) {
+  if (view.shape.size() != 2) return false;
+  // A transposed 2D matrix has stride[0] = 1, stride[1] = shape[0]
+  // (stepping through rows goes by 1, stepping through cols jumps by original row count)
+  return view.stride[0] == 1 && view.stride[1] == view.shape[0];
+}
+
+#ifdef SHITTY
+
+// cuBLAS uses column-major layout, but our tensors are row-major.
+// The trick: C = A @ B in row-major is equivalent to C^T = B^T @ A^T in col-major.
+// Since the transpose just changes how we interpret the memory layout:
+//   - We swap A and B
+//   - We swap M and N
+// This gives us the correct result without any actual transposition.
+//
+// For transposed B (common in Linear layers where we store weights as [out, in]
+// and want to compute input @ weights.T), we use CUBLAS_OP_T to let cuBLAS
+// handle the transpose without copying data.
+
 
 class CublasHandle {
 public:
@@ -90,28 +112,6 @@ private:
   CublasHandle(const CublasHandle&) = delete;
   CublasHandle& operator=(const CublasHandle&) = delete;
 };
-
-// Check if a 2D tensor is a simple transpose (stride pattern: [1, cols] instead of [cols, 1])
-template <typename T, typename D>
-bool is_2d_transpose(const TensorView<T, D>& view) {
-  if (view.shape.size() != 2) return false;
-  // A transposed 2D matrix has stride[0] = 1, stride[1] = shape[0]
-  // (stepping through rows goes by 1, stepping through cols jumps by original row count)
-  return view.stride[0] == 1 && view.stride[1] == view.shape[0];
-}
-
-} // anonymous namespace
-
-// cuBLAS uses column-major layout, but our tensors are row-major.
-// The trick: C = A @ B in row-major is equivalent to C^T = B^T @ A^T in col-major.
-// Since the transpose just changes how we interpret the memory layout:
-//   - We swap A and B
-//   - We swap M and N
-// This gives us the correct result without any actual transposition.
-//
-// For transposed B (common in Linear layers where we store weights as [out, in]
-// and want to compute input @ weights.T), we use CUBLAS_OP_T to let cuBLAS
-// handle the transpose without copying data.
 
 template <>
 Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
@@ -310,5 +310,144 @@ Tensor<float, CUDA> matmul(const TensorView<float, CUDA>& tensor_a,
 
   return out;
 }
+#endif
+
+template <>
+Tensor<float, CUDA> matmul(const TensorView<float, CUDA>& tensor_a,
+                            const TensorView<float, CUDA>& tensor_b) {
+  assert(tensor_a.is_contiguous() && "tensor A must be contiguous");
+
+  size_t a_ndim = tensor_a.shape.size();
+  size_t b_ndim = tensor_b.shape.size();
+
+  assert(a_ndim >= 2 && b_ndim >= 2);
+
+  bool b_transposed = is_2d_transpose(tensor_b);
+  if (!b_transposed) {
+    assert(tensor_b.is_contiguous() && "tensor B must be contiguous (or a 2D transpose)");
+  }
+
+  size_t M = tensor_a.shape[a_ndim - 2];
+  size_t K = tensor_a.shape[a_ndim - 1];
+  size_t N = tensor_b.shape[b_ndim - 1];
+
+  assert(K == tensor_b.shape[b_ndim - 2] && "Inner dimensions must match");
+
+  size_t batch_size = 1;
+  for (size_t i = 0; i < a_ndim - 2; ++i) {
+    batch_size *= tensor_a.shape[i];
+  }
+
+  Shape out_shape;
+  for (size_t i = 0; i < a_ndim - 2; ++i) {
+    out_shape.push_back(tensor_a.shape[i]);
+  }
+  out_shape.push_back(M);
+  out_shape.push_back(N);
+
+  Tensor<float, CUDA> out{out_shape};
+
+  // heyoooooooooooooooooooooooooooooooooooooooo
+
+  return out;
+}
+
+static constexpr int BLOCK_SIZE = 32;
+static constexpr int NUM_WORKERS = 1;
+static constexpr int WARP_THREADS = 32;
+static constexpr int NUM_THREADS = NUM_WORKERS * WARP_THREADS;
+
+using namespace kittens;
+
+struct matmul_globals {
+  using sub_tile = st_bf<BLOCK_SIZE, BLOCK_SIZE>;
+  using tile_gl = gl<bf16, 1, 1, -1, -1, sub_tile>;
+
+  tile_gl A;
+  tile_gl B;
+  tile_gl C;
+
+  int M;
+  int N;
+  int K;
+};
+
+// MxK @ K@N = MxN
+__global__ void kernel(Cuda<bfloat16>* A, Cuda<bfloat16>* B, Cuda<bfloat16>* C, int M, int N, int K) {
+  __shared__ Cuda<bfloat16> As[BLOCK_SIZE][BLOCK_SIZE], Bs[BLOCK_SIZE][BLOCK_SIZE];
+  int bx = blockIdx.x; int tx = threadIdx.x;
+  int by = blockIdx.y; int ty = threadIdx.y;
+
+  int row = by * blockDim.y + ty;
+  int col = bx * blockDim.x + tx;
+
+  float sum = 0.0f;
+
+  for (int tile = 0; tile < blockDim.x; ++tile) {
+    As[ty][tx] = A[row * K + tile * BLOCK_SIZE + tx];
+    Bs[ty][tx] = B[(tile * BLOCK_SIZE + ty) * N + col];
+    __syncthreads();
+    #pragma unroll
+    for (int k = 0; k < BLOCK_SIZE; ++k) {
+      sum += __bfloat162float(As[ty][k] * Bs[k][tx]);
+    }
+    __syncthreads();
+  }
+
+  C[row * N + col] = __float2bfloat16(sum);
+}
+
+template <>
+Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
+                               const TensorView<bfloat16, CUDA>& tensor_b) {
+  assert(tensor_a.is_contiguous() && "tensor A must be contiguous");
+
+  size_t a_ndim = tensor_a.shape.size();
+  size_t b_ndim = tensor_b.shape.size();
+
+  assert(a_ndim >= 2 && b_ndim >= 2);
+
+  // Check if B is a 2D transpose - if so, we use CUBLAS_OP_T
+  bool b_transposed = is_2d_transpose(tensor_b);
+  if (!b_transposed) {
+    assert(tensor_b.is_contiguous() && "tensor B must be contiguous (or a 2D transpose)");
+  }
+
+  size_t M = tensor_a.shape[a_ndim - 2];
+  size_t K = tensor_a.shape[a_ndim - 1];
+  size_t N = tensor_b.shape[b_ndim - 1];
+
+  assert(K == tensor_b.shape[b_ndim - 2] && "Inner dimensions must match");
+
+  // Calculate batch size from A's leading dimensions
+  size_t batch_size = 1;
+  for (size_t i = 0; i < a_ndim - 2; ++i) {
+    batch_size *= tensor_a.shape[i];
+  }
+
+  // Build output shape
+  Shape out_shape;
+  for (size_t i = 0; i < a_ndim - 2; ++i) {
+    out_shape.push_back(tensor_a.shape[i]);
+  }
+  out_shape.push_back(M);
+  out_shape.push_back(N);
+
+  auto n_elements = M * N;
+  TensorStorage<bfloat16, CUDA> storage(n_elements);
+  Tensor<bfloat16, CUDA> out{out_shape, std::move(storage)};
+
+  auto* a_d = reinterpret_cast<Cuda<bfloat16>*>(tensor_a.data); // NOLINT
+  auto* b_d = reinterpret_cast<Cuda<bfloat16>*>(tensor_b.data); // NOLINT
+  auto* c_d = reinterpret_cast<Cuda<bfloat16>*>(out.data()); // NOLINT
+                                                             //
+  dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+  dim3 blocks((N + BLOCK_SIZE-1) / BLOCK_SIZE, (M + BLOCK_SIZE-1) / BLOCK_SIZE);
+
+  kernel<<<blocks, threads>>>(a_d, b_d, c_d, M, N, K);
+
+  return out;
+}
+
 
 } // namespace tensor::kernels
