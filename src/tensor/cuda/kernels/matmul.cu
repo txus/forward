@@ -367,34 +367,41 @@ struct matmul_globals {
   tile_gl B;
   tile_gl C;
 
-  int M;
-  int N;
-  int K;
+  size_t M;
+  size_t N;
+  size_t K;
 };
 
 // MxK @ K@N = MxN
-__global__ void kernel(Cuda<bfloat16>* A, Cuda<bfloat16>* B, Cuda<bfloat16>* C, int M, int N, int K) {
-  __shared__ Cuda<bfloat16> As[BLOCK_SIZE][BLOCK_SIZE], Bs[BLOCK_SIZE][BLOCK_SIZE];
-  int bx = blockIdx.x; int tx = threadIdx.x;
-  int by = blockIdx.y; int ty = threadIdx.y;
+__global__ void kernel(const __grid_constant__ matmul_globals g) {
+  extern __shared__ alignment_dummy __shm[];
+  shared_allocator al((int*)&__shm[0]);
+  st_bf<BLOCK_SIZE, BLOCK_SIZE> &As = al.allocate<st_bf<BLOCK_SIZE, BLOCK_SIZE>>();
+  st_bf<BLOCK_SIZE, BLOCK_SIZE> &Bs = al.allocate<st_bf<BLOCK_SIZE, BLOCK_SIZE>>();
 
-  int row = by * blockDim.y + ty;
-  int col = bx * blockDim.x + tx;
+  rt_bf<BLOCK_SIZE, BLOCK_SIZE> A_reg;
+  rt_bf<BLOCK_SIZE, BLOCK_SIZE> B_reg;
+  rt_bf<BLOCK_SIZE, BLOCK_SIZE, ducks::rt_layout::col> B_reg_col;
+  rt_fl<BLOCK_SIZE, BLOCK_SIZE> C_accum;
 
-  float sum = 0.0f;
+  int col = blockIdx.x;
+  int row = blockIdx.y;
 
-  for (int tile = 0; tile < blockDim.x; ++tile) {
-    As[ty][tx] = A[row * K + tile * BLOCK_SIZE + tx];
-    Bs[ty][tx] = B[(tile * BLOCK_SIZE + ty) * N + col];
+  warp::zero(C_accum);
+
+  int num_tiles = (g.K + BLOCK_SIZE - 1) / BLOCK_SIZE;
+  for (int tile = 0; tile < num_tiles; ++tile) {
+    warp::load(As, g.A, {0, 0, row, tile});
+    warp::load(Bs, g.B, {0, 0, tile, col});
     __syncthreads();
-    #pragma unroll
-    for (int k = 0; k < BLOCK_SIZE; ++k) {
-      sum += __bfloat162float(As[ty][k] * Bs[k][tx]);
-    }
+    warp::load(A_reg, As);
+    warp::load(B_reg, Bs);
+    warp::swap_layout(B_reg_col, B_reg);
+    __syncthreads();
+    warp::mma_AB(C_accum, A_reg, B_reg_col, C_accum);
     __syncthreads();
   }
-
-  C[row * N + col] = __float2bfloat16(sum);
+  warp::store(g.C, C_accum, {0, 0, row, col});
 }
 
 template <>
@@ -441,10 +448,21 @@ Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
   auto* b_d = reinterpret_cast<Cuda<bfloat16>*>(tensor_b.data); // NOLINT
   auto* c_d = reinterpret_cast<Cuda<bfloat16>*>(out.data()); // NOLINT
                                                              //
-  dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
   dim3 blocks((N + BLOCK_SIZE-1) / BLOCK_SIZE, (M + BLOCK_SIZE-1) / BLOCK_SIZE);
 
-  kernel<<<blocks, threads>>>(a_d, b_d, c_d, M, N, K);
+  using a_gl = matmul_globals::tile_gl;
+  using b_gl = matmul_globals::tile_gl;
+  using c_gl = matmul_globals::tile_gl;
+  a_gl a_arg{(bf16*)a_d, nullptr, nullptr, M, K};
+  b_gl b_arg{(bf16*)b_d, nullptr, nullptr, K, N};
+  c_gl c_arg{(bf16*)c_d, nullptr, nullptr, M, N};
+  matmul_globals g{a_arg, b_arg, c_arg, M, N, K};
+
+  unsigned long mem_size = 100000;
+  cudaDeviceSynchronize();
+  cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, mem_size);
+  kernel<<<blocks, NUM_THREADS, mem_size>>>(g);
+  cudaDeviceSynchronize();
 
   return out;
 }
