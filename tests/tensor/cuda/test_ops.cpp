@@ -483,10 +483,10 @@ TEST(TensorCUDATest, SliceBf16MiddleDim) {
 
 TEST(TensorCUDATest, MatmulBf16) {
   SKIP_IF_NO_GPU();
-  // 64x64 @ 64x64 = 64x64
+  // 128x128 @ 128x128 = 128x128
   // A filled with 1s, B filled with 1s
-  // Each element of C = sum of 64 ones = 64
-  constexpr int N = 64;
+  // Each element of C = sum of 128 ones = 128
+  constexpr int N = 1024;
   Tensor<bfloat16, CPU> a({N, N});
   Tensor<bfloat16, CPU> b({N, N});
   for (int i = 0; i < N * N; ++i) {

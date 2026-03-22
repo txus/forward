@@ -401,19 +401,19 @@ using namespace kittens;
 //
 // ============================================================================
 
-static constexpr int TILE_M = 64;    // Output tile rows
+static constexpr int TILE_M = 128;   // Output tile rows
 static constexpr int TILE_N = 64;    // Output tile columns
 static constexpr int TILE_K = 32;    // Inner dimension chunk size
 
-static constexpr int NUM_WARPS = 4;        // 4 warps per block
+static constexpr int NUM_WARPS = 4;        // 4 warps = 1 warpgroup
 static constexpr int WARP_THREADS = 32;    // 32 threads per warp (hardware constant)
 static constexpr int NUM_THREADS = NUM_WARPS * WARP_THREADS;  // 128 threads total
-static constexpr int WARP_M = TILE_M / NUM_WARPS;  // Each warp handles 16 rows
+static constexpr int WARP_M = TILE_M / NUM_WARPS;  // Each warp handles 32 rows (128/4)
 
 // Shared memory tile types (st = shared tile, bf = bfloat16)
-using a_tile = st_bf<TILE_M, TILE_K>;   // A tile: 64x32 bf16
+using a_tile = st_bf<TILE_M, TILE_K>;   // A tile: 128x32 bf16
 using b_tile = st_bf<TILE_K, TILE_N>;   // B tile: 32x64 bf16
-using d_tile = st_bf<TILE_M, TILE_N>;   // Output tile: 64x64 bf16
+using d_tile = st_bf<TILE_M, TILE_N>;   // Output tile: 128x64 bf16
 
 // Global memory layout descriptors for TMA (Tensor Memory Accelerator)
 // The -1 values are placeholders for runtime dimensions (M, K, N)
@@ -480,9 +480,13 @@ void kernel(
   // -------------------------------------------------------------------------
   // rt = register tile (stored in thread-private registers)
   // Each warp has its own register tiles; no sharing between warps.
+  //
+  // OPTIMIZATION: We declare B_reg directly in column layout. This causes
+  // warp::load to use ldmatrix.trans, which loads and transposes in one
+  // instruction. This eliminates the need for swap_layout (which generated
+  // 96 movmatrix instructions per iteration!).
   rt_bf<WARP_M, TILE_K> A_reg;  // This warp's A slice: 16x32 bf16
-  rt_bf<TILE_K, TILE_N> B_reg;  // Full B tile: 32x64 bf16
-  rt_bf<TILE_K, TILE_N, ducks::rt_layout::col> B_reg_col;  // B in column layout (for MMA)
+  rt_bf<TILE_K, TILE_N, ducks::rt_layout::col> B_reg_col;  // B in column layout (loaded with ldmatrix.trans)
   rt_fl<WARP_M, TILE_N> C_accum;  // Accumulator: 16x64 float32 (higher precision)
 
   // Zero the accumulator before starting
@@ -497,9 +501,7 @@ void kernel(
   // Before entering the main loop, kick off the first load.
   // This gets the pipeline started - we'll have data ready when we need it.
   if (threadIdx.x == 0) {
-    // Tell the semaphore to expect these bytes
     tma::expect_bytes(smem_arrived[0], sizeof(a_tile) + sizeof(b_tile));
-    // Start async loads into buffer 0
     tma::load_async(As[0], A_layout, {row, 0}, smem_arrived[0]);
     tma::load_async(Bs[0], B_layout, {0, col}, smem_arrived[0]);
   }
@@ -514,18 +516,13 @@ void kernel(
   //
   // This overlaps the load of tile[i+1] with compute of tile[i].
   for (int tile = 0; tile < num_tiles; ++tile) {
-    // Which buffer are we using this iteration?
-    // tile 0 -> buffer 0, tile 1 -> buffer 1, tile 2 -> buffer 0, ...
     int cur_buf = tile % NUM_STAGES;
     int next_buf = (tile + 1) % NUM_STAGES;
     int next_tile = tile + 1;
 
     // --- LAUNCH NEXT LOAD (if there is a next tile) ---
-    // This happens BEFORE we wait for the current tile, maximizing overlap.
     if (next_tile < num_tiles && threadIdx.x == 0) {
-      // Set up semaphore for next buffer
       tma::expect_bytes(smem_arrived[next_buf], sizeof(a_tile) + sizeof(b_tile));
-      // Start async loads for next iteration
       tma::load_async(As[next_buf], A_layout, {row, next_tile}, smem_arrived[next_buf]);
       tma::load_async(Bs[next_buf], B_layout, {next_tile, col}, smem_arrived[next_buf]);
     }
@@ -540,13 +537,12 @@ void kernel(
     // warpgroup::load reads the portion of A that this warp needs.
     // It uses warpid() internally to compute the correct row offset.
     warpgroup::load(A_reg, As[cur_buf]);  // Each warp gets its 16 rows
-    warp::load(B_reg, Bs[cur_buf]);       // All warps load the full B tile
+
+    // Loading B directly into column layout triggers ldmatrix.trans,
+    // which transposes the data during the load - no extra movmatrix needed!
+    warp::load(B_reg_col, Bs[cur_buf]);   // All warps load B with transpose
 
     // --- COMPUTE: MATRIX MULTIPLY-ACCUMULATE ---
-    // mma_AB requires B in column-major layout for the tensor cores.
-    // swap_layout transposes the register layout (not the data).
-    warp::swap_layout(B_reg_col, B_reg);
-
     // Perform: C_accum += A_reg @ B_reg_col
     // This uses HMMA (mma.sync.m16n8k16) tensor core instructions.
     // Each warp computes a 16x64 portion of the output.
@@ -625,12 +621,24 @@ Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
   d_gl D_layout{reinterpret_cast<bf16*>(c_d), nullptr, nullptr, (unsigned long)M, (unsigned long)N};
 
   dim3 blocks(N / TILE_N, M / TILE_M);
+
+  // Calculate shared memory needed (double buffered):
+  // - As[2]: 2 * TILE_M * TILE_K * sizeof(bf16) = 2 * 128 * 32 * 2 = 16,384 bytes
+  // - Bs[2]: 2 * TILE_K * TILE_N * sizeof(bf16) = 2 * 32 * 64 * 2  =  8,192 bytes
+  // - Ds:    TILE_M * TILE_N * sizeof(bf16)     = 128 * 64 * 2     = 16,384 bytes
+  // - Plus alignment padding (tma_swizzle_allocator aligns to 1024 bytes)
+  // Total: ~41KB needed
   constexpr int smem_size = 48 * 1024;
 
   auto attr_err = cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, smem_size);
   if (attr_err != cudaSuccess) {
     fmt::print(stderr, "cudaFuncSetAttribute error: {}\n", cudaGetErrorString(attr_err));
   }
+
+  // Check occupancy (for debugging/tuning)
+  int num_blocks_per_sm = 0;
+  cudaOccupancyMaxActiveBlocksPerMultiprocessor(&num_blocks_per_sm, kernel, NUM_THREADS, smem_size);
+  // fmt::print("Occupancy: {} blocks/SM with {}KB shared memory\n", num_blocks_per_sm, smem_size / 1024);
 
   kernel<<<blocks, NUM_THREADS, smem_size>>>(A_layout, B_layout, D_layout, M, N, K);
 
