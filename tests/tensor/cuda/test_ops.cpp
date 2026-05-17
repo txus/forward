@@ -511,30 +511,24 @@ TEST(TensorCUDATest, MatmulBf16) {
 TEST(TensorCUDATest, MatmulBf16Batched) {
   SKIP_IF_NO_GPU();
   // Batched matmul: 2 batches of 2x3 @ 3x2
-  Tensor<bfloat16, CPU> a({2, 2, 3});
+  Tensor<bfloat16, CPU> a({2, 16, 16});
   // Batch 0: same as above test
-  a.set_(0, 1);
-  a.set_(1, 2);
-  a.set_(2, 3);
-  a.set_(3, 4);
-  a.set_(4, 5);
-  a.set_(5, 6);
+  for (int i = 0; i < 256; ++i) {
+    a.set_(i, i + 1);
+  }
   // Batch 1: all ones
-  for (int i = 6; i < 12; ++i) {
+  for (int i = 256; i < 512; ++i) {
     a.set_(i, 1);
   }
 
-  Tensor<bfloat16, CPU> b({2, 3, 2});
+  Tensor<bfloat16, CPU> b({2, 16, 16});
   // Batch 0: same as above test
-  b.set_(0, 7);
-  b.set_(1, 8);
-  b.set_(2, 9);
-  b.set_(3, 10);
-  b.set_(4, 11);
-  b.set_(5, 12);
-  // Batch 1: all twos
-  for (int i = 6; i < 12; ++i) {
-    b.set_(i, 2);
+  for (int i = 0; i < 256; ++i) {
+    a.set_(i, i + 1);
+  }
+  // Batch 1: all ones
+  for (int i = 256; i < 512; ++i) {
+    a.set_(i, 2);
   }
 
   auto a_gpu = a.cuda();
@@ -544,7 +538,7 @@ TEST(TensorCUDATest, MatmulBf16Batched) {
 
   auto result_cpu = result.cpu();
 
-  Shape expected_shape = {2, 2, 2};
+  Shape expected_shape = {2, 16, 16};
   EXPECT_EQ(result_cpu.shape(), expected_shape);
 
   // Batch 0: same as single matmul test
