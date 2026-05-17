@@ -87,6 +87,12 @@ FetchContent_Declare(
   GIT_TAG 55d53aa
 )
 
+FetchContent_Declare(
+  thunderkittens
+  GIT_REPOSITORY https://github.com/HazyResearch/ThunderKittens.git
+  GIT_TAG 00ea8a2
+)
+
 # On NixOS with Clang, clangd uses a different resource-dir than clang++
 # Set the correct resource-dir for all C++ compilation
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND DEFINED CLANG_RESOURCE_DIR AND NOT CLANG_RESOURCE_DIR STREQUAL "")
@@ -95,7 +101,7 @@ endif()
 
 
 # Make dependencies available
-FetchContent_MakeAvailable(fmtlib json safetensors_cpp tokenizers_cpp)
+FetchContent_MakeAvailable(fmtlib json safetensors_cpp tokenizers_cpp thunderkittens)
 
 # compiled library code
 add_subdirectory(src/tensor)

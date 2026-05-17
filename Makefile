@@ -95,7 +95,8 @@ prepare_benchmark:
 
 .PHONY: benchmark_tensor
 benchmark: prepare_benchmark
-	@cmake --build build --target bm_tensor
+	@cmake --build build --target bm_tensor --target test_tensor_cuda
+	@ctest --test-dir build -R "TensorCUDATest\.MatmulBf16$$" --output-on-failure
 	./build/benchmarks/tensor/bm_tensor
 
 .PHONY: benchmark_llama

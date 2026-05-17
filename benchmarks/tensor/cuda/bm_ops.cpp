@@ -30,13 +30,13 @@ static void BM_CUDA_AddBf16(State& state) {
                           state.range(1) * bytes_per_element * 2);
 }
 
-BENCHMARK(BM_CUDA_AddBf16)
-    ->Args({8192, 2048})
-    ->Args({16384, 2048})
-    ->Args({65536, 2048})
-    ->Args({262144, 2048})
-    ->Unit(kMillisecond)
-    ->UseRealTime();
+// BENCHMARK(BM_CUDA_AddBf16)
+//     ->Args({8192, 2048})
+//     ->Args({16384, 2048})
+//     ->Args({65536, 2048})
+//     ->Args({262144, 2048})
+//     ->Unit(kMillisecond)
+//     ->UseRealTime();
 
 static void BM_CUDA_SumFp32LastDim(State& state) {
   Tensor<float, CUDA> tensor(
@@ -58,11 +58,11 @@ static void BM_CUDA_SumFp32LastDim(State& state) {
                           state.range(1) * bytes_per_element);
 }
 
-BENCHMARK(BM_CUDA_SumFp32LastDim)
-    ->Args({16384, 2048})
-    ->Args({65536, 2048})
-    ->Unit(kMillisecond)
-    ->UseRealTime();
+// BENCHMARK(BM_CUDA_SumFp32LastDim)
+//     ->Args({16384, 2048})
+//     ->Args({65536, 2048})
+//     ->Unit(kMillisecond)
+//     ->UseRealTime();
 
 static void BM_CUDA_SumFp32FirstDim(State& state) {
   Tensor<float, CUDA> tensor(
@@ -84,11 +84,11 @@ static void BM_CUDA_SumFp32FirstDim(State& state) {
                           state.range(1) * bytes_per_element);
 }
 
-BENCHMARK(BM_CUDA_SumFp32FirstDim)
-    ->Args({16384, 2048})
-    ->Args({65536, 2048})
-    ->Unit(kMillisecond)
-    ->UseRealTime();
+// BENCHMARK(BM_CUDA_SumFp32FirstDim)
+//     ->Args({16384, 2048})
+//     ->Args({65536, 2048})
+//     ->Unit(kMillisecond)
+//     ->UseRealTime();
 
 static void BM_CUDA_MaskedFillBf16(State& state) {
   Tensor<bfloat16, CUDA> tensor(
@@ -114,11 +114,11 @@ static void BM_CUDA_MaskedFillBf16(State& state) {
                           state.range(1) * bytes_per_element);
 }
 
-BENCHMARK(BM_CUDA_MaskedFillBf16)
-    ->Args({16384, 2048})
-    ->Args({65536, 2048})
-    ->Unit(kMillisecond)
-    ->UseRealTime();
+// BENCHMARK(BM_CUDA_MaskedFillBf16)
+//     ->Args({16384, 2048})
+//     ->Args({65536, 2048})
+//     ->Unit(kMillisecond)
+//     ->UseRealTime();
 
 static void BM_CUDA_CatBf16FirstDim(State& state) {
   Tensor<bfloat16, CUDA> tensor_a(
@@ -142,11 +142,11 @@ static void BM_CUDA_CatBf16FirstDim(State& state) {
                           state.range(1) * bytes_per_element * 2);
 }
 
-BENCHMARK(BM_CUDA_CatBf16FirstDim)
-    ->Args({16384, 2048})
-    ->Args({65536, 2048})
-    ->Unit(kMillisecond)
-    ->UseRealTime();
+// BENCHMARK(BM_CUDA_CatBf16FirstDim)
+//     ->Args({16384, 2048})
+//     ->Args({65536, 2048})
+//     ->Unit(kMillisecond)
+//     ->UseRealTime();
 
 static void BM_CUDA_CatBf16LastDim(State& state) {
   Tensor<bfloat16, CUDA> tensor_a(
@@ -170,8 +170,64 @@ static void BM_CUDA_CatBf16LastDim(State& state) {
                           state.range(1) * bytes_per_element * 2);
 }
 
-BENCHMARK(BM_CUDA_CatBf16LastDim)
-    ->Args({16384, 2048})
-    ->Args({65536, 2048})
-    ->Unit(kMillisecond)
-    ->UseRealTime();
+// BENCHMARK(BM_CUDA_CatBf16LastDim)
+//     ->Args({16384, 2048})
+//     ->Args({65536, 2048})
+//     ->Unit(kMillisecond)
+//     ->UseRealTime();
+
+static void BM_CUDA_MatmulBf16(State& state) {
+  auto m = static_cast<size_t>(state.range(0));
+  auto k = static_cast<size_t>(state.range(1));
+  auto n = static_cast<size_t>(state.range(2));
+
+  Tensor<bfloat16, CUDA> tensor_a({m, k});
+  Tensor<bfloat16, CUDA> tensor_b({k, n});
+
+  tensor_a.fill_(bfloat16(4.0));
+  tensor_b.fill_(bfloat16(3.0));
+
+  auto a_v = tensor_a.view();
+  auto b_v = tensor_b.view();
+
+  for (auto _ : state) {
+    DoNotOptimize(matmul(a_v, b_v));
+  }
+
+  int64_t flops = 0;
+  flops += state.iterations() * 2 * m * k * n;
+  state.counters["FLOPs"] = Counter(flops, Counter::kIsRate);
+  auto bytes_per_element = 2;
+  state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * m * k * k * n *
+                          bytes_per_element);
+}
+
+BENCHMARK(BM_CUDA_MatmulBf16)->Args({16384, 8192, 16384})->Unit(kMillisecond)->UseRealTime();
+
+static void BM_CUDA_MatmulFp32(State& state) {
+  auto m = static_cast<size_t>(state.range(0));
+  auto k = static_cast<size_t>(state.range(1));
+  auto n = static_cast<size_t>(state.range(2));
+
+  Tensor<float, CUDA> tensor_a({m, k});
+  Tensor<float, CUDA> tensor_b({k, n});
+
+  tensor_a.fill_(float(4.0));
+  tensor_b.fill_(float(3.0));
+
+  auto a_v = tensor_a.view();
+  auto b_v = tensor_b.view();
+
+  for (auto _ : state) {
+    DoNotOptimize(matmul(a_v, b_v));
+  }
+
+  int64_t flops = 0;
+  flops += state.iterations() * 2 * m * k * n;
+  state.counters["FLOPs"] = Counter(flops, Counter::kIsRate);
+  auto bytes_per_element = 2;
+  state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * m * k * k * n *
+                          bytes_per_element);
+}
+
+BENCHMARK(BM_CUDA_MatmulFp32)->Args({16384, 8192, 16384})->Unit(kMillisecond)->UseRealTime();
