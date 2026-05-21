@@ -1,4 +1,4 @@
-add_executable(bm_llama bm_rope.cpp)
+add_executable(bm_llama bm_rope.cpp bm_grouped_query_attention.cpp)
 target_link_libraries(bm_llama PRIVATE llama benchmark::benchmark_main)
 
 target_compile_features(bm_llama PRIVATE cxx_std_26)

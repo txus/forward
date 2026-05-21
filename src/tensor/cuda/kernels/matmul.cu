@@ -79,12 +79,14 @@ private:
   // Warmup bf16 GEMM kernels to avoid JIT compilation on first real call
   void warmup() {
     constexpr int N = 64;
+    constexpr int BATCH = 2;
     void* a = nullptr;
     void* b = nullptr;
     void* c = nullptr;
-    cudaMalloc(&a, N * N * sizeof(__nv_bfloat16));
-    cudaMalloc(&b, N * N * sizeof(__nv_bfloat16));
-    cudaMalloc(&c, N * N * sizeof(__nv_bfloat16));
+    // Allocate enough for BATCH matrices (batched GEMM uses stride N*N)
+    cudaMalloc(&a, BATCH * N * N * sizeof(__nv_bfloat16));
+    cudaMalloc(&b, BATCH * N * N * sizeof(__nv_bfloat16));
+    cudaMalloc(&c, BATCH * N * N * sizeof(__nv_bfloat16));
 
     float alpha = 1.0f, beta = 0.0f;
 
@@ -97,7 +99,7 @@ private:
     cublasGemmStridedBatchedEx(handle_, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N, &alpha,
                                b, CUDA_R_16BF, N, N * N,
                                a, CUDA_R_16BF, N, N * N, &beta,
-                               c, CUDA_R_16BF, N, N * N, 2,
+                               c, CUDA_R_16BF, N, N * N, BATCH,
                                CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT);
 
     cudaDeviceSynchronize();
@@ -113,6 +115,36 @@ private:
   CublasHandle(const CublasHandle&) = delete;
   CublasHandle& operator=(const CublasHandle&) = delete;
 };
+
+const char* cublas_status_to_string(cublasStatus_t status) {
+
+    switch (status) {
+
+        case CUBLAS_STATUS_SUCCESS: return "CUBLAS_STATUS_SUCCESS";
+
+        case CUBLAS_STATUS_NOT_INITIALIZED: return "CUBLAS_STATUS_NOT_INITIALIZED";
+
+        case CUBLAS_STATUS_ALLOC_FAILED: return "CUBLAS_STATUS_ALLOC_FAILED";
+
+        case CUBLAS_STATUS_INVALID_VALUE: return "CUBLAS_STATUS_INVALID_VALUE";
+
+        case CUBLAS_STATUS_ARCH_MISMATCH: return "CUBLAS_STATUS_ARCH_MISMATCH";
+
+        case CUBLAS_STATUS_MAPPING_ERROR: return "CUBLAS_STATUS_MAPPING_ERROR";
+
+        case CUBLAS_STATUS_EXECUTION_FAILED: return "CUBLAS_STATUS_EXECUTION_FAILED";
+
+        case CUBLAS_STATUS_INTERNAL_ERROR: return "CUBLAS_STATUS_INTERNAL_ERROR";
+
+        case CUBLAS_STATUS_NOT_SUPPORTED: return "CUBLAS_STATUS_NOT_SUPPORTED";
+
+        case CUBLAS_STATUS_LICENSE_ERROR: return "CUBLAS_STATUS_LICENSE_ERROR";
+
+        default: return "UNKNOWN_CUBLAS_STATUS";
+
+    }
+
+}
 
 template <>
 Tensor<float, CUDA> matmul(const TensorView<float, CUDA>& tensor_a,
@@ -156,6 +188,14 @@ Tensor<float, CUDA> matmul(const TensorView<float, CUDA>& tensor_a,
 
   cublasOperation_t op_b = b_transposed ? CUBLAS_OP_T : CUBLAS_OP_N;
   int ldb = b_transposed ? static_cast<int>(K) : static_cast<int>(N);
+
+  if (b_ndim > 2) {
+      assert(a_ndim == b_ndim && "batched matmul requires same rank unless B is 2D broadcasted");
+      for (size_t i = 0; i < a_ndim - 2; ++i) {
+          assert(tensor_a.shape[i] == tensor_b.shape[i] &&
+                 "batched matmul batch dimensions must match");
+      }
+  }
 
   if (batch_size == 1) {
     cublasStatus_t status = cublasSgemm(
@@ -244,36 +284,29 @@ Tensor<bfloat16, CUDA> matmul(const TensorView<bfloat16, CUDA>& tensor_a,
 
   cublasHandle_t handle = CublasHandle::get();
 
-  // For row-major: C = A @ B becomes C^T = B^T @ A^T in col-major
-  // We swap A and B in the cuBLAS call.
-  //
-  // If B is already transposed (view-only, no data copy), we need to "undo" it
-  // for cuBLAS by using CUBLAS_OP_T. The physical layout is [N, K] but the view
-  // shape is [K, N]. cuBLAS sees it as col-major [K, N], and with OP_T treats it
-  // as [N, K] which is what we want.
+  cublasOperation_t op_cublas_A =
+      b_transposed ? CUBLAS_OP_T : CUBLAS_OP_N;
+  cublasOperation_t op_cublas_B = CUBLAS_OP_N;
 
-  // When B is transposed:
-  // - Physical data is [N, K] (original weights before transpose view)
-  // - View shape is [K, N] (after .transpose())
-  // - ldb = N (the leading dimension of the physical layout)
-  // - We use CUBLAS_OP_T so cuBLAS reads it as transposed
+  int m = static_cast<int>(N);
+  int n = static_cast<int>(M);
+  int k = static_cast<int>(K);
 
-  cublasOperation_t op_b = b_transposed ? CUBLAS_OP_T : CUBLAS_OP_N;
-  int ldb = b_transposed ? static_cast<int>(K) : static_cast<int>(N);
+  int lda = b_transposed ? static_cast<int>(K) : static_cast<int>(N);
+  int ldb = static_cast<int>(K);
+  int ldc = static_cast<int>(N);
 
   if (batch_size == 1) {
     // Single matrix multiplication
     cublasStatus_t status = cublasGemmEx(
         handle,
-        op_b, CUBLAS_OP_N,
-        static_cast<int>(N),       // rows of op(B) and C
-        static_cast<int>(M),       // cols of op(A) and C
-        static_cast<int>(K),       // cols of op(B), rows of op(A)
+        op_cublas_A, op_cublas_B,
+        m, n, k,
         &alpha,
-        tensor_b.data, CUDA_R_16BF, ldb,
-        tensor_a.data, CUDA_R_16BF, static_cast<int>(K),  // A: lda = K
+        tensor_b.data, CUDA_R_16BF, lda,
+        tensor_a.data, CUDA_R_16BF, ldb,
         &beta,
-        out.data(), CUDA_R_16BF, static_cast<int>(N),     // C: ldc = N
+        out.data(), CUDA_R_16BF, ldc,
         CUBLAS_COMPUTE_32F,        // Accumulate in fp32
         CUBLAS_GEMM_DEFAULT);
 

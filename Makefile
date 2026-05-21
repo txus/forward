@@ -91,7 +91,7 @@ test:
 
 .PHONY: prepare_benchmark
 prepare_benchmark:
-	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release -DFUSED_ROPE=ON
+	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release
 
 .PHONY: benchmark_tensor
 benchmark: prepare_benchmark
@@ -117,4 +117,3 @@ format:
 .PHONY: clean
 clean:
 	@rm -rf build*/ || true
-

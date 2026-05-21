@@ -12,7 +12,7 @@ template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D>
 gqa_forward(const TensorView<T, D>& qs, const TensorView<T, D>& ks,          // NOLINT
             const TensorView<T, D>& vs, const TensorView<int, D>& attn_mask, // NOLINT
-            const Softmax& softmax, T scale_factor, size_t group_size, size_t d_out) {
+            const Softmax& softmax, float scale_factor, size_t group_size, size_t d_out) {
   auto batch_size = qs.shape[0];
   auto queries_len = qs.shape[2];
   auto kvs_len = ks.shape[2];
@@ -58,7 +58,7 @@ gqa_forward(const TensorView<T, D>& qs, const TensorView<T, D>& ks,          // 
 
 template <typename T, typename D>
 GroupedQueryAttention<T, D>::GroupedQueryAttention(const ModelConfig& config, size_t cached_tokens)
-    : scale(T(1.0F / std::sqrt(static_cast<float>(config.head_dim)))), d_in(config.hidden_size),
+    : scale(1.0F / std::sqrt(static_cast<float>(config.head_dim))), d_in(config.hidden_size),
       d_out(config.hidden_size), num_heads(config.num_attention_heads), head_dim(d_out / num_heads),
       num_kv_groups(config.num_key_value_heads), group_size(num_heads / num_kv_groups) {
   assert(d_out % num_heads == 0);
@@ -193,12 +193,14 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
   queries_v = queries.view();
   keys = rope.forward(keys_v); // (batch, num_heads, seq_len, head_dim)
   keys_v = keys.view();
+  values = copy(values_v); // (batch, num_heads, seq_len, head_dim)
+  values_v = values.view();
 
   Tensor<T, D> attn_out;
 
   if (use_fused_attn) {
     if constexpr (std::is_same_v<D, CUDA>) {
-      attn_out = gqa_forward_fused(queries_v, keys_v, values_v, scale, group_size, d_out, true);
+      attn_out = gqa_forward_fused<T, CUDA, 64>(queries_v, keys_v, values_v, scale, group_size, d_out, position_offset);
     } else {
       attn_out = gqa_forward(queries_v, keys_v, values_v, attention_mask, softmax, scale,
                              group_size, d_out);
@@ -219,7 +221,21 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
 
 template class GroupedQueryAttention<bfloat16, CPU>;
 
+// Explicit instantiation of the free function is required even when FUSED_ATTN
+// is enabled, because the class's forward() skips the non-fused code path
+// entirely in that case, so the template is never implicitly instantiated.
+// External callers (e.g. benchmarks) still need to find the symbol.
+template Tensor<std::remove_const_t<bfloat16>, CPU>
+gqa_forward(const TensorView<bfloat16, CPU>&, const TensorView<bfloat16, CPU>&,
+            const TensorView<bfloat16, CPU>&, const TensorView<int, CPU>&,
+            const Softmax&, float, size_t, size_t);
+
 #ifdef BACKEND_CUDA
 template class GroupedQueryAttention<bfloat16, CUDA>;
+
+template Tensor<std::remove_const_t<bfloat16>, CUDA>
+gqa_forward(const TensorView<bfloat16, CUDA>&, const TensorView<bfloat16, CUDA>&,
+            const TensorView<bfloat16, CUDA>&, const TensorView<int, CUDA>&,
+            const Softmax&, float, size_t, size_t);
 #endif
 } // namespace llama

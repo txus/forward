@@ -13,15 +13,15 @@ template <typename T, typename D>
 Tensor<std::remove_const_t<T>, D>
 gqa_forward(const TensorView<T, D>& qs, const TensorView<T, D>& ks, // NOLINT
             const TensorView<T, D>& vs,                             // NOLINT
-            const TensorView<int, D>& attn_mask, const nn::Softmax& softmax, T scale_factor,
+            const TensorView<int, D>& attn_mask, const nn::Softmax& softmax, float scale_factor,
             size_t group_size, size_t d_out);
 
-template <typename T, typename D>
+template <typename T, typename D, int HEAD_DIM>
 Tensor<std::remove_const_t<T>, D>
 gqa_forward_fused(const TensorView<T, D>& qs,                 // NOLINT
                   const TensorView<T, D>& ks,                 // NOLINT
-                  const TensorView<T, D>& vs, T scale_factor, // NOLINT
-                  size_t group_size, size_t d_out, bool is_causal);
+                  const TensorView<T, D>& vs, float scale_factor, // NOLINT
+                  size_t group_size, size_t d_out, int position_offset = 0, bool is_causal = true);
 
 template <typename T, typename D> class GroupedQueryAttention {
 private:
@@ -32,7 +32,7 @@ private:
   size_t num_kv_groups;
   size_t group_size;
 
-  T scale;
+  float scale;
 
   nn::Linear<T, D> q_proj;
   nn::Linear<T, D> k_proj;

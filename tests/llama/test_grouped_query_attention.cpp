@@ -137,6 +137,7 @@ TEST(LlamaCUDAGQATest, ParityWithKVCache) {
   auto expected_prefill_output = slice(output_activations.view(), 1, 0, 3);
   auto expected_prefill_output_cpu = expected_prefill_output.cpu();
   tensor_is_close<bfloat16>(prefill_output_cpu.view().span(), expected_prefill_output_cpu.span());
+  fmt::println("Prefill worked!");
 
   EXPECT_EQ(gqa.get_cache_size(), 3);
 
@@ -148,6 +149,7 @@ TEST(LlamaCUDAGQATest, ParityWithKVCache) {
   auto expected_decode_output_cpu = expected_decode_output.cpu();
 
   tensor_is_close<bfloat16>(decode_output_cpu.view().span(), expected_decode_output_cpu.span());
+  fmt::println("Decode with kv cache worked!");
 
   EXPECT_EQ(gqa.get_cache_size(), 4);
 }
