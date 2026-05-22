@@ -62,13 +62,13 @@ __forceinline__ __device__ void compute_wmma_trans(
             wmma::load_matrix_sync(
                 a_frag,
                 &a_smem[a_off][d0],
-                K
+                A_STRIDE
             );
 
             wmma::load_matrix_sync(
                 b_frag,
                 &b_smem[b_off][d0],
-                K
+                B_STRIDE
             );
 
             wmma::mma_sync(acc_frag, a_frag, b_frag, acc_frag);
@@ -84,7 +84,7 @@ __forceinline__ __device__ void compute_wmma_trans(
         wmma::store_matrix_sync(
             &c_smem[a_off][b_off],
             acc_frag,
-            N,
+            C_STRIDE,
             wmma::mem_row_major
         );
     }
@@ -132,13 +132,13 @@ __forceinline__ __device__ void compute_wmma(
             wmma::load_matrix_sync(
                 a_frag,
                 &a_smem[a_off][d0],
-                K
+                A_STRIDE
             );
 
             wmma::load_matrix_sync(
                 b_frag,
                 &b_smem[d0][b_off],
-                N
+                B_STRIDE
             );
 
             wmma::mma_sync(acc_frag, a_frag, b_frag, acc_frag);
@@ -154,7 +154,7 @@ __forceinline__ __device__ void compute_wmma(
         wmma::store_matrix_sync(
             &c_smem[a_off][b_off],
             acc_frag,
-            N,
+            C_STRIDE,
             wmma::mem_row_major
         );
     }
@@ -309,15 +309,19 @@ __global__ void gqa_fused(
     vtile.initialize();
     __syncthreads();
 
-    __shared__ float scores_fp32[BLOCK_Q][BLOCK_K + 1]; // [q, k]
-    __shared__ T scores_bf16[BLOCK_Q][BLOCK_K]; // [q, k]
+    //constexpr int BLOCK_K_PAD = BLOCK_K + 1;
+    constexpr int BLOCK_K_PAD = BLOCK_K + 4;
+    constexpr int HEAD_DIM_PAD = HEAD_DIM + 4;
+
+    __shared__ float scores_fp32[BLOCK_Q][BLOCK_K_PAD]; // [q, k]
+    __shared__ T scores_bf16[BLOCK_Q][BLOCK_K_PAD]; // [q, k]
 
     // online softmax stuff
     __shared__ float m[BLOCK_Q]; // running max
     __shared__ float l[BLOCK_Q]; // running denominator / sum exp
     __shared__ float row_max[BLOCK_Q];
     __shared__ float row_sum[BLOCK_Q];
-    __shared__ float o_accum[BLOCK_Q][HEAD_DIM + 1]; // running output accumulator
+    __shared__ float o_accum[BLOCK_Q][HEAD_DIM_PAD]; // running output accumulator
 
     qtile.load_async(b, hq, q_start);
 
@@ -344,7 +348,7 @@ __global__ void gqa_fused(
         compute_wmma_trans<T, BLOCK_Q, BLOCK_K, HEAD_DIM, NUM_THREADS,
             HEAD_DIM, // a stride
             HEAD_DIM, // b stride
-            BLOCK_K + 1 // c stride
+            BLOCK_K_PAD // c stride
             >(
             qs_tile,
             ks_tile,
@@ -422,7 +426,11 @@ __global__ void gqa_fused(
         // o_accum += p @ V
         // scores is BLOCK_Q x BLOCK_K
         // vtile is BLOCK_K x HEAD_DIM
-        compute_wmma<T, BLOCK_Q, HEAD_DIM, BLOCK_K, NUM_THREADS>(
+        compute_wmma<T, BLOCK_Q, HEAD_DIM, BLOCK_K, NUM_THREADS,
+            BLOCK_K_PAD, // a stride
+            HEAD_DIM, // b stride
+            HEAD_DIM_PAD // c stride
+            >(
             scores_bf16,
             vs_tile,
             o_accum
