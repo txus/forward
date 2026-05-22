@@ -357,6 +357,7 @@ __global__ void gqa_fused(
         );
 
         // apply attn mask
+        #pragma unroll
         for (int i = tid; i < BLOCK_Q * BLOCK_K; i += NUM_THREADS) {
             int q = i / BLOCK_K;
             int k = i % BLOCK_K;
@@ -373,6 +374,7 @@ __global__ void gqa_fused(
         }
         __syncthreads();
 
+        #pragma unroll
         for (int q = tid; q < BLOCK_Q; q += NUM_THREADS) {
             float rmax = -INFINITY;
 
@@ -384,7 +386,9 @@ __global__ void gqa_fused(
         }
         __syncthreads();
 
+
         // scores = exp(scores - row_max), row_sum
+        #pragma unroll
         for (int q = tid; q < BLOCK_Q; q += NUM_THREADS) {
             float sum = 0.0f;
             float m_new = row_max[q];
@@ -404,6 +408,7 @@ __global__ void gqa_fused(
         __syncthreads();
 
         // Rescale old O accumulator by alpha.
+        #pragma unroll
         for (int i = tid; i < BLOCK_Q * HEAD_DIM; i += NUM_THREADS) {
             int q = i / HEAD_DIM;
             int d = i % HEAD_DIM;
