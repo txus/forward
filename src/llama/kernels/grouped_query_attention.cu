@@ -2,6 +2,7 @@
 #include <tensor/dtype.hpp>
 #include <tensor/device_type.hpp>
 #include <cuda.h>
+#include <cuda_bf16.h>
 #include <mma.h>
 #include <cuda/barrier>
 #include <cuda/ptx>
@@ -14,6 +15,47 @@ namespace wmma = nvcuda::wmma;
 using barrier = cuda::barrier<cuda::thread_scope_block>;
 namespace cde = cuda::device::experimental;
 namespace ptx = cuda::ptx;
+
+__device__ inline
+void ldmatrix_x2(uint32_t regs[2], uint32_t addr) {
+  asm volatile("ldmatrix.sync.aligned.m8n8.x2.b16 {%0, %1}, [%2];"
+              : "=r"(regs[0]), "=r"(regs[1])
+              : "r"(addr));
+}
+
+__device__ inline
+void ldmatrix_x4(uint32_t regs[4], uint32_t addr) {
+  asm volatile("ldmatrix.sync.aligned.m8n8.x4.b16 {%0, %1, %2, %3}, [%4];"
+              : "=r"(regs[0]), "=r"(regs[1]), "=r"(regs[2]), "=r"(regs[3])
+              : "r"(addr));
+}
+
+__device__ inline
+void ldmatrix_x2_trans(uint32_t regs[2], uint32_t addr) {
+  asm volatile("ldmatrix.sync.aligned.m8n8.x2.trans.b16 {%0, %1}, [%2];"
+              : "=r"(regs[0]), "=r"(regs[1])
+              : "r"(addr));
+}
+
+__device__ inline
+void ldmatrix_x4_trans(uint32_t regs[4], uint32_t addr) {
+  asm volatile("ldmatrix.sync.aligned.m8n8.x4.trans.b16 {%0, %1, %2, %3}, [%4];"
+              : "=r"(regs[0]), "=r"(regs[1]), "=r"(regs[2]), "=r"(regs[3])
+              : "r"(addr));
+}
+
+__device__ inline
+void mma_m16n8k16(uint32_t A[4], uint32_t B[2], float D[4]) {
+  asm volatile("mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32 "
+              "{%0, %1, %2, %3}, "
+              "{%4, %5, %6, %7}, "
+              "{%8, %9}, "
+              "{%10, %11, %12, %13};"
+              : "=f"(D[0]), "=f"(D[1]), "=f"(D[2]), "=f"(D[3])
+              : "r"(A[0]), "r"(A[1]), "r"(A[2]), "r"(A[3]),
+                "r"(B[0]), "r"(B[1]),
+                "f"(D[0]), "f"(D[1]), "f"(D[2]), "f"(D[3]));
+}
 
 __device__ __forceinline__ float safe_exp_delta(float old_m, float new_m) {
     if (!isfinite(old_m) && !isfinite(new_m)) return 0.0f;
@@ -238,6 +280,29 @@ struct Tile {
     }
 };
 
+template<int BLOCK_Q, int BLOCK_K_PAD>
+__device__ __forceinline__ void store_m16n8_accum_to_smem(
+    float (&scores)[BLOCK_Q][BLOCK_K_PAD],
+    const float acc[4],
+    int q_base,
+    int k_base,
+    float scale
+) {
+    int lane  = threadIdx.x & 31;
+    int group = lane >> 2; // 0..7
+    int tid4  = lane & 3;  // 0..3
+
+    int q0 = q_base + group;
+    int q1 = q_base + group + 8;
+    int k0 = k_base + tid4 * 2;
+    int k1 = k0 + 1;
+
+    scores[q0][k0] = acc[0] * scale;
+    scores[q0][k1] = acc[1] * scale;
+    scores[q1][k0] = acc[2] * scale;
+    scores[q1][k1] = acc[3] * scale;
+}
+
 template<typename T, int BLOCK_Q, int BLOCK_K, int HEAD_DIM, int NUM_THREADS>
 __global__ void gqa_fused(
     T* __restrict__ out, size_t o_b_stride, size_t o_h_stride, size_t o_s_stride, size_t o_d_stride,
@@ -267,7 +332,9 @@ __global__ void gqa_fused(
     assert(k_s_stride == HEAD_DIM && "k s stride is not head dim");
     assert(v_s_stride == HEAD_DIM && "v s stride is not head dim");
 
-    int tid = threadIdx.x;
+    const int tid = threadIdx.x;
+    const int warp_id = tid / 32;
+    const int lane_id = tid  % 32;
 
     __shared__ alignas(128) T qs_tile[BLOCK_Q][HEAD_DIM];
     __shared__ alignas(128) T ks_tile[BLOCK_K][HEAD_DIM];
@@ -309,7 +376,6 @@ __global__ void gqa_fused(
     vtile.initialize();
     __syncthreads();
 
-    //constexpr int BLOCK_K_PAD = BLOCK_K + 1;
     constexpr int BLOCK_K_PAD = BLOCK_K + 4;
     constexpr int HEAD_DIM_PAD = HEAD_DIM + 4;
 
@@ -338,23 +404,89 @@ __global__ void gqa_fused(
     }
     __syncthreads();
 
+    constexpr int NUM_WARPS = NUM_THREADS / 32;
+    constexpr int WARP_Q = BLOCK_Q / NUM_WARPS;
+
+    // mma.m16n8k16
+    constexpr int MMA_M = 16;
+    constexpr int MMA_N = 8;
+    constexpr int MMA_K = 16;
+
+    uint32_t Q_rmem[WARP_Q / MMA_M][HEAD_DIM / MMA_K][4]; // A in mma
+    uint32_t K_rmem[BLOCK_K / MMA_N][HEAD_DIM / MMA_K][2]; // B in mma
+
+    for (int mma_id_q = 0; mma_id_q < WARP_Q / MMA_M; mma_id_q++) {
+      for (int mma_id_d = 0; mma_id_d < HEAD_DIM / MMA_K; mma_id_d++) {
+        const int row = warp_id * WARP_Q + mma_id_q * MMA_M + (lane_id % 16);
+        const int col = mma_id_d * MMA_K + (lane_id / 16 * 8);
+        const uint32_t addr = __cvta_generic_to_shared(&qs_tile[row][col]);
+        ldmatrix_x4(Q_rmem[mma_id_q][mma_id_d], addr);
+      }
+    }
+    __syncthreads();
+
     for(int k_idx = 0; k_idx < kv_seq_len; k_idx += BLOCK_K) {
+        float S_rmem[WARP_Q / MMA_M][BLOCK_K / MMA_N][4] = {};
+
         ktile.load_async(b, hk, k_idx);
         vtile.load_async(b, hk, k_idx);
 
         qtile.wait();
         ktile.wait();
 
-        compute_wmma_trans<T, BLOCK_Q, BLOCK_K, HEAD_DIM, NUM_THREADS,
-            HEAD_DIM, // a stride
-            HEAD_DIM, // b stride
-            BLOCK_K_PAD // c stride
-            >(
-            qs_tile,
-            ks_tile,
-            scores_fp32,
-            scale_factor
-        );
+        // shared -> registers
+        for (int mma_id_kv = 0; mma_id_kv < BLOCK_K / MMA_N; mma_id_kv++) {
+          for (int mma_id_d = 0; mma_id_d < HEAD_DIM / MMA_K; mma_id_d++) {
+            const int row = mma_id_kv * MMA_N + (lane_id % 8);
+            const int col = mma_id_d * MMA_K + (lane_id / 8 * 8);
+            const uint32_t addr = __cvta_generic_to_shared(&ks_tile[row][col]);
+            ldmatrix_x2(K_rmem[mma_id_kv][mma_id_d], addr);
+          }
+        }
+
+        // MMA S = Q @ K.T [BLOCK_Q, BLOCK_KV]
+        for (int mma_id_q = 0; mma_id_q < WARP_Q / MMA_M; mma_id_q++)
+          for (int mma_id_kv = 0; mma_id_kv < BLOCK_K / MMA_N; mma_id_kv++)
+            for (int mma_id_d = 0; mma_id_d < HEAD_DIM / MMA_K; mma_id_d++)
+              mma_m16n8k16(Q_rmem[mma_id_q][mma_id_d],
+                           K_rmem[mma_id_kv][mma_id_d],
+                           S_rmem[mma_id_q][mma_id_kv]);
+
+        // for (int mma_id_q = 0; mma_id_q < WARP_Q / MMA_M; mma_id_q++) {
+        //       // apply softmax scale
+        //     for (int mma_id_kv = 0; mma_id_kv < BLOCK_K / MMA_N; mma_id_kv++)
+        //         for (int reg_id = 0; reg_id < 4; reg_id++)
+        //             // how to map this to  something so that i can write to scores_fp32[q][k] =
+        //             // instead of S_rmem?
+        //             S_rmem[mma_id_q][mma_id_kv][reg_id] *= scale_factor;
+        // }
+
+        for (int mma_id_q = 0; mma_id_q < BLOCK_Q / MMA_M; mma_id_q++) {
+            for (int mma_id_kv = 0; mma_id_kv < BLOCK_K / MMA_N; mma_id_kv++) {
+                int q_base = mma_id_q  * MMA_M;
+                int k_base = mma_id_kv * MMA_N;
+
+                store_m16n8_accum_to_smem<BLOCK_Q, BLOCK_K_PAD>(
+                    scores_fp32,
+                    S_rmem[mma_id_q][mma_id_kv],
+                    q_base,
+                    k_base,
+                    scale_factor
+                );
+            }
+        }
+        __syncthreads();
+
+        // compute_wmma_trans<T, BLOCK_Q, BLOCK_K, HEAD_DIM, NUM_THREADS,
+        //     HEAD_DIM, // a stride
+        //     HEAD_DIM, // b stride
+        //     BLOCK_K_PAD // c stride
+        //     >(
+        //     qs_tile,
+        //     ks_tile,
+        //     scores_fp32,
+        //     scale_factor
+        // );
 
         // apply attn mask
         #pragma unroll
@@ -486,7 +618,8 @@ template<typename T, int TILE_SEQ>
 CUtensorMap create_tensor_map(
     const T* gmem_ptr, // pointer to tensor[batch, head, seq, dim];
     unsigned int b, unsigned int h, unsigned int s, unsigned int d,
-    size_t b_stride, size_t h_stride, size_t s_stride
+    size_t b_stride, size_t h_stride, size_t s_stride,
+    CUtensorMapSwizzle swizzle = CU_TENSOR_MAP_SWIZZLE_NONE
     // q_d,
     // batch_size, num_q_heads, seq_len, q_head_dim,
     // q_b_stride, q_h_stride, q_s_stride
@@ -528,7 +661,7 @@ CUtensorMap create_tensor_map(
         box_dims,
         elem_strides,
         CU_TENSOR_MAP_INTERLEAVE_NONE,
-        CU_TENSOR_MAP_SWIZZLE_NONE, // no swizzle (simpler for mma/WMMA)
+        swizzle,
         CU_TENSOR_MAP_L2_PROMOTION_NONE,
         CU_TENSOR_MAP_FLOAT_OOB_FILL_NAN_REQUEST_ZERO_FMA
     );
@@ -586,8 +719,8 @@ Tensor<std::remove_const_t<T>, D> gqa_forward_fused(const TensorView<T, D> &qs,
   const auto* k_d = reinterpret_cast<Cuda<T>*>(ks.data); // NOLINT
   const auto* v_d = reinterpret_cast<Cuda<T>*>(vs.data); // NOLINT
 
-  constexpr int BLOCK_Q = 16; // queries per CTA
-  constexpr int BLOCK_K = 16; // keys streamed per iteration
+  constexpr int BLOCK_Q = 64; // queries per CTA
+  constexpr int BLOCK_K = 32; // keys streamed per iteration
   constexpr int THREADS = 128; // 4 warps
 
   auto q_tmap = create_tensor_map<Cuda<T>, BLOCK_Q>(
@@ -599,6 +732,7 @@ Tensor<std::remove_const_t<T>, D> gqa_forward_fused(const TensorView<T, D> &qs,
       k_d,
       batch_size, num_kv_heads, kv_seq_len, kv_head_dim,
       k_b_stride, k_h_stride, k_s_stride
+      //CU_TENSOR_MAP_SWIZZLE_128B
   );
   auto v_tmap = create_tensor_map<Cuda<T>, BLOCK_K>(
       v_d,
