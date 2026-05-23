@@ -196,6 +196,7 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
 
   Tensor<T, D> attn_out;
 
+#if defined(BACKEND_CUDA) && defined(FUSED_ATTN)
   if (use_fused_attn) {
     if constexpr (std::is_same_v<D, CUDA>) {
       attn_out = gqa_forward_fused(queries_v, keys_v, values_v, scale, group_size, d_out, true);
@@ -203,7 +204,9 @@ GroupedQueryAttention<T, D>::forward(const TensorView<T, D>& inputs,
       attn_out = gqa_forward(queries_v, keys_v, values_v, attention_mask, softmax, scale,
                              group_size, d_out);
     }
-  } else {
+  } else
+#endif
+  {
     attn_out =
         gqa_forward(queries_v, keys_v, values_v, attention_mask, softmax, scale, group_size, d_out);
   }

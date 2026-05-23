@@ -1,7 +1,6 @@
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/llama/*.hpp")
 
-option(FUSED_ROPE "Use fused RoPE kernel (CUDA only)" ON)
-option(FUSED_ATTN "Use fused attention kernel (CUDA only)" ON)
+# FUSED_ROPE, FUSED_ATTN declared in top-level CMakeLists.txt
 
 set(LLAMA_SOURCES config.cpp model.cpp layer.cpp mlp.cpp rope.cpp grouped_query_attention.cpp kv_cache.cpp)
 
@@ -9,10 +8,6 @@ if(BACKEND_CUDA)
   include(CUDAConfig)
   enable_language(CUDA)
   list(APPEND LLAMA_SOURCES kernels/rope.cu kernels/grouped_query_attention.cu)
-elseif(FUSED_ATTN)
-  message(WARNING "FUSED_ATTN requested but BACKEND_CUDA=OFF; ignoring")
-elseif(FUSED_ROPE)
-  message(WARNING "FUSED_ROPE requested but BACKEND_CUDA=OFF; ignoring")
 endif()
 
 add_library(llama STATIC ${LLAMA_SOURCES})

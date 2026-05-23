@@ -4,7 +4,7 @@ project(
   Forward
   VERSION 0.1
   DESCRIPTION "A simple transformer inference engine"
-  LANGUAGES CXX CUDA
+  LANGUAGES CXX
 )
 
 # Add cmake module path for our custom modules
@@ -18,6 +18,12 @@ else()
   option(BACKEND_CUDA "Enable CUDA backend" ON)
   option(BACKEND_METAL "Enable Metal backend" OFF)
 endif()
+
+# CUDA-only feature toggles. Defaults track BACKEND_CUDA so CPU builds
+# don't emit "requested but ignored" warnings.
+option(FUSED_ROPE       "Use fused RoPE kernel (CUDA only)"            ${BACKEND_CUDA})
+option(FUSED_ATTN       "Use fused attention kernel (CUDA only)"       ${BACKEND_CUDA})
+option(SKIP_CUDA_TESTS  "Skip CUDA tests at runtime (no GPU available)" OFF)
 
 # Propagate backend flags as compile definitions
 if(BACKEND_CUDA)
@@ -87,12 +93,6 @@ FetchContent_Declare(
   GIT_TAG 55d53aa
 )
 
-FetchContent_Declare(
-  thunderkittens
-  GIT_REPOSITORY https://github.com/HazyResearch/ThunderKittens.git
-  GIT_TAG 00ea8a2
-)
-
 # On NixOS with Clang, clangd uses a different resource-dir than clang++
 # Set the correct resource-dir for all C++ compilation
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND DEFINED CLANG_RESOURCE_DIR AND NOT CLANG_RESOURCE_DIR STREQUAL "")
@@ -101,7 +101,7 @@ endif()
 
 
 # Make dependencies available
-FetchContent_MakeAvailable(fmtlib json safetensors_cpp tokenizers_cpp thunderkittens)
+FetchContent_MakeAvailable(fmtlib json safetensors_cpp tokenizers_cpp)
 
 # compiled library code
 add_subdirectory(src/tensor)
