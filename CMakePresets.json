@@ -2,9 +2,9 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "ninja-nvcc",
-      "displayName": "Production build with NVCC",
-      "description": "Standard build using nvcc for CUDA compilation",
+      "name": "ninja",
+      "displayName": "Main build",
+      "description": "Platform-default build: Metal on macOS, CUDA (nvcc) on Linux",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
@@ -14,6 +14,8 @@
     },
     {
       "name": "ninja-clangd",
+      "displayName": "Clangd tooling build (Linux/CUDA)",
+      "description": "Compiles CUDA with clang so clangd can parse .cu files; emits compile_commands.json into build/clangd",
       "environment": {
         "NIX_HARDENING_ENABLE": ""
       },
@@ -51,8 +53,8 @@
   ],
   "buildPresets": [
     {
-      "name": "ninja-nvcc",
-      "configurePreset": "ninja-nvcc"
+      "name": "ninja",
+      "configurePreset": "ninja"
     },
     {
       "name": "ninja-clangd",

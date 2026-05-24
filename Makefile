@@ -2,11 +2,11 @@
 
 .PHONY: all
 all:
-	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Debug && cmake --build build --parallel --
+	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Debug && cmake --build build --parallel --
 
 .PHONY: rebuild
 rebuild:
-	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Debug
+	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Debug
 
 .PHONY: dx
 dx:
@@ -14,11 +14,11 @@ dx:
 
 .PHONY: release
 release:
-	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
+	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
 
 .PHONY: prepare_profile
 prepare_profile:
-	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release
+	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Release
 	@cmake --build build --parallel --target forward
 
 .PHONY: profile
@@ -91,7 +91,7 @@ test:
 
 .PHONY: prepare_benchmark
 prepare_benchmark:
-	@cmake --preset ninja-nvcc -DCMAKE_BUILD_TYPE=Release -DFUSED_ROPE=ON
+	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Release -DFUSED_ROPE=ON
 
 .PHONY: benchmark_tensor
 benchmark: prepare_benchmark

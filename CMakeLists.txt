@@ -100,8 +100,18 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND DEFINED CLANG_RESOURCE_DIR AND NOT
 endif()
 
 
-# Make dependencies available
+# Make dependencies available.
+# tokenizers_cpp and its vendored deps (msgpack, sentencepiece) emit CMake
+# deprecation + developer warnings (old cmake_minimum_required, CMP0175) that we
+# can't fix upstream. Silence them only across the dependency configure, then
+# restore defaults so our own src/ subdirectories still get full warnings.
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(fmtlib json safetensors_cpp tokenizers_cpp)
+
+unset(CMAKE_WARN_DEPRECATED CACHE)
+unset(CMAKE_SUPPRESS_DEVELOPER_WARNINGS CACHE)
 
 # compiled library code
 add_subdirectory(src/tensor)
@@ -119,4 +129,3 @@ if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
   AND BUILD_TESTING)
   add_subdirectory(tests)
 endif()
-

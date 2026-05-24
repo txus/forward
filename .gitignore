@@ -3,6 +3,9 @@ tests/model
 .cmake/
 CLAUDE.md
 
+# Per-machine clangd config: symlink .clangd -> .clangd.cuda or .clangd.metal
+.clangd
+
 .envrc
 .direnv/
 
