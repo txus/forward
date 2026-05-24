@@ -7,6 +7,23 @@ project(
   LANGUAGES CXX
 )
 
+# --- Compiler contract (see cmake/toolchains/) -------------------------------
+# We require LLVM Clang >= 20 for C++26 + libc++. This turns a cryptic
+# "cxx_std_26 not known to compiler" failure deep in configure into a clear,
+# early error. CMAKE_CXX_COMPILER_ID is "Clang" for upstream/Homebrew and
+# "AppleClang" for Apple's system compiler, so this also rejects AppleClang.
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  message(FATAL_ERROR
+    "Forward requires LLVM Clang (got '${CMAKE_CXX_COMPILER_ID}'). "
+    "Configure via a preset so the right toolchain file is used: "
+    "cmake --preset macos   (or linux).")
+endif()
+if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 20)
+  message(FATAL_ERROR
+    "Forward needs Clang >= 20 for C++26 (got ${CMAKE_CXX_COMPILER_VERSION}).")
+endif()
+# -----------------------------------------------------------------------------
+
 # Add cmake module path for our custom modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -68,6 +85,14 @@ endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+  # Generate the per-platform .clangd so the editor parses with the same flags
+  # as this build. .clangd is gitignored (per-machine). macOS uses the build/
+  # compile DB directly; Linux uses the CUDA-as-clang build/clangd DB.
+  if(APPLE)
+    configure_file(${CMAKE_SOURCE_DIR}/.clangd.metal ${CMAKE_SOURCE_DIR}/.clangd COPYONLY)
+  else()
+    configure_file(${CMAKE_SOURCE_DIR}/.clangd.cuda  ${CMAKE_SOURCE_DIR}/.clangd COPYONLY)
+  endif()
   set(CMAKE_CXX_EXTENSIONS ON)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
   include(CTest)

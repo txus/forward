@@ -9,4 +9,4 @@ target_include_directories(test_tensor_cuda
 )
 
 include(GoogleTest)
-gtest_discover_tests(test_tensor_cuda)
+gtest_discover_tests(test_tensor_cuda PROPERTIES LABELS "tensor\;cuda")

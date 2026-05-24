@@ -11,4 +11,4 @@ target_include_directories(test_llama
 )
 
 include(GoogleTest)
-gtest_discover_tests(test_llama)
+gtest_discover_tests(test_llama PROPERTIES LABELS "llama")

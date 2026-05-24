@@ -7,3 +7,6 @@ target_include_directories(bm_llama
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
 )
+
+set_target_properties(bm_llama PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bench")

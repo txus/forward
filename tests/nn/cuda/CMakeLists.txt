@@ -9,4 +9,4 @@ target_include_directories(test_nn_cuda
 )
 
 include(GoogleTest)
-gtest_discover_tests(test_nn_cuda)
+gtest_discover_tests(test_nn_cuda PROPERTIES LABELS "nn\;cuda")

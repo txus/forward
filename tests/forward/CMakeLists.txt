@@ -9,4 +9,4 @@ target_include_directories(test_forward
 )
 
 include(GoogleTest)
-gtest_discover_tests(test_forward)
+gtest_discover_tests(test_forward PROPERTIES LABELS "forward")

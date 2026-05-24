@@ -10,4 +10,4 @@ target_include_directories(test_tensor_cpu
 )
 
 include(GoogleTest)
-gtest_discover_tests(test_tensor_cpu)
+gtest_discover_tests(test_tensor_cpu PROPERTIES LABELS "tensor\;cpu")

@@ -2,67 +2,70 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "ninja",
-      "displayName": "Main build",
-      "description": "Platform-default build: Metal on macOS, CUDA (nvcc) on Linux",
+      "name": "macos",
+      "displayName": "macOS / Metal",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/macos-metal.cmake",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
-      "name": "ninja-clangd",
-      "displayName": "Clangd tooling build (Linux/CUDA)",
-      "description": "Compiles CUDA with clang so clangd can parse .cu files; emits compile_commands.json into build/clangd",
-      "environment": {
-        "NIX_HARDENING_ENABLE": ""
-      },
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/clangd",
+      "name": "macos-bench",
+      "displayName": "macOS / Metal (benchmarks)",
+      "inherits": "macos",
+      "binaryDir": "${sourceDir}/build-bench",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CUDA_COMPILER": "clang++",
-        "CMAKE_CUDA_HOST_COMPILER": "clang++",
-        "CMAKE_CUDA_ARCHITECTURES": "120",
-        "CMAKE_CUDA_COMPILER_TOOLKIT_ROOT": "$env{CUDA_PATH}",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "BACKEND_CUDA": "ON",
-        "CUDAToolkit_ROOT": "$env{CUDA_PATH}",
-        "OpenMP_ROOT": "$env{OPENMP_ROOT}",
-        "CLANG_RESOURCE_DIR": "$env{CLANG_RESOURCE_DIR}",
-        "LIBCXX_INCLUDE": "$env{LIBCXX_INCLUDE}"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
       }
     },
     {
-      "name": "ninja-clangd-nocuda",
-      "displayName": "Clangd-compatible build (no CUDA)",
-      "description": "Clangd build for macOS or environments without CUDA",
+      "name": "linux",
+      "displayName": "Linux / CUDA",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/clangd",
+      "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/linux-cuda.cmake",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "$env{CLANGXX_PATH}",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "BACKEND_CUDA": "OFF",
-        "OpenMP_ROOT": "$env{OPENMP_ROOT}"
+        "CMAKE_CUDA_ARCHITECTURES": "120"
+      }
+    },
+    {
+      "name": "linux-bench",
+      "displayName": "Linux / CUDA (benchmarks)",
+      "inherits": "linux",
+      "binaryDir": "${sourceDir}/build-bench",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "FUSED_ROPE": "ON"
+      }
+    },
+    {
+      "name": "linux-clangd",
+      "displayName": "Linux clangd database (CUDA-as-clang)",
+      "description": "Compiles CUDA with clang so clangd can parse .cu files; emits compile_commands.json into build/clangd",
+      "inherits": "linux",
+      "binaryDir": "${sourceDir}/build/clangd",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "environment": { "NIX_HARDENING_ENABLE": "" },
+      "cacheVariables": {
+        "CMAKE_CUDA_COMPILER": "clang++",
+        "CMAKE_CUDA_HOST_COMPILER": "clang++"
       }
     }
   ],
   "buildPresets": [
-    {
-      "name": "ninja",
-      "configurePreset": "ninja"
-    },
-    {
-      "name": "ninja-clangd",
-      "configurePreset": "ninja-clangd"
-    },
-    {
-      "name": "ninja-clangd-nocuda",
-      "configurePreset": "ninja-clangd-nocuda"
-    }
+    { "name": "macos",        "configurePreset": "macos" },
+    { "name": "macos-bench",  "configurePreset": "macos-bench" },
+    { "name": "linux",        "configurePreset": "linux" },
+    { "name": "linux-bench",  "configurePreset": "linux-bench" },
+    { "name": "linux-clangd", "configurePreset": "linux-clangd" }
   ]
 }

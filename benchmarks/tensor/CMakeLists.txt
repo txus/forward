@@ -13,3 +13,6 @@ target_include_directories(bm_tensor
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
 )
+
+set_target_properties(bm_tensor PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bench")

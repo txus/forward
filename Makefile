@@ -1,119 +1,54 @@
 .SHELLFLAGS := -eu -o pipefail -c
 
-.PHONY: all
-all:
-	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Debug && cmake --build build --parallel --
+# Pick the preset by host OS. Override with `make ... PRESET=linux` if needed.
+PRESET ?= $(shell uname -s | grep -q Darwin && echo macos || echo linux)
+# Space-separated labels -> repeated -L flags (ctest ANDs them).
+LBL    := $(foreach l,$(LABELS),-L $(l))
 
-.PHONY: rebuild
-rebuild:
-	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Debug
+.PHONY: configure
+configure:
+	@cmake --preset $(PRESET) $(ARGS)
 
-.PHONY: dx
-dx:
-	@cmake --preset ninja-clangd && cmake --build --preset ninja-clangd -t tensor_cpu
+.PHONY: build
+build: configure
+	@cmake --build build -j
 
 .PHONY: release
 release:
-	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel --
+	@cmake --preset $(PRESET) -DCMAKE_BUILD_TYPE=Release
+	@cmake --build build -j
 
-.PHONY: prepare_profile
-prepare_profile:
-	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Release
-	@cmake --build build --parallel --target forward
+# Run a subset of tests by label: make test LABELS=tensor
+#                                 make test LABELS="tensor metal"
+#                                 make test            (everything buildable here)
+.PHONY: test
+test: configure
+	@cmake --build build -j
+	@ctest --test-dir build $(LBL) --output-on-failure
 
+# Pattern rules can't be listed in .PHONY (make ignores it), but they're
+# effectively phony here: no file named run-* or bench-* ever exists in the
+# repo root, so the recipe always runs.
+
+# Build + run an app target: make run-forward / run-test_metal / run-inspect
+run-%: configure
+	@cmake --build build --target $*
+	@./build/apps/$*
+
+# Build + run a benchmark in RelWithDebInfo: make bench-tensor / bench-llama
+# (bench-llama needs the CUDA backend; bm_llama isn't built on macOS.)
+bench-%:
+	@cmake --preset $(PRESET)-bench
+	@cmake --build build-bench --target bm_$*
+	@./build-bench/bench/bm_$*
+
+# Build a profiling binary (RelWithDebInfo) and print the ncu command to run it.
+# CUDA-only: targets a CUDA test and Nsight Compute (ncu).
 .PHONY: profile
 profile:
-	@cmake --build build --parallel --target test_tensor_cuda
-	@echo 'sudo ncu --kernel-name "add_kernel" ctest --test-dir build -R "^TensorCUDATest.AddBF16"'
-
-.PHONY: app
-app:
-	@cmake --build build --target forward
-	@./build/apps/forward
-
-.PHONY: app
-test_metal:
-	@cmake --build build --target test_metal
-	@./build/apps/test_metal
-
-.PHONY: inspect
-inspect:
-	@cmake --build build --target inspect
-	@./build/apps/inspect
-
-.PHONY: tensor
-tensor:
-	@cmake --build build --target tensor
-	@ctest --test-dir build -R "^TensorCPU" --output-on-failure
-	@ctest --test-dir build -R "^TensorCUDA" --output-on-failure
-	@ctest --test-dir build -R "^TensorMETAL" --output-on-failure
-
-.PHONY: tensor_cpu
-tensor_cpu:
-	@cmake --build build --target test_tensor_cpu
-	@ctest --test-dir build -R "^TensorCPU" --output-on-failure
-
-.PHONY: tensor_cuda
-tensor_cuda:
-	@cmake --build build --target test_tensor_cuda
-	@ctest --test-dir build -R "^TensorCUDA" --output-on-failure
-
-.PHONY: tensor_metal
-tensor_metal:
-	@cmake --build build --target test_tensor_metal
-	@ctest --test-dir build -R "^TensorMETAL" --output-on-failure
-
-.PHONY: nn
-nn:
-	@cmake --build build --target nn
-	@ctest --test-dir build -R "^NNCPU" --output-on-failure
-	@ctest --test-dir build -R "^NNCUDA" --output-on-failure
-
-.PHONY: nn_cpu
-nn_cpu:
-	@cmake --build build --target test_nn_cpu
-	@ctest --test-dir build -R "^NNCPU" --output-on-failure
-
-.PHONY: nn_cuda
-nn_cuda:
-	@cmake --build build --target test_nn_cuda
-	@ctest --test-dir build -R "^NNCUDA" --output-on-failure
-
-.PHONY: llama
-llama:
-	@cmake --build build --target test_llama
-	@ctest --test-dir build -R "^Llama" --output-on-failure
-
-.PHONY: llama_cuda
-llama_cuda:
-	@cmake --build build --target test_llama
-	@ctest --test-dir build -R "^LlamaCUDA" --output-on-failure
-
-.PHONY: forward
-forward:
-	@cmake --build build --target test_forward
-	@ctest --test-dir build -R "^Forward" --output-on-failure
-
-.PHONY: test
-test:
-	@cmake --build build
-	@ctest --test-dir build --output-on-failure
-
-
-.PHONY: prepare_benchmark
-prepare_benchmark:
-	@cmake --preset ninja -DCMAKE_BUILD_TYPE=Release -DFUSED_ROPE=ON
-
-.PHONY: benchmark_tensor
-benchmark: prepare_benchmark
-	@cmake --build build --target bm_tensor --target test_tensor_cuda
-	@ctest --test-dir build -R "TensorCUDATest\.MatmulBf16$$" --output-on-failure
-	./build/benchmarks/tensor/bm_tensor
-
-.PHONY: benchmark_llama
-benchmark_llama: prepare_benchmark
-	@cmake --build build --target bm_llama
-	./build/benchmarks/llama/bm_llama
+	@cmake --preset $(PRESET)-bench
+	@cmake --build build-bench --target test_tensor_cuda
+	@echo 'sudo ncu --kernel-name "add_kernel" ctest --test-dir build-bench -R "^TensorCUDA"'
 
 .PHONY: lint
 lint:

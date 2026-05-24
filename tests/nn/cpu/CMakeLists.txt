@@ -9,4 +9,4 @@ target_include_directories(test_nn_cpu
 )
 
 include(GoogleTest)
-gtest_discover_tests(test_nn_cpu)
+gtest_discover_tests(test_nn_cpu PROPERTIES LABELS "nn\;cpu")
