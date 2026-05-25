@@ -484,6 +484,26 @@ public:
     return result;
   }
 #endif
+#ifdef BACKEND_METAL
+  // Device transfer methods
+
+  Tensor<std::remove_const_t<T>, METAL> metal() const
+    requires std::same_as<D, device::CPU>
+  {
+    Tensor<std::remove_const_t<T>, METAL> result{shape()};
+    std::memcpy(result.data(), data(), size() * sizeof(T));
+    return result;
+  }
+
+  Tensor<std::remove_const_t<T>, CPU> cpu() const
+    requires std::same_as<D, device::METAL>
+  {
+    metal_fwd::synchronize();
+    Tensor<std::remove_const_t<T>, CPU> result{shape()};
+    std::memcpy(result.data(), data(), size() * sizeof(T));
+    return result;
+  }
+#endif
 
   // CPU specific useful things
 

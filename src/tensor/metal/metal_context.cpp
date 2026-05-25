@@ -12,6 +12,13 @@ MetalContext::MetalContext()
   library_ = NS::TransferPtr(device_->newLibrary(filePath, &error));
 }
 
+MetalContext& MetalContext::instance() {
+  static MetalContext ctx;
+  return ctx;
+}
+
+MetalContext::~MetalContext() = default;
+
 void MetalContext::track(NS::SharedPtr<MTL::CommandBuffer> last_cmd) {
   last_cmd_ = last_cmd;
 }

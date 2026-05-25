@@ -2,7 +2,6 @@
 #include <string_view>
 #include <variant>
 
-#include "Foundation/NSSharedPtr.hpp"
 #include "metal_context.hpp"
 
 namespace tensor::metal {
@@ -23,7 +22,7 @@ inline void launch(const std::string_view fn_name, size_t grid_x,
   auto cmd = NS::RetainPtr(ctx.queue()->commandBuffer());
   auto* enc = cmd->computeCommandEncoder();
 
-  enc->setComputePipelineState(pso);
+  enc->setComputePipelineState(pso.get());
   uint32_t idx = 0;
   for (const auto& arg : args) {
     std::visit(

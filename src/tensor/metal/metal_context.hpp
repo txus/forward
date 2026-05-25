@@ -4,8 +4,6 @@
 #include <unordered_map>
 #include <util/metal.hpp>
 
-#include "Metal/MTLCommandBuffer.hpp"
-
 namespace tensor::metal {
 
 class AutoreleasePool {
