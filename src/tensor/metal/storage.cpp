@@ -2,6 +2,7 @@
 #include <tensor/storage.hpp>
 #include <type_traits>
 
+#include "buffer_handle.hpp"
 #include "launcher.hpp"
 #include "metal_context.hpp"
 
@@ -9,10 +10,6 @@ namespace tensor {
 using namespace dtype;
 using namespace device;
 using namespace metal;
-
-struct metal_fwd::BufferHandle {
-  MTL::Buffer* buf;
-};
 
 void metal_fwd::synchronize() {
   metal::MetalContext::instance().synchronize();

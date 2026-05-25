@@ -1,4 +1,4 @@
-add_executable(test_tensor_metal test_tensor.cpp)
+add_executable(test_tensor_metal test_tensor.cpp test_ops.cpp)
 target_compile_features(test_tensor_metal PRIVATE cxx_std_26)
 target_link_libraries(test_tensor_metal PRIVATE tensor_core tensor_metal GTest::gtest_main)
 target_include_directories(test_tensor_metal

@@ -2,7 +2,7 @@ include(MetalShaders)
 
 file(GLOB HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/tensor/*.hpp")
 
-add_library(tensor_metal STATIC metal_cpp.cpp metal_context.cpp storage.cpp)
+add_library(tensor_metal STATIC metal_cpp.cpp metal_context.cpp storage.cpp ops.cpp)
 
 target_link_libraries(tensor_metal
   PUBLIC
@@ -12,7 +12,10 @@ target_link_libraries(tensor_metal
     safetensors_cpp
 )
 
-compile_metal_shaders(tensor_metal kernels/fill.metal)
+compile_metal_shaders(tensor_metal
+  kernels/fill.metal
+  kernels/arange.metal
+  )
 
 target_include_directories(tensor_metal
   PUBLIC

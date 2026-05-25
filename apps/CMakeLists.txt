@@ -15,7 +15,8 @@ if(BACKEND_METAL)
   target_link_libraries(test_metal
   PRIVATE
     fmt::fmt
-    metal_cpp
+    metal_cpp     # metal-cpp headers + frameworks
+    tensor_metal  # provides the single metal-cpp implementation TU (metal_cpp.cpp)
   )
 
   compile_metal_shaders(test_metal fill.metal)

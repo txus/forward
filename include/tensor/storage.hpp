@@ -187,11 +187,11 @@ void synchronize();
 
 template <typename T> class TensorStorage<T, METAL> {
 private:
-  std::shared_ptr<metal_fwd::BufferHandle> buffer_;
   T* data_ = nullptr;
   size_t size_ = 0;
 
 public:
+  std::shared_ptr<metal_fwd::BufferHandle> buffer_;
   using pointer = T*;
   using const_pointer = const T*;
 

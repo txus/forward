@@ -109,6 +109,14 @@ template <DType T, Device D> struct TensorView {
   Shape shape;
   Shape stride;
 
+#ifdef BACKEND_METAL
+  // The MTL::Buffer that `data` points into. CUDA views need only the raw
+  // pointer (kernels take pointers); Metal binds buffer objects, so a view
+  // must remember its owning buffer to bind it at the right offset.
+  // Opaque pointer => no Metal headers leak into this device-agnostic header.
+  const metal_fwd::BufferHandle* buf = nullptr;
+#endif
+
   // Default constructor
   TensorView() = default;
 
@@ -120,7 +128,11 @@ template <DType T, Device D> struct TensorView {
   template <typename U>
     requires std::same_as<U, std::remove_const_t<T>> && std::is_const_v<T>
   TensorView(const TensorView<U, D>& other)
-      : data(other.data), data_size(other.data_size), shape(other.shape), stride(other.stride) {}
+      : data(other.data), data_size(other.data_size), shape(other.shape), stride(other.stride) {
+#ifdef BACKEND_METAL
+    buf = other.buf;
+#endif
+  }
 
   std::span<T> span()
     requires std::same_as<D, device::CPU>
@@ -197,7 +209,11 @@ template <DType T, Device D> struct TensorView {
       sub_size = 1; // scalar
     }
 
-    return TensorView{data + offset, sub_size, new_shape, new_strides};
+    auto sub_view = TensorView{data + offset, sub_size, new_shape, new_strides};
+#ifdef BACKEND_METAL
+    sub_view.buf = buf; // sub-view shares the parent's owning buffer
+#endif
+    return sub_view;
   }
 
   template <typename... Ix>
@@ -233,7 +249,11 @@ template <DType T, Device D> struct TensorView {
       sub_size = 1; // scalar
     }
 
-    return TensorView{data + offset, sub_size, new_shape, new_strides};
+    auto sub_view = TensorView{data + offset, sub_size, new_shape, new_strides};
+#ifdef BACKEND_METAL
+    sub_view.buf = buf; // sub-view shares the parent's owning buffer
+#endif
+    return sub_view;
   }
 
   void transpose(size_t dim_a, size_t dim_b) {
@@ -443,7 +463,6 @@ public:
   typename TensorStorage<T, D>::const_pointer data() const {
     return storage_.data();
   }
-
   [[nodiscard]] size_t size() const {
     return storage_.size();
   }
@@ -452,11 +471,23 @@ public:
   }
 
   TensorView<T, D> view() {
-    return TensorView<T, D>{data(), size(), shape(), get_all_strides(shape())};
+    auto v = TensorView<T, D>{data(), size(), shape(), get_all_strides(shape())};
+#ifdef BACKEND_METAL
+    if constexpr (std::same_as<D, device::METAL>) {
+      v.buf = storage_.buffer_.get();
+    }
+#endif
+    return v;
   }
 
   TensorView<const T, D> view() const {
-    return TensorView<const T, D>{data(), size(), shape(), get_all_strides(shape())};
+    auto v = TensorView<const T, D>{data(), size(), shape(), get_all_strides(shape())};
+#ifdef BACKEND_METAL
+    if constexpr (std::same_as<D, device::METAL>) {
+      v.buf = storage_.buffer_.get();
+    }
+#endif
+    return v;
   }
 
   void fill_(T value)
@@ -486,6 +517,9 @@ public:
 #endif
 #ifdef BACKEND_METAL
   // Device transfer methods
+
+  [[nodiscard]] const metal_fwd::BufferHandle* mtl_handle() const requires std::same_as<D, device::METAL>
+    { return storage_.buffer_.get(); }
 
   Tensor<std::remove_const_t<T>, METAL> metal() const
     requires std::same_as<D, device::CPU>
