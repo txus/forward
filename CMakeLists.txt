@@ -34,6 +34,21 @@ else()
 endif()
 if(BACKEND_METAL)
   add_compile_definitions(BACKEND_METAL)
+
+  find_library(METAL_FW        Metal        REQUIRED)
+  find_library(FOUNDATION_FW   Foundation   REQUIRED)
+  find_library(MPS_FW         MetalPerformanceShaders REQUIRED)
+
+  add_library(metal_cpp INTERFACE)
+  target_link_libraries(metal_cpp
+  INTERFACE
+    ${METAL_FW}
+    ${FOUNDATION_FW}
+    ${MPS_FW}
+  )
+  target_include_directories(metal_cpp INTERFACE
+    ${CMAKE_SOURCE_DIR}/vendor/metal-cpp)
+
   message(STATUS "Backend: Metal enabled")
 endif()
 

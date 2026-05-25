@@ -8,5 +8,6 @@ CLAUDE.md
 
 .envrc
 .direnv/
+.DS_Store
 
 tests/reference/.venv

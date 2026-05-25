@@ -179,4 +179,47 @@ public:
 };
 #endif
 
+#ifdef BACKEND_METAL
+namespace metal_fwd {
+struct BufferHandle;
+void synchronize();
+} // namespace metal_fwd
+
+template <typename T> class TensorStorage<T, METAL> {
+private:
+  std::shared_ptr<metal_fwd::BufferHandle> buffer_;
+  T* data_ = nullptr;
+  size_t size_ = 0;
+
+public:
+  using pointer = T*;
+  using const_pointer = const T*;
+
+  TensorStorage() = default;
+  explicit TensorStorage(size_t size);
+
+  [[nodiscard]] size_t size() const {
+    return size_;
+  }
+  pointer data() {
+    return data_;
+  }
+  const_pointer data() const {
+    return data_;
+  }
+
+  T operator[](size_t idx) {
+    metal_fwd::synchronize();
+    return data_[idx];
+  };
+  T operator[](size_t idx) const {
+    metal_fwd::synchronize();
+    return data_[idx];
+  }
+
+  void resize(size_t size);
+  void fill(T value);
+};
+#endif
+
 }; // namespace tensor

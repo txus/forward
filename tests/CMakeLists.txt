@@ -22,6 +22,10 @@ if(BACKEND_CUDA)
   add_subdirectory(nn/cuda)
 endif()
 
+if(BACKEND_METAL)
+  add_subdirectory(tensor/metal)
+endif()
+
 add_subdirectory(tensor/cpu)
 add_subdirectory(nn/cpu)
 add_subdirectory(llama)

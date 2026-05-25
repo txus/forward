@@ -31,6 +31,11 @@ app:
 	@cmake --build build --target forward
 	@./build/apps/forward
 
+.PHONY: app
+test_metal:
+	@cmake --build build --target test_metal
+	@./build/apps/test_metal
+
 .PHONY: inspect
 inspect:
 	@cmake --build build --target inspect
@@ -41,6 +46,7 @@ tensor:
 	@cmake --build build --target tensor
 	@ctest --test-dir build -R "^TensorCPU" --output-on-failure
 	@ctest --test-dir build -R "^TensorCUDA" --output-on-failure
+	@ctest --test-dir build -R "^TensorMETAL" --output-on-failure
 
 .PHONY: tensor_cpu
 tensor_cpu:
@@ -51,6 +57,11 @@ tensor_cpu:
 tensor_cuda:
 	@cmake --build build --target test_tensor_cuda
 	@ctest --test-dir build -R "^TensorCUDA" --output-on-failure
+
+.PHONY: tensor_metal
+tensor_metal:
+	@cmake --build build --target test_tensor_metal
+	@ctest --test-dir build -R "^TensorMETAL" --output-on-failure
 
 .PHONY: nn
 nn:
@@ -117,4 +128,3 @@ format:
 .PHONY: clean
 clean:
 	@rm -rf build*/ || true
-

@@ -34,6 +34,10 @@ if(BACKEND_CUDA)
   add_subdirectory(cuda)
 endif()
 
+if(BACKEND_METAL)
+  add_subdirectory(metal)
+endif()
+
 # Unified tensor library - aggregates CPU and backend-specific libraries
 add_library(tensor INTERFACE)
 target_link_libraries(tensor INTERFACE tensor_core tensor_cpu)
@@ -41,10 +45,12 @@ target_link_libraries(tensor INTERFACE tensor_core tensor_cpu)
 if(BACKEND_CUDA)
   target_link_libraries(tensor INTERFACE tensor_cuda)
 endif()
+if(BACKEND_METAL)
+  target_link_libraries(tensor INTERFACE tensor_metal)
+endif()
 
 source_group(
   TREE "${PROJECT_SOURCE_DIR}/include"
   PREFIX "Header Files"
   FILES ${HEADER_LIST}
 )
-

@@ -22,6 +22,14 @@ template <> struct device_name<CUDA> {
 };
 #endif
 
+#ifdef BACKEND_METAL
+struct METAL {};
+template <> struct is_device<METAL> : std::true_type {};
+template <> struct device_name<METAL> {
+  static constexpr const char* value = "METAL";
+};
+#endif
+
 template <typename D>
 concept Device = is_device<D>::value;
 
