@@ -17,22 +17,16 @@ struct Bytes {
   size_t size;
 };
 
-// A whole Metal tensor binds its buffer at offset 0.
 template <typename T> inline Buffer to_buffer(const Tensor<T, METAL>& tensor) {
   return Buffer{.buf = tensor.mtl_handle()->buf};
 }
 
-// A view binds its owning buffer at the byte offset where the view begins.
-// `setBuffer(buf, offset, idx)` makes the kernel's `device T*` start there, so
-// the kernel is oblivious to slicing — exactly like CUDA's `base + offset`.
 template <typename T> inline Buffer to_buffer(const TensorView<T, METAL>& view) {
-  auto* base = reinterpret_cast<const std::byte*>(view.buf->buf->contents());
-  auto* here = reinterpret_cast<const std::byte*>(view.data);
+  const auto* base = reinterpret_cast<const std::byte*>(view.buf->buf->contents());
+  const auto* here = reinterpret_cast<const std::byte*>(view.data);
   return Buffer{.buf = view.buf->buf, .offset = static_cast<size_t>(here - base)};
 }
 
-// Upload a scalar inline (setBytes copies it during encoding, so `value` only
-// needs to outlive the launch call). Pass the value itself, not its address.
 template <typename T> inline Bytes to_bytes(const T& value) {
   return Bytes{.data = &value, .size = sizeof(T)};
 }

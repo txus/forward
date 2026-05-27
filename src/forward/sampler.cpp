@@ -32,7 +32,7 @@ std::tuple<std::string, GenerationStats> Sampler<T, D, C>::generate(llama::Model
   auto start_time = high_resolution_clock::now();
   high_resolution_clock::time_point first_token_time;
   high_resolution_clock::time_point prev_token_time;
-  float total_itl_ms = 0.0f;
+  float total_itl_ms = 0.0F;
 
   for (size_t token_idx = 0; token_idx < max_num_tokens; ++token_idx) {
     // Create input tensor on CPU, then transfer to device if needed
@@ -97,7 +97,7 @@ std::tuple<std::string, GenerationStats> Sampler<T, D, C>::generate(llama::Model
   GenerationStats stats{
       .tokens_per_sec = float(max_num_tokens) / total_elapsed.count(),
       .ttft_ms = ttft.count(),
-      .avg_itl_ms = (max_num_tokens > 1) ? total_itl_ms / float(max_num_tokens - 1) : 0.0f,
+      .avg_itl_ms = (max_num_tokens > 1) ? total_itl_ms / float(max_num_tokens - 1) : 0.0F,
   };
 
   return {tokenizer_->decode(sampled_token_ids), stats};
